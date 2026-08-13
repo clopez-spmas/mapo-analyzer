@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAPO Analyzer</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>MAPO Analyzer</h1>
+      <p>Cálculo del índice MAPO para movilización y asistencia de pacientes.</p>
+      <p class="warning">Aplicación independiente. Este proyecto no utiliza ni modifica OCRA Analyzer.</p>
+    </header>
+
+    <section class="card">
+      <h2>Datos iniciales</h2>
+      <div class="grid">
+        <label>Operadores (OP)<input id="op" type="number" min="0" step="1"></label>
+        <label>Pacientes no colaboradores (NC)<input id="nc" type="number" min="0" step="1"></label>
+        <label>Pacientes parcialmente colaboradores (PC)<input id="pc" type="number" min="0" step="1"></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Factores MAPO</h2>
+      <div class="grid">
+        <label>Factor de elevación (FS)<select id="fs"><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
+        <label>Factor ayudas menores (FA)<select id="fa"><option value="0.5">0,5</option><option value="1">1</option></select></label>
+        <label>Factor sillas de ruedas (FC)<select id="fc"><option value="0.75">0,75</option><option value="1">1</option><option value="1.5">1,5</option></select></label>
+        <label>Factor ambiente (Famb)<select id="famb"><option value="0.75">0,75</option><option value="1">1</option><option value="1.5">1,5</option></select></label>
+        <label>Factor formación (FF)<select id="ff"><option value="0.75">0,75</option><option value="1">1</option><option value="2">2</option></select></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <button id="calculate">Calcular MAPO</button>
+      <div id="error" class="error" hidden></div>
+    </section>
+
+    <section id="result" class="card result" hidden>
+      <h2>Resultado</h2>
+      <div id="mapoValue" class="score"></div>
+      <div id="classification"></div>
+      <div id="breakdown"></div>
+    </section>
+  </main>
+  <script src="js/mapo.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
