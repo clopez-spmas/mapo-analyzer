@@ -1,33 +1,30 @@
-/* MAPO — controlador único de la pantalla de horarios.
-   No contiene la lógica de horarios: solo garantiza que V3 sea la vista activa. */
+/* MAPO — controlador de horarios. V3 es la única vista de horarios. */
 (function(){
-  function isWorkerStep(){
-    try {
-      return !!(window.selectedStudy && window.currentStep !== undefined &&
-        window.MAPO_STUDIES?.[window.selectedStudy]?.steps?.[window.currentStep]?.shiftSchedule);
-    } catch(e){ return false; }
+  let lastActivation=0;
+  function isOldScheduleScreen(){
+    const host=document.getElementById('formContainer');
+    if(!host) return false;
+    const text=host.textContent||'';
+    return text.includes('Personas trabajadoras que realizan MMP') &&
+           !!host.querySelector('.schedule-block');
   }
   function activate(){
-    if(!isWorkerStep() || typeof window.renderWorkerScheduleV3!=='function') return;
+    if(!isOldScheduleScreen()) return;
+    if(typeof window.renderWorkerScheduleV3!=='function') return;
+    if(Date.now()-lastActivation<100) return;
+    lastActivation=Date.now();
     window.renderWorkerScheduleV3();
   }
+  const observer=new MutationObserver(()=>activate());
   function install(){
-    if(typeof window.renderStep==='function' && !window.__mapoWorkerControllerInstalled){
-      const original=window.renderStep;
-      window.renderStep=function(){
-        if(isWorkerStep() && typeof window.renderWorkerScheduleV3==='function'){
-          window.renderWorkerScheduleV3();
-          return;
-        }
-        return original.apply(this,arguments);
-      };
-      window.__mapoWorkerControllerInstalled=true;
+    const host=document.getElementById('formContainer');
+    if(host && !host.__mapoScheduleObserved){
+      observer.observe(host,{childList:true,subtree:true});
+      host.__mapoScheduleObserved=true;
     }
     activate();
   }
-  const timer=setInterval(function(){
-    install();
-    if(window.__mapoWorkerControllerInstalled) clearInterval(timer);
-  },25);
-  setTimeout(function(){install();},500);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
+  else install();
+  setInterval(install,250);
 })();
