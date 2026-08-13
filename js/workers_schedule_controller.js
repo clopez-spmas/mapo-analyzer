@@ -1,5 +1,5 @@
 /* MAPO — controlador único del paso de horarios.
-   No modifica OCRA ni el resto de pasos. */
+   Solo garantiza que V3 controle el renderizado de ese paso. */
 (function(){
   function isWorkerStep(){
     try{
@@ -28,20 +28,6 @@
           return;
         }
         return window.__mapoV3OriginalRenderStep.apply(this,arguments);
-      };
-    }
-
-    if(typeof window.saveStep==='function'&&!window.__mapoV3OriginalSaveStep){
-      window.__mapoV3OriginalSaveStep=window.saveStep;
-      window.saveStep=function(){
-        if(isWorkerStep()){
-          const result=window.__mapoV3SaveAndValidate
-            ? window.__mapoV3SaveAndValidate()
-            : null;
-          if(result && typeof result.OP==='number') formData.op=result.OP;
-          return result;
-        }
-        return window.__mapoV3OriginalSaveStep.apply(this,arguments);
       };
     }
 
