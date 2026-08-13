@@ -1,4 +1,12 @@
 /* Definición de los tres estudios MAPO. Los modelos documentales son independientes. */
+const MAPO_HELP = {
+  fs: 'Factor de elevación (FS). La documentación contempla suficiencia de los equipos y adecuación de su uso. En hospitalización, la adecuación se comprueba con el porcentaje de levantamientos totales realizados con ayuda; el umbral es del 90%.',
+  fa: 'Factor de ayudas menores (FA). Comprueba si las ayudas menores disponibles son adecuadas y suficientes y si se utilizan en al menos el 90% de los levantamientos parciales.',
+  fc: 'Factor de sillas de ruedas (FC). Se obtiene a partir de la puntuación media de las sillas de ruedas (PMSR) y de su suficiencia respecto a los pacientes no autónomos. El programa debe calcularlo a partir de los datos de la ficha.',
+  famb: 'Factor ambiente (Famb). Se obtiene a partir de la puntuación media del ambiente (PMamb), calculada con las puntuaciones de baños de higiene, baños con WC y habitaciones.',
+  ff: 'Factor formación (FF). Depende de las condiciones de formación indicadas en la ficha: características de la formación, cobertura de la plantilla, antigüedad y condiciones de eficacia cuando correspondan.'
+};
+
 const MAPO_STUDIES = {
   hospitalizacion: {
     title: 'Salas de hospitalización', description: 'Evaluación de riesgo MAPO en unidades de hospitalización.', templateKey: 'hospitalizacion',
@@ -6,11 +14,11 @@ const MAPO_STUDIES = {
       { title: 'Identificación', fields: [['empresa','Empresa','text'],['centro','Centro','text'],['nif','NIF','text'],['fecha','Fecha','date'],['unidad','Sala / Unidad','text'],['codigo','Código de sala','text'],['camas','Nº de camas','number']]},
       { title: 'Organización y pacientes', fields: [['op','Personas trabajadoras que realizan MMP (OP)','number'],['nc','Pacientes no colaboradores (NC)','number'],['pc','Pacientes parcialmente colaboradores (PC)','number']]},
       { title: 'Levantamientos', fields: [['st','Levantamientos totales (ST)','number'],['lta','Levantamientos totales con ayudas (LTA)','number'],['sp','Levantamientos parciales (SP)','number'],['lpa','Levantamientos parciales con ayudas (LPA)','number']]},
-      { title: 'Factor de elevación (FS)', fields: [['elevadores','Número de elevadores utilizables','number'],['camillasRegulables','Número de camillas regulables','number'],['camillaConAyuda','¿Transferencias con camilla acompañadas de tabla/sábana/rollboard? (1=Sí, 0=No)','number'],['camas3Nodos100','¿Camas regulables de 3 nodos para el 100%? (1=Sí, 0=No)','number']]},
-      { title: 'Ayudas menores (FA)', fields: [['sabanaOTabla','¿Hay sábana o tabla deslizante? (1=Sí, 0=No)','number'],['otrasAyudas','Número de otras ayudas menores disponibles','number']]},
-      { title: 'Sillas de ruedas (FC)', fields: [['sillasSuficientes','¿Sillas suficientes (≥50% de NA)? (1=Sí, 0=No)','number'],['pmsr','PMSR, puntuación media de sillas de ruedas','number']]},
-      { title: 'Ambiente / entorno (Famb)', fields: [['pmb','PMB, puntuación media baños de higiene','number'],['pmwc','PMWC, puntuación media baños con WC','number'],['pmh','PMH, puntuación media habitaciones','number']]},
-      { title: 'Formación (FF)', fields: [['ff','Valor FF según la condición de formación (0,75 / 1 / 2)','number']]}
+      { title: 'Factor de elevación (FS)', helpKey:'fs', fields: [['elevadores','Número de elevadores utilizables','number'],['camillasRegulables','Número de camillas regulables','number'],['camillaConAyuda','¿Transferencias con camilla acompañadas de tabla/sábana/rollboard? (1=Sí, 0=No)','number'],['camas3Nodos100','¿Camas regulables de 3 nodos para el 100%? (1=Sí, 0=No)','number']]},
+      { title: 'Ayudas menores (FA)', helpKey:'fa', fields: [['sabanaOTabla','¿Hay sábana o tabla deslizante? (1=Sí, 0=No)','number'],['otrasAyudas','Número de otras ayudas menores disponibles','number']]},
+      { title: 'Sillas de ruedas (FC)', helpKey:'fc', fields: [['sillasSuficientes','¿Sillas suficientes (≥50% de NA)? (1=Sí, 0=No)','number'],['pmsr','PMSR, puntuación media de sillas de ruedas','number']]},
+      { title: 'Ambiente / entorno (Famb)', helpKey:'famb', fields: [['pmb','PMB, puntuación media baños de higiene','number'],['pmwc','PMWC, puntuación media baños con WC','number'],['pmh','PMH, puntuación media habitaciones','number']]},
+      { title: 'Formación (FF)', helpKey:'ff', fields: [['ff','Valor FF según la condición de formación (0,75 / 1 / 2)','number']]}
     ]
   },
   ambulatorio: {
