@@ -9,7 +9,7 @@
 (function(){
   const v=Date.now();
   document.getElementById('appStyles').href='css/styles.css?v='+v;
-  const scripts=['js/mapo.js','js/studies.js','js/shift_schedule.js','js/templates.js','js/app.js','js/patient_types.js','js/patient_integration.js','js/mobilizations.js','js/mobilizations_help_boot.js','js/mobilizations_boot.js','js/mobilizations_calc_boot.js','js/hospitalizacion_ui_v2.js','js/hospitalizacion_validation.js','js/hospitalizacion_dashboard.js','js/wheelchairs.js','js/wheelchairs_boot.js','js/workers_schedule_v3.js','js/workers_schedule_boot.js'];
+  const scripts=['js/mapo.js','js/studies.js','js/shift_schedule.js','js/templates.js','js/app.js','js/patient_types.js','js/patient_integration.js','js/mobilizations.js','js/mobilizations_help_boot.js','js/mobilizations_boot.js','js/mobilizations_calc_boot.js','js/hospitalizacion_ui_v2.js','js/hospitalizacion_validation.js','js/hospitalizacion_dashboard.js','js/wheelchairs.js','js/wheelchairs_boot.js','js/workers_schedule_v3.js','js/workers_schedule_controller.js'];
   function load(i){
     if(i>=scripts.length)return;
     const s=document.createElement('script');
