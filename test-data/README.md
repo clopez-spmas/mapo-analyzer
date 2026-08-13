@@ -1,0 +1,1 @@
+Directorio reservado para casos de prueba MAPO. No contiene datos reales de pacientes.
