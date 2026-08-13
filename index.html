@@ -6,27 +6,12 @@
 <title>MAPO Analyzer</title>
 <link id="appStyles" rel="stylesheet" href="css/styles.css">
 <script>
-/* Cargador global de recursos: cada carga usa una URL única para impedir
-   que Chrome reutilice JavaScript/CSS antiguos después de un cambio en GitHub. */
 (function(){
   const v=Date.now();
   const css=document.getElementById('appStyles');
   css.href='css/styles.css?v='+v;
-  const scripts=[
-    'js/mapo.js','js/studies.js','js/shift_schedule.js','js/templates.js','js/app.js',
-    'js/patient_types.js','js/patient_integration.js','js/mobilizations.js',
-    'js/mobilizations_help_boot.js','js/mobilizations_boot.js','js/mobilizations_calc_boot.js',
-    'js/hospitalizacion_ui_v2.js','js/hospitalizacion_validation.js','js/hospitalizacion_dashboard.js',
-    'js/wheelchairs.js','js/wheelchairs_boot.js','js/workers_schedule_v3.js','js/workers_schedule_boot.js'
-  ];
-  function load(i){
-    if(i>=scripts.length)return;
-    const s=document.createElement('script');
-    s.src=scripts[i]+'?v='+v;
-    s.onload=()=>load(i+1);
-    s.onerror=()=>{console.error('No se pudo cargar '+scripts[i]);load(i+1);};
-    document.body.appendChild(s);
-  }
+  const scripts=['js/mapo.js','js/studies.js','js/shift_schedule.js','js/templates.js','js/app.js','js/patient_types.js','js/patient_integration.js','js/mobilizations.js','js/mobilizations_help_boot.js','js/mobilizations_boot.js','js/mobilizations_calc_boot.js','js/hospitalizacion_ui_v2.js','js/hospitalizacion_validation.js','js/hospitalizacion_dashboard.js','js/wheelchairs.js','js/wheelchairs_boot.js','js/workers_schedule_v3.js','js/workers_schedule_boot.js','js/workers_schedule_navigation_fix.js'];
+  function load(i){if(i>=scripts.length)return;const s=document.createElement('script');s.src=scripts[i]+'?v='+v;s.onload=()=>load(i+1);s.onerror=()=>{console.error('No se pudo cargar '+scripts[i]);load(i+1);};document.body.appendChild(s);}
   window.addEventListener('DOMContentLoaded',()=>load(0));
 })();
 </script>
