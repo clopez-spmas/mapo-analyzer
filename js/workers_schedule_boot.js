@@ -1,18 +1,13 @@
-/* MAPO — puente de arranque de la pantalla de horarios.
-   app.js contiene una implementación histórica que puede renderizar el paso
-   directamente. Este puente fuerza la implementación V3 después de cualquier
-   render del contenedor, sin modificar la lógica general de MAPO. */
+/* MAPO — puente de arranque de la pantalla de horarios. */
 (function(){
-  function isWorkerStep(){
-    return !!(window.MAPO_STUDIES && window.selectedStudy &&
-      window.MAPO_STUDIES[window.selectedStudy] &&
-      window.MAPO_STUDIES[window.selectedStudy].steps &&
-      window.MAPO_STUDIES[window.selectedStudy].steps[window.currentStep] &&
-      window.MAPO_STUDIES[window.selectedStudy].steps[window.currentStep].shiftSchedule);
-  }
   let forcing=false;
+  function looksLikeWorkerStep(){
+    const host=document.getElementById('formContainer');
+    if(!host) return false;
+    return !!host.querySelector('.schedule-block,.schedule-row,.schedule-table');
+  }
   function forceV3(){
-    if(forcing || !isWorkerStep() || typeof window.renderStep!=='function') return;
+    if(forcing || !looksLikeWorkerStep() || typeof window.renderStep!=='function') return;
     forcing=true;
     try { window.renderStep(); } finally { setTimeout(function(){forcing=false;},0); }
   }
@@ -20,9 +15,9 @@
     const host=document.getElementById('formContainer');
     if(!host) return;
     const observer=new MutationObserver(function(){ forceV3(); });
-    observer.observe(host,{childList:true,subtree:false});
-    document.addEventListener('click',function(){ setTimeout(forceV3,0); },true);
-    setTimeout(forceV3,50);
+    observer.observe(host,{childList:true,subtree:true});
+    document.addEventListener('click',function(){ setTimeout(forceV3,20); },true);
+    setTimeout(forceV3,100);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
   else start();
