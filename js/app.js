@@ -41,11 +41,11 @@ function renderStep() {
   const study = MAPO_STUDIES[selectedStudy], step = study.steps[currentStep];
   $('studyTitle').textContent = study.title;
   $('studyDescription').textContent = `${study.description} · Paso ${currentStep + 1} de ${study.steps.length}: ${step.title}`;
-  const help = step.helpKey ? `<button type="button" class="help-trigger" data-help="${step.helpKey}" aria-label="Ayuda sobre ${step.title}" title="Mostrar ayuda">?</button><div class="help-popover" id="help_${step.helpKey}" hidden>${MAPO_HELP[step.helpKey]}</div>` : '';
+  const helpData = step.helpKey ? MAPO_HELP[step.helpKey] : null;
+  const help = helpData ? `<button type="button" class="help-trigger" data-help="${step.helpKey}" aria-label="${helpData.title}" title="Mostrar ayuda">?</button><div class="help-popover" id="help_${step.helpKey}" hidden><strong>${helpData.title}</strong>${helpData.html}</div>` : '';
   $('formContainer').innerHTML = `<div class="step-title-row"><h3>${step.title}</h3>${help}</div><div class="grid">${step.fields.map(([id,label,type]) => `<label>${label}<input id="field_${id}" type="${type}" min="0" step="any" value="${formData[id] ?? ''}"></label>`).join('')}</div>`;
   document.querySelectorAll('.help-trigger').forEach(button => button.addEventListener('click', () => {
-    const box = $(`help_${button.dataset.help}`);
-    const wasHidden = box.hidden;
+    const box = $(`help_${button.dataset.help}`), wasHidden = box.hidden;
     document.querySelectorAll('.help-popover').forEach(p => p.hidden = true);
     box.hidden = !wasHidden;
   }));
