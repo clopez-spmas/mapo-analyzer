@@ -18,4 +18,5 @@
   function renderResults(){const e=document.getElementById('workerV3Results');if(!e)return;try{const r=calc();e.innerHTML=`<div class="schedule-preview"><h3>Distribución por turnos</h3><table><thead><tr><th>Turno</th><th>Entrada</th><th>Salida</th><th>Jornada completa</th><th>Horario parcial</th></tr></thead><tbody>${[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].map(([n,k])=>{const sh=r.shifts[k];const f=r.fd.filter(x=>x.label===n).reduce((a,x)=>a+x.people,0),p=r.pd.filter(x=>x.label===n).reduce((a,x)=>a+x.people,0);return `<tr><td>${n}</td><td>${sh.start}</td><td>${sh.end}</td><td>${f}</td><td>${p}</td></tr>`;}).join('')}</tbody></table><p><strong>A:</strong> ${r.A} · <strong>D:</strong> ${r.D.toFixed(3)} · <strong>OP:</strong> ${r.OP.toFixed(3)}</p></div>`;formData.op=r.OP;}catch(err){e.innerHTML=`<div class="error">${esc(err.message)}</div>`;}}
   window.renderWorkerScheduleV3=render;
   window.saveWorkerScheduleV3=function(){saveInputs();const r=calc();formData.op=r.OP;return r;};
+  document.addEventListener('change',function(e){if(e.target&&e.target.name==='workerModeV3'){saveInputs();state().mode=e.target.value;render();}},true);
 })();
