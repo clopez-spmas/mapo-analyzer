@@ -4,7 +4,7 @@ body { margin: 0; padding: 30px; font-family: "Segoe UI", Arial, Helvetica, sans
 .header, .card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 h1 { color: #005a9c; margin-top: 0; }
 h2 { margin-top: 0; color: #005a9c; }
-h3 { color: #005a9c; }
+h3 { color: #005a9c; margin: 0; }
 .warning { font-weight: 600; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
 label { display: flex; flex-direction: column; gap: 7px; font-weight: 600; }
@@ -17,6 +17,10 @@ button.secondary { background: #fff; color: #005a9c; border: 1px solid #0078d4; 
 .study-option { text-align: left; min-height: 120px; display: flex; flex-direction: column; gap: 10px; }
 .study-option span { font-weight: 400; line-height: 1.4; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.step-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; position: relative; }
+.help-trigger { width: 28px; height: 28px; min-width: 28px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; line-height: 1; }
+.help-trigger:hover { background: #005a9c; }
+.help-popover { margin: -5px 0 20px 38px; padding: 14px 16px; background: #f7fafc; border: 1px solid #cbd5e0; border-left: 4px solid #0078d4; border-radius: 8px; line-height: 1.5; font-weight: 400; max-width: 850px; }
 .progress { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 18px 0 24px; }
 #progressBar { height: 100%; width: 0; background: #0078d4; transition: width .2s ease; }
 .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
