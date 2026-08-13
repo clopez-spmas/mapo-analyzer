@@ -6,11 +6,11 @@ const MAPO_HELP = {
   famb:{title:'¿Cómo se determina Famb?',html:'<p>El programa obtiene PMB, PMWC y PMH a partir de las características del ambiente y calcula <strong>PMamb = PMB + PMWC + PMH</strong>.</p>'},
   ff:{title:'¿Cómo se determina FF?',html:'<p>El programa determina FF a partir de las características del curso, duración, práctica, organización, cobertura de plantilla, antigüedad y, cuando corresponda, verificación de eficacia.</p>'}
 };
-
 const MAPO_STUDIES={
  hospitalizacion:{title:'Salas de hospitalización',description:'Evaluación de riesgo MAPO en unidades de hospitalización.',templateKey:'hospitalizacion',steps:[
   {title:'Identificación de la unidad',fields:[['empresa','Hospital / empresa','text'],['unidad','Sala / unidad','text'],['fecha','Fecha de evaluación','date'],['codigo','Código de sala','text'],['camas','Número de camas','number']]},
-  {title:'Personas trabajadoras y pacientes',fields:[['op','Número de personas trabajadoras que realizan MMP (OP)','number'],['nc','Número de pacientes no colaboradores (NC)','number'],['pc','Número de pacientes parcialmente colaboradores (PC)','number']]},
+  {title:'Personas trabajadoras que realizan MMP',shiftSchedule:true},
+  {title:'Pacientes',fields:[['nc','Número de pacientes no colaboradores (NC)','number'],['pc','Número de pacientes parcialmente colaboradores (PC)','number']]},
   {title:'Factor de elevación (FS)',helpKey:'fs',questionGroup:'fs'},
   {title:'Factor de ayudas menores (FA)',helpKey:'fa',questionGroup:'fa'},
   {title:'Factor de sillas de ruedas (FC)',helpKey:'fc',questionGroup:'fc'},
