@@ -38,7 +38,7 @@ function calculateShiftSchedule(data){
     const hours=durationMinutes(r.start,r.end)/60;
     if(hours<=0) throw new Error(`La duración del turno ${r.label} debe ser mayor que cero.`);
     const A=Number(r.fullPeople||0), B=Number(r.partialPeople||0);
-    if(A<0||B<0) throw new Error('El número de personas no puede ser negativo.');
+    if(!Number.isInteger(A)||A<0||!Number.isInteger(B)||B<0) throw new Error(`Las personas del turno ${r.label} deben ser números enteros iguales o mayores que 0.`);
     const partialHours= r.partialStart && r.partialEnd ? overlapMinutes(r.start,r.end,r.partialStart,r.partialEnd)/60 : 0;
     if(B>0 && partialHours<=0) throw new Error(`Introduzca el horario de presencia parcial del turno ${r.label}.`);
     if(partialHours>hours+1e-9) throw new Error(`La presencia parcial del turno ${r.label} no puede superar la duración del turno.`);
