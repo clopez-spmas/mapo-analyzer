@@ -2,107 +2,28 @@
 (function(){
   const MAX=50, INITIAL=5, MIN_FULL=1;
   const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
   const state=()=>{
     const s=formData.workerSchedule=formData.workerSchedule||{};
-    s.page=s.page||'full';
-    s.mode=s.mode||'auto';
-    s.full=Array.isArray(s.full)?s.full:[];
-    s.partial=Array.isArray(s.partial)?s.partial:[];
+    s.page=s.page||'full'; s.mode=s.mode||'auto';
+    s.full=Array.isArray(s.full)?s.full:[]; s.partial=Array.isArray(s.partial)?s.partial:[];
     s.shifts=s.shifts||{morning:{start:'06:00',end:'14:00'},afternoon:{start:'14:00',end:'22:00'},night:{start:'22:00',end:'06:00'}};
-    if(!Object.prototype.hasOwnProperty.call(s,'fullInitialized')){
-      s.fullInitialized=true;
-      if(s.full.length===0)for(let i=0;i<INITIAL;i++)s.full.push({start:'',end:'',people:'',label:''});
-    }
-    if(!Object.prototype.hasOwnProperty.call(s,'partialInitialized')){
-      s.partialInitialized=true;
-      if(s.partial.length===0)for(let i=0;i<INITIAL;i++)s.partial.push({start:'',end:'',people:'',reference:0,label:''});
-    }
+    if(!Object.prototype.hasOwnProperty.call(s,'fullInitialized')){s.fullInitialized=true;if(s.full.length===0)for(let i=0;i<INITIAL;i++)s.full.push({start:'',end:'',people:'',label:''});}
+    if(!Object.prototype.hasOwnProperty.call(s,'partialInitialized')){s.partialInitialized=true;if(s.partial.length===0)for(let i=0;i<INITIAL;i++)s.partial.push({start:'',end:'',people:'',reference:0,label:''});}
     return s;
   };
-
   const mins=t=>{if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(t||''))throw Error('Hora no válida. Use formato 24 h (HH:MM).');const [h,m]=t.split(':').map(Number);return h*60+m;};
   const dur=(a,b)=>{let x=mins(a),y=mins(b);if(y<=x)y+=1440;return y-x;};
   const overlap=(a,b,c,d)=>{let s=mins(a),e=mins(b),p=mins(c),q=mins(d);if(e<=s)e+=1440;if(q<=p)q+=1440;let best=0;for(const z of [-1440,0,1440])best=Math.max(best,Math.max(0,Math.min(e,q+z)-Math.max(s,p+z)));return best;};
   const inShift=(t,a,b)=>{const x=mins(t),s=mins(a),e=mins(b);if(e===s)return true;if(e>s)return x>=s&&x<e;return x>=s||x<e;};
   const autoSuggestion=rows=>{const valid=rows.filter(r=>r.start&&r.end);if(!valid.length)return {morning:{start:'06:00',end:'14:00'},afternoon:{start:'14:00',end:'22:00'},night:{start:'22:00',end:'06:00'}};let earliest=1440,latest=-1;valid.forEach(r=>{earliest=Math.min(earliest,mins(r.start));latest=Math.max(latest,mins(r.end));});if(latest<earliest)latest+=1440;const span=Math.max(1,latest-earliest),block=Math.max(1,Math.round(span/3/30)*30),f=n=>{n=(n%1440+1440)%1440;return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')};const m=earliest,t=m+block,a=t+block;return {morning:{start:f(m),end:f(t)},afternoon:{start:f(t),end:f(a)},night:{start:f(a),end:f(m+1440)}};};
   const classify=(r,s)=>{if(!r.start)return 'Sin clasificar';if(s.mode==='auto')s.shifts=s.suggested||autoSuggestion(s.full);for(const [k,v] of Object.entries(s.shifts)){if(inShift(r.start,v.start,v.end))return k==='morning'?'Mañana':k==='afternoon'?'Tarde':'Noche';}return 'Sin clasificar';};
-
   function saveInputs(){const s=state();document.querySelectorAll('[data-v3-t]').forEach(e=>{const a=s[e.dataset.v3T],i=Number(e.dataset.v3I),f=e.dataset.v3F;if(!a[i])a[i]={};a[i][f]=e.type==='number'?(e.value===''?'':Number(e.value)):e.value;});document.querySelectorAll('[data-shift]').forEach(e=>{s.shifts[e.dataset.shift][e.dataset.f]=e.value;});}
-
-  function calc(){
-    const s=state();
-    s.suggested=autoSuggestion(s.full);
-    if(s.mode==='auto')s.shifts=s.suggested;
-    const full=s.full.filter(r=>r.start||r.end||r.people!=='');
-    const partial=s.partial.filter(r=>r.start||r.end||r.people!=='');
-    let A=0,D=0;
-    const fd=full.map((r,i)=>{
-      if(!r.start||!r.end)throw Error('Complete entrada y salida del horario completo '+(i+1)+'.');
-      const p=Number(r.people||0);
-      if(!Number.isInteger(p)||p<0)throw Error('Personas debe ser un entero igual o mayor que 0.');
-      A+=p;
-      return {...r,people:p,hours:dur(r.start,r.end)/60,label:classify(r,s),index:i};
-    });
-    const pd=partial.map((r,i)=>{
-      if(!r.start||!r.end)throw Error('Complete entrada y salida del horario parcial '+(i+1)+'.');
-      const p=Number(r.people||0);
-      if(!fd.length)throw Error('Añada al menos un horario completo antes de calcular horarios parciales.');
-      const ref=Math.min(Number(r.reference||0),fd.length-1);
-      const ph=overlap(r.start,r.end,fd[ref].start,fd[ref].end)/60;
-      const C=fd[ref].hours?ph/fd[ref].hours:0;
-      D+=p*C;
-      return {...r,people:p,reference:ref,C,D:p*C,label:classify(r,s),index:i};
-    });
-    return{A,D,OP:A+D,fd,pd,shifts:s.shifts};
-  }
-
+  function calc(){const s=state();s.suggested=autoSuggestion(s.full);if(s.mode==='auto')s.shifts=s.suggested;const full=s.full.filter(r=>r.start||r.end||r.people!=='');const partial=s.partial.filter(r=>r.start||r.end||r.people!=='');let A=0,D=0;const fd=full.map((r,i)=>{if(!r.start||!r.end)throw Error('Complete entrada y salida del horario completo '+(i+1)+'.');const p=Number(r.people||0);if(!Number.isInteger(p)||p<0)throw Error('Personas debe ser un entero igual o mayor que 0.');A+=p;return {...r,people:p,hours:dur(r.start,r.end)/60,label:classify(r,s),index:i};});const pd=partial.map((r,i)=>{if(!r.start||!r.end)throw Error('Complete entrada y salida del horario parcial '+(i+1)+'.');const p=Number(r.people||0);if(!fd.length)throw Error('Añada al menos un horario completo antes de calcular horarios parciales.');const ref=Math.min(Number(r.reference||0),fd.length-1);const ph=overlap(r.start,r.end,fd[ref].start,fd[ref].end)/60;const C=fd[ref].hours?ph/fd[ref].hours:0;D+=p*C;return {...r,people:p,reference:ref,C,D:p*C,label:classify(r,s),index:i};});return{A,D,OP:A+D,fd,pd,shifts:s.shifts};}
   function render(){const s=state();const host=document.getElementById('formContainer');if(!host)return;host.innerHTML=`<div class="step-title-row"><h3>Personas trabajadoras que realizan MMP</h3></div><div class="shift-mode"><strong>Clasificación de turnos</strong><label><input type="radio" name="workerModeV3" value="auto" ${s.mode==='auto'?'checked':''}> El programa sugiere los turnos según los horarios introducidos</label><label><input type="radio" name="workerModeV3" value="manual" ${s.mode==='manual'?'checked':''}> Establecer yo los turnos</label></div><div id="shiftConfig"></div><div class="subnav"><button type="button" class="subnav-btn ${s.page==='full'?'active':''}" data-v3-page="full">Jornada completa</button><button type="button" class="subnav-btn ${s.page==='partial'?'active':''}" data-v3-page="partial">Horario parcial</button></div><div id="workerV3Page"></div><div id="workerV3Results"></div>`;renderShiftConfig();renderPage();bind();renderResults();}
-
   function renderShiftConfig(){const s=state(),e=document.getElementById('shiftConfig');if(!e)return;if(s.mode==='auto'){s.suggested=autoSuggestion(s.full);s.shifts=s.suggested;e.innerHTML=`<div class="schedule-preview"><h4>Turnos sugeridos por el programa</h4><p>La propuesta se actualiza a partir de los horarios introducidos.</p><div class="grid"><label>Mañana — entrada<input type="time" value="${s.suggested.morning.start}" readonly></label><label>Mañana — salida<input type="time" value="${s.suggested.morning.end}" readonly></label><label>Tarde — entrada<input type="time" value="${s.suggested.afternoon.start}" readonly></label><label>Tarde — salida<input type="time" value="${s.suggested.afternoon.end}" readonly></label><label>Noche — entrada<input type="time" value="${s.suggested.night.start}" readonly></label><label>Noche — salida<input type="time" value="${s.suggested.night.end}" readonly></label></div></div>`;}else{e.innerHTML=`<div class="schedule-preview"><h4>Establezca los turnos</h4><p>Introduzca la entrada y salida de cada turno.</p><div class="grid"><label>Mañana — entrada<input data-shift="morning" data-f="start" type="time" value="${esc(s.shifts.morning.start)}"></label><label>Mañana — salida<input data-shift="morning" data-f="end" type="time" value="${esc(s.shifts.morning.end)}"></label><label>Tarde — entrada<input data-shift="afternoon" data-f="start" type="time" value="${esc(s.shifts.afternoon.start)}"></label><label>Tarde — salida<input data-shift="afternoon" data-f="end" type="time" value="${esc(s.shifts.afternoon.end)}"></label><label>Noche — entrada<input data-shift="night" data-f="start" type="time" value="${esc(s.shifts.night.start)}"></label><label>Noche — salida<input data-shift="night" data-f="end" type="time" value="${esc(s.shifts.night.end)}"></label></div></div>`;}}
-
-  function renderPage(){const s=state(),h=document.getElementById('workerV3Page'),arr=s.page==='partial'?s.partial:s.full;h.innerHTML=`<div class="worker-subpage"><div class="step-title-row"><h3>${s.page==='partial'?'Horarios parciales':'Horarios de jornada completa'}</h3></div><p>Introduzca entrada, salida y número de personas. Se muestran 5 horarios inicialmente y puede añadir hasta 50.</p><div class="worker-list">${arr.map((r,i)=>`<div class="registry-card worker-row"><div class="registry-card-head"><h4>Horario ${i+1}</h4><button type="button" class="secondary" data-v3-remove="${s.page}" data-v3-i="${i}">Eliminar</button></div><div class="grid"><label>Hora de entrada<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="start" type="time" value="${esc(r.start)}"></label><label>Hora de salida<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="end" type="time" value="${esc(r.end)}"></label><label>Personas<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="people" type="number" min="0" step="1" value="${esc(r.people)}"></label>${s.page==='partial'&&s.full.some(x=>x.start&&x.end)?`<label>Horario completo de referencia<select data-v3-t="partial" data-v3-i="${i}" data-v3-f="reference">${s.full.map((f,j)=>`<option value="${j}" ${Number(r.reference||0)===j?'selected':''}>${j+1}. ${esc(f.start)}–${esc(f.end)}</option>`).join('')}</select></label>`:''}</div></div>`).join('')}</div><button type="button" class="secondary" id="v3Add">+ Añadir otro horario</button></div>`;}
-
+  function renderPage(){const s=state(),h=document.getElementById('workerV3Page'),arr=s.page==='partial'?s.partial:s.full;h.innerHTML=`<div class="worker-subpage"><div class="step-title-row"><h3>${s.page==='partial'?'Horarios parciales':'Horarios de jornada completa'}</h3></div><p>Introduzca entrada, salida y número de personas. Se muestran 5 horarios inicialmente y puede añadir hasta 50.</p><div class="worker-list">${arr.map((r,i)=>`<div class="registry-card worker-row"><div class="registry-card-head"><h4>Horario ${i+1}</h4><button type="button" class="secondary" data-v3-remove="${s.page}" data-v3-i="${i}">Eliminar</button></div><div class="grid"><label>Hora de entrada<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="start" type="time" value="${esc(r.start)}"></label><label>Hora de salida<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="people" type="number" min="0" step="1" value="${esc(r.people)}"></label><label>Personas<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="people" type="number" min="0" step="1" value="${esc(r.people)}"></label>${s.page==='partial'&&s.full.some(x=>x.start&&x.end)?`<label>Horario completo de referencia<select data-v3-t="partial" data-v3-i="${i}" data-v3-f="reference">${s.full.map((f,j)=>`<option value="${j}" ${Number(r.reference||0)===j?'selected':''}>${j+1}. ${esc(f.start)}–${esc(f.end)}</option>`).join('')}</select></label>`:''}</div></div>`).join('')}</div><button type="button" class="secondary" id="v3Add">+ Añadir otro horario</button></div>`;}
   function bind(){document.querySelectorAll('[data-v3-page]').forEach(b=>b.onclick=function(ev){ev.preventDefault();ev.stopImmediatePropagation();saveInputs();const s=state();s.page=this.dataset.v3Page;render();});document.querySelectorAll('input[name="workerModeV3"]').forEach(b=>b.onchange=()=>{saveInputs();state().mode=b.value;render();});document.querySelectorAll('[data-v3-t]').forEach(e=>e.addEventListener(e.tagName==='SELECT'?'change':'input',()=>{saveInputs();renderResults();}));document.querySelectorAll('[data-shift]').forEach(e=>e.addEventListener('change',()=>{saveInputs();renderResults();}));document.querySelectorAll('[data-v3-remove]').forEach(b=>b.addEventListener('click',function(ev){ev.preventDefault();ev.stopImmediatePropagation();saveInputs();const s=state(),page=this.dataset.v3Remove,a=s[page],i=Number(this.dataset.v3I);if(!Array.isArray(a)||!Number.isInteger(i)||i<0||i>=a.length)return;if(page==='full'&&a.length===MIN_FULL){alert('Debe quedar al menos un horario de jornada completa.');return;}a.splice(i,1);render();}));document.getElementById('v3Add')?.addEventListener('click',function(ev){ev.preventDefault();ev.stopImmediatePropagation();saveInputs();const s=state(),a=s[s.page];if(a.length>=MAX){alert('Ha alcanzado el límite de 50 horarios.');return;}a.push(s.page==='partial'?{start:'',end:'',people:'',reference:0,label:''}:{start:'',end:'',people:'',label:''});render();});}
-
-  function renderResults(){
-    const e=document.getElementById('workerV3Results');
-    if(!e)return;
-    try{
-      const r=calc();
-      const shifts=[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']];
-      const rows=shifts.map(([n,k])=>{
-        const sh=r.shifts[k];
-        const fullPresent=r.fd.filter(x=>overlap(x.start,x.end,sh.start,sh.end)>0).reduce((a,x)=>a+x.people,0);
-        const partialPresent=r.pd.reduce((a,x)=>{
-          const total=dur(x.start,x.end);
-          const covered=overlap(x.start,x.end,sh.start,sh.end);
-          return a+(total?x.people*(covered/total):0);
-        },0);
-        const totalPresent=fullPresent+partialPresent;
-        const fullOP=r.fd.filter(x=>x.label===n).reduce((a,x)=>a+x.people,0);
-        const partialOP=r.pd.reduce((a,x)=>{
-          const ref=r.fd[x.reference];
-          if(!ref)return a;
-          const covered=overlap(x.start,x.end,sh.start,sh.end);
-          const refHours=ref.hours*60;
-          return a+(refHours?x.people*(covered/refHours):0);
-        },0);
-        const opTurn=fullOP+partialOP;
-        return `<tr><td>${n}</td><td>${sh.start}</td><td>${sh.end}</td><td>${fullPresent.toFixed(3)}</td><td>${partialPresent.toFixed(3)}</td><td><strong>${totalPresent.toFixed(3)}</strong></td><td>${opTurn.toFixed(3)}</td></tr>`;
-      }).join('');
-      e.innerHTML=`<div class="schedule-preview"><h3>Distribución por turnos</h3><table><thead><tr><th>Turno</th><th>Entrada</th><th>Salida</th><th>Jornada completa</th><th>Horario parcial</th><th>Personas presentes</th><th>OP</th></tr></thead><tbody>${rows}</tbody></table><p><strong>A:</strong> ${r.A} · <strong>D:</strong> ${r.D.toFixed(3)} · <strong>OP:</strong> ${r.OP.toFixed(3)}</p></div>`;
-      formData.op=r.OP;
-      formData.opByShift={};
-      shifts.forEach(([n,k])=>{
-        const sh=r.shifts[k];
-        const fullOP=r.fd.filter(x=>x.label===n).reduce((a,x)=>a+x.people,0);
-        const partialOP=r.pd.reduce((a,x)=>{const ref=r.fd[x.reference];if(!ref)return a;const covered=overlap(x.start,x.end,sh.start,sh.end);const refHours=ref.hours*60;return a+(refHours?x.people*(covered/refHours):0);},0);
-        formData.opByShift[k]=fullOP+partialOP;
-      });
-    }catch(err){e.innerHTML=`<div class="error">${esc(err.message)}</div>`;}
-  }
-
+  function renderResults(){const e=document.getElementById('workerV3Results');if(!e)return;try{const r=calc();const shifts=[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']];const rows=shifts.map(([n,k])=>{const sh=r.shifts[k];const fullPresent=r.fd.reduce((sum,x)=>sum+x.people*(overlap(x.start,x.end,sh.start,sh.end)/60)/x.hours,0);const partialPresent=r.pd.reduce((sum,x)=>{const total=dur(x.start,x.end)/60,ov=overlap(x.start,x.end,sh.start,sh.end)/60;return sum+(total?x.people*ov/total:0);},0);const totalPresent=fullPresent+partialPresent;const fullOP=r.fd.reduce((sum,x)=>sum+x.people*(overlap(x.start,x.end,sh.start,sh.end)/60)/x.hours,0);const partialOP=r.pd.reduce((sum,x)=>{const ref=r.fd[x.reference];if(!ref)return sum;const refHours=ref.hours*60,ov=overlap(x.start,x.end,sh.start,sh.end);return sum+(refHours?x.people*ov/refHours:0);},0);const raw=fullOP+partialOP;return {name:n,key:k,start:sh.start,end:sh.end,fullPresent,partialPresent,totalPresent,raw};});const rawTotal=rows.reduce((sum,row)=>sum+row.raw,0);const scale=rawTotal>0?r.OP/rawTotal:0;rows.forEach(row=>row.op=row.raw*scale);formData.op=r.OP;formData.opByShift={};formData.presenceByShift={};rows.forEach(row=>{formData.opByShift[row.key]=row.op;formData.presenceByShift[row.key]=row.totalPresent;});e.innerHTML=`<div class="schedule-preview"><h3>Distribución por turnos</h3><table><thead><tr><th>Turno</th><th>Entrada</th><th>Salida</th><th>Jornada completa</th><th>Horario parcial</th><th>Personas presentes</th><th>OP</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${row.name}</td><td>${row.start}</td><td>${row.end}</td><td>${row.fullPresent.toFixed(3)}</td><td>${row.partialPresent.toFixed(3)}</td><td><strong>${row.totalPresent.toFixed(3)}</strong></td><td>${row.op.toFixed(3)}</td></tr>`).join('')}</tbody></table><p><strong>A:</strong> ${r.A} · <strong>D:</strong> ${r.D.toFixed(3)} · <strong>OP:</strong> ${r.OP.toFixed(3)}</p></div>`;}catch(err){e.innerHTML=`<div class="error">${esc(err.message)}</div>`;}}
   window.renderWorkerScheduleV3=render;
   window.saveWorkerScheduleV3=function(){saveInputs();const r=calc();formData.op=r.OP;return r;};
 })();
