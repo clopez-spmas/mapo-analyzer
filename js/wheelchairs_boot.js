@@ -25,4 +25,18 @@
     }
     return originalSaveStep();
   };
+  const originalCalculate=window.calculateHospitalizacionFactors;
+  window.calculateHospitalizacionFactors=function(d){
+    const result=originalCalculate(d);
+    const wc=wheelchairTotals();
+    const na=num(d.nc)+num(d.pc);
+    const sufficient=wc.total>=na*.5;
+    const fc=wc.pmsr<=1.33?(sufficient?.75:1):wc.pmsr<=2.66?(sufficient?1.12:1.5):(sufficient?1.5:2);
+    result.fc=fc;
+    result.details=result.details||{};
+    result.details.pmsr=wc.pmsr;
+    result.details.fcSufficient=sufficient;
+    result.details.wheelchairCount=wc.total;
+    return result;
+  };
 })();
