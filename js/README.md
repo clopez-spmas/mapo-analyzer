@@ -1,0 +1,1 @@
+UI auxiliar. La aplicación principal usa mapo.js, factors.js y app.js.
