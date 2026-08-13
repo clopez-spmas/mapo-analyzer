@@ -1,12 +1,38 @@
-/* MAPO — desglose de OP por turno. No modifica la lógica MAPO. */
+/* MAPO — presentación de OP por turno. No recalcula OP. */
 (function(){
-  function mins(t){const m=/^(\d{2}):(\d{2})$/.exec(t||'');return m?Number(m[1])*60+Number(m[2]):-1;}
-  function duration(a,b){let x=mins(a),y=mins(b);if(x<0||y<0)return 0;if(y<=x)y+=1440;return y-x;}
-  function overlap(a,b,c,d){let s=mins(a),e=mins(b),p=mins(c),q=mins(d);if([s,e,p,q].some(x=>x<0))return 0;if(e<=s)e+=1440;if(q<=p)q+=1440;let best=0;for(const z of [-1440,0,1440])best=Math.max(best,Math.max(0,Math.min(e,q+z)-Math.max(s,p+z)));return best;}
-  function inShift(t,a,b){const x=mins(t),s=mins(a),e=mins(b);if(x<0||s<0||e<0)return false;if(e===s)return true;if(e>s)return x>=s&&x<e;return x>=s||x<e;}
-  function classify(t,sh){for(const [k,v] of Object.entries(sh||{}))if(inShift(t,v.start,v.end))return k;return null;}
-  function calculate(){const s=window.formData?.workerSchedule;if(!s)return null;const sh=s.shifts||{};const out={morning:0,afternoon:0,night:0};const validFull=(s.full||[]).filter(r=>r.start&&r.end);validFull.forEach(r=>{const k=classify(r.start,sh);if(k)out[k]+=Number(r.people||0);});const full=validFull;const partial=(s.partial||[]).filter(r=>r.start&&r.end);partial.forEach(r=>{const p=Number(r.people||0);if(!p)return;const ref=Math.min(Number(r.reference||0),Math.max(0,full.length-1));const base=full[ref];if(!base)return;const c=duration(base.start,base.end);if(!c)return;const op=p*overlap(r.start,r.end,base.start,base.end)/c;const k=classify(r.start,sh);if(k)out[k]+=op;});out.global=out.morning+out.afternoon+out.night;return out;}
-  function paint(){const box=document.getElementById('workerV3Results');if(!box)return;const op=calculate();if(!op)return;const table=box.querySelector('table');if(!table)return;let th=table.querySelector('thead tr');if(!th)return;if(!th.querySelector('[data-op-turn]')){const h=document.createElement('th');h.dataset.opTurn='1';h.textContent='OP';th.appendChild(h);}const keys=['morning','afternoon','night'];table.querySelectorAll('tbody tr').forEach((tr,i)=>{if(i>2)return;let td=tr.querySelector('[data-op-turn]');if(!td){td=document.createElement('td');td.dataset.opTurn='1';tr.appendChild(td);}td.textContent=Number(op[keys[i]]||0).toFixed(3);});let foot=box.querySelector('[data-op-global]');if(!foot){foot=document.createElement('p');foot.dataset.opGlobal='1';table.parentElement.appendChild(foot);}foot.innerHTML='<strong>OP por turnos — global:</strong> '+op.global.toFixed(3);}
-  function start(){const root=document.getElementById('formContainer');if(!root)return;const mo=new MutationObserver(()=>{clearTimeout(start.t);start.t=setTimeout(paint,0);});mo.observe(root,{childList:true,subtree:true});paint();}
+  function paint(){
+    const box=document.getElementById('workerV3Results');
+    if(!box)return;
+    const op=window.formData?.opByShift;
+    if(!op)return;
+    const table=box.querySelector('table');
+    if(!table)return;
+    const th=table.querySelector('thead tr');
+    if(!th)return;
+    if(!th.querySelector('[data-op-turn]')){
+      const h=document.createElement('th');
+      h.dataset.opTurn='1';
+      h.textContent='OP';
+      th.appendChild(h);
+    }
+    const keys=['morning','afternoon','night'];
+    table.querySelectorAll('tbody tr').forEach((tr,i)=>{
+      if(i>2)return;
+      let td=tr.querySelector('[data-op-turn]');
+      if(!td){td=document.createElement('td');td.dataset.opTurn='1';tr.appendChild(td);}
+      td.textContent=Number(op[keys[i]]||0).toFixed(3);
+    });
+    let foot=box.querySelector('[data-op-global]');
+    if(!foot){foot=document.createElement('p');foot.dataset.opGlobal='1';table.parentElement.appendChild(foot);}
+    const global=keys.reduce((sum,k)=>sum+Number(op[k]||0),0);
+    foot.innerHTML='<strong>OP por turnos — global:</strong> '+global.toFixed(3);
+  }
+  function start(){
+    const root=document.getElementById('formContainer');
+    if(!root)return;
+    const mo=new MutationObserver(()=>{clearTimeout(start.t);start.t=setTimeout(paint,0);});
+    mo.observe(root,{childList:true,subtree:true});
+    paint();
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
