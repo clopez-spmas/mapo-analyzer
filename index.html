@@ -4,23 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAPO Analyzer</title>
-<link id="appStyles" rel="stylesheet" href="css/styles.css">
-<script>
-(function(){
-  const v=Date.now();
-  document.getElementById('appStyles').href='css/styles.css?v='+v;
-  const scripts=['js/mapo.js','js/studies.js','js/shift_schedule.js','js/templates.js','js/app.js','js/patient_types.js','js/patient_integration.js','js/mobilizations.js','js/mobilizations_help_boot.js','js/mobilizations_boot.js','js/mobilizations_calc_boot.js','js/hospitalizacion_ui_v2.js','js/hospitalizacion_validation.js','js/hospitalizacion_dashboard.js','js/wheelchairs.js','js/wheelchairs_boot.js','js/workers_schedule_v3.js','js/workers_schedule_controller.js'];
-  function load(i){
-    if(i>=scripts.length)return;
-    const s=document.createElement('script');
-    s.src=scripts[i]+'?v='+v;
-    s.onload=()=>load(i+1);
-    s.onerror=()=>{console.error('No se pudo cargar '+scripts[i]);load(i+1);};
-    document.body.appendChild(s);
-  }
-  window.addEventListener('DOMContentLoaded',()=>load(0));
-})();
-</script>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <main class="container">
@@ -30,5 +14,22 @@
 <section id="result" class="card result" hidden><div class="section-heading"><h2>Resultado de la evaluación</h2><button id="generateReport">Generar informe Word</button></div><div id="mapoValue" class="score"></div><div id="classification"></div><div id="breakdown"></div></section>
 <section id="templateAdmin" class="card admin-card" hidden><h2>Administración de modelos de informe</h2><p class="admin-warning"><strong>Acceso restringido.</strong> Esta zona está destinada exclusivamente a los dos usuarios autorizados.</p><div id="templateStatus"></div><div class="template-grid"><label>Modelo de hospitalización<input id="templateHospitalizacion" type="file" accept=".docx"></label><label>Modelo de servicios ambulatorios<input id="templateAmbulatorio" type="file" accept=".docx"></label><label>Modelo de área quirúrgica<input id="templateQuirurgica" type="file" accept=".docx"></label></div></section>
 </main>
+<script src="js/mapo.js"></script>
+<script src="js/studies.js"></script>
+<script src="js/shift_schedule.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/app.js"></script>
+<script src="js/patient_types.js"></script>
+<script src="js/patient_integration.js"></script>
+<script src="js/mobilizations.js"></script>
+<script src="js/mobilizations_help_boot.js"></script>
+<script src="js/mobilizations_boot.js"></script>
+<script src="js/mobilizations_calc_boot.js"></script>
+<script src="js/hospitalizacion_ui_v2.js"></script>
+<script src="js/hospitalizacion_validation.js"></script>
+<script src="js/hospitalizacion_dashboard.js"></script>
+<script src="js/wheelchairs.js"></script>
+<script src="js/wheelchairs_boot.js"></script>
+<script src="js/workers_schedule_v3.js"></script>
 </body>
 </html>
