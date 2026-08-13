@@ -10,43 +10,75 @@
   <main class="container">
     <header class="header">
       <h1>MAPO Analyzer</h1>
-      <p>Cálculo del índice MAPO para movilización y asistencia de pacientes.</p>
-      <p class="warning">Aplicación independiente. Este proyecto no utiliza ni modifica OCRA Analyzer.</p>
+      <p>Evaluación del riesgo por movilización manual de pacientes.</p>
+      <p class="warning">Aplicación independiente de OCRA Analyzer.</p>
     </header>
 
-    <section class="card">
-      <h2>Datos iniciales</h2>
-      <div class="grid">
-        <label>Operadores (OP)<input id="op" type="number" min="0" step="1"></label>
-        <label>Pacientes no colaboradores (NC)<input id="nc" type="number" min="0" step="1"></label>
-        <label>Pacientes parcialmente colaboradores (PC)<input id="pc" type="number" min="0" step="1"></label>
+    <section id="studySelection" class="card">
+      <h2>¿Qué desea estudiar?</h2>
+      <p>Seleccione el modelo de evaluación antes de comenzar.</p>
+      <div class="study-grid">
+        <button class="study-option" data-study="hospitalizacion">
+          <strong>Salas de hospitalización</strong>
+          <span>Evaluación MAPO de unidades de hospitalización.</span>
+        </button>
+        <button class="study-option" data-study="ambulatorio">
+          <strong>Servicios ambulatorios</strong>
+          <span>Evaluación específica de servicios ambulatorios.</span>
+        </button>
+        <button class="study-option" data-study="quirurgica">
+          <strong>Área quirúrgica</strong>
+          <span>Evaluación específica del área quirúrgica.</span>
+        </button>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Factores MAPO</h2>
-      <div class="grid">
-        <label>Factor de elevación (FS)<select id="fs"><option value="1">1</option><option value="2">2</option><option value="4">4</option></select></label>
-        <label>Factor ayudas menores (FA)<select id="fa"><option value="0.5">0,5</option><option value="1">1</option></select></label>
-        <label>Factor sillas de ruedas (FC)<select id="fc"><option value="0.75">0,75</option><option value="1">1</option><option value="1.5">1,5</option></select></label>
-        <label>Factor ambiente (Famb)<select id="famb"><option value="0.75">0,75</option><option value="1">1</option><option value="1.5">1,5</option></select></label>
-        <label>Factor formación (FF)<select id="ff"><option value="0.75">0,75</option><option value="1">1</option><option value="2">2</option></select></label>
+    <section id="studyPanel" class="card" hidden>
+      <div class="section-heading">
+        <div>
+          <h2 id="studyTitle">Evaluación</h2>
+          <p id="studyDescription"></p>
+        </div>
+        <button id="changeStudy" class="secondary">Cambiar estudio</button>
       </div>
-    </section>
 
-    <section class="card">
-      <button id="calculate">Calcular MAPO</button>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="formContainer"></div>
+
+      <div class="actions">
+        <button id="previousStep" class="secondary" hidden>Anterior</button>
+        <button id="nextStep">Continuar</button>
+        <button id="calculate" hidden>Calcular MAPO</button>
+      </div>
       <div id="error" class="error" hidden></div>
     </section>
 
     <section id="result" class="card result" hidden>
-      <h2>Resultado</h2>
+      <div class="section-heading">
+        <h2>Resultado de la evaluación</h2>
+        <button id="generateReport">Generar informe Word</button>
+      </div>
       <div id="mapoValue" class="score"></div>
       <div id="classification"></div>
       <div id="breakdown"></div>
     </section>
+
+    <section id="templateAdmin" class="card admin-card" hidden>
+      <h2>Administración de modelos de informe</h2>
+      <p class="admin-warning"><strong>Acceso restringido.</strong> Esta zona está destinada exclusivamente a los dos usuarios autorizados.</p>
+      <div id="templateStatus"></div>
+      <div class="template-grid">
+        <label>Modelo de hospitalización<input id="templateHospitalizacion" type="file" accept=".docx"></label>
+        <label>Modelo de servicios ambulatorios<input id="templateAmbulatorio" type="file" accept=".docx"></label>
+        <label>Modelo de área quirúrgica<input id="templateQuirurgica" type="file" accept=".docx"></label>
+      </div>
+      <p class="small">Los modelos deben conservar los identificadores de campos definidos por MAPO Analyzer. El cambio de diseño del Word no obliga a cambiar el programa mientras esos identificadores se mantengan.</p>
+    </section>
   </main>
+
   <script src="js/mapo.js"></script>
+  <script src="js/studies.js"></script>
+  <script src="js/templates.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
