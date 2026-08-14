@@ -1,0 +1,22 @@
+/* Estilos aislados del bloque de baños. No comparte reglas con movilizaciones, pacientes ni sillas. */
+.bath-screen-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin:10px 0 20px;padding:18px 20px;border:1px solid #d6e1ec;border-radius:12px;background:#f7fafc}
+.bath-screen-header h3{margin:0 0 7px;color:#005a9c;font-size:1.25rem}
+.bath-screen-header p{margin:0;color:#334e68}
+.bath-screen-step{font-weight:700;color:#005a9c;white-space:nowrap}
+.bath-screen-tabs{display:flex;gap:10px;margin:0 0 18px}
+.bath-screen-tabs button.active{background:#0078d4;color:#fff}
+.bath-registry-context{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:14px;padding:12px 15px;border-left:4px solid #0078d4;border-radius:6px;background:#edf6fd;color:#234e70}
+.bath-registry-context strong{font-size:1rem;color:#005a9c}
+.bath-registry-context span{font-size:.9rem}
+.bath-add-top{margin:4px 0 18px}
+.bath-registry-card{border:1px solid #cbd8e5;border-radius:12px;padding:18px;margin-bottom:16px;background:#fff}
+.bath-registry-card .registry-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.bath-registry-card .registry-card-head h4{margin:0;color:#005a9c;font-size:1.05rem}
+.bath-type-badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#e7f2fb;color:#005a9c;font-size:.8rem;font-weight:700}
+.bath-registry-card .registry-questions{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:16px 0}
+.bath-registry-card .registry-questions>div{padding:12px;border:1px solid #e1e8ef;border-radius:8px;background:#f9fbfd}
+.bath-registry-card .choice-row{margin-top:9px;display:flex;align-items:center;gap:18px}
+.bath-registry-card .choice{display:inline-flex;align-items:center;gap:6px;margin:0}
+.bath-registry-card input[type=radio]{margin:0}
+.bath-famb-note{margin:18px 0 10px;padding:12px 15px;border-radius:8px;background:#f7fafc;color:#486581}
+@media(max-width:700px){.bath-screen-header{flex-direction:column}.bath-screen-tabs{flex-direction:column}.bath-registry-card .registry-questions{grid-template-columns:1fr}}
