@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAPO Analyzer</title>
 <link rel="stylesheet" href="css/styles.css?v=20260814-7">
+<link rel="stylesheet" href="css/access_screen.css?v=20260814-1">
 <link rel="stylesheet" href="css/hospitalizacion_visual_fix.css?v=20260814-3">
 <link rel="stylesheet" href="css/bathrooms_ui.css?v=20260814-1">
 <link rel="stylesheet" href="css/study_io.css?v=20260814-1">
@@ -14,12 +15,43 @@
 <header class="header"><h1>MAPO Analyzer</h1><p>Evaluación del riesgo por movilización manual de pacientes.</p><p class="warning">Aplicación independiente de OCRA Analyzer.</p></header>
 
 <section id="accessScreen" class="card access-screen">
-  <h2>Acceso al programa</h2>
-  <p>Bienvenido a MAPO Analyzer.</p>
-  <p>Antes de comenzar, puede consultar las instrucciones de uso del programa.</p>
-  <div class="access-actions">
-    <button id="enterProgram" type="button">Acceder al programa</button>
-    <a id="instructionsButton" class="access-button secondary" href="instrucciones/instrucciones.pdf" target="_blank" rel="noopener">Ver / descargar instrucciones de uso</a>
+  <div class="access-hero">
+    <span class="access-badge">Evaluación MAPO</span>
+    <h1>MAPO Analyzer</h1>
+    <p>Herramienta para la evaluación del riesgo por movilización manual de pacientes y el análisis de los factores que intervienen en la exposición.</p>
+  </div>
+
+  <div class="access-content">
+    <h2>Bienvenido</h2>
+    <p class="access-intro">Antes de comenzar la evaluación, puede consultar las instrucciones de uso o acceder directamente al programa.</p>
+
+    <div class="access-features">
+      <div class="access-feature">
+        <span class="access-feature-icon" aria-hidden="true">🏥</span>
+        <strong>Evaluación MAPO</strong>
+        <span>Analice unidades de hospitalización y los diferentes modelos de evaluación disponibles.</span>
+      </div>
+      <div class="access-feature">
+        <span class="access-feature-icon" aria-hidden="true">📋</span>
+        <strong>Factores de riesgo</strong>
+        <span>Introduzca de forma guiada los datos necesarios para completar el estudio.</span>
+      </div>
+      <div class="access-feature">
+        <span class="access-feature-icon" aria-hidden="true">📊</span>
+        <strong>Resultados</strong>
+        <span>Obtenga el resultado de la evaluación y conserve los datos del estudio para continuar posteriormente.</span>
+      </div>
+    </div>
+
+    <div class="access-actions">
+      <button id="enterProgram" type="button">Acceder al programa&nbsp; →</button>
+      <a id="instructionsButton" class="access-button secondary" href="instrucciones/instrucciones.pdf" target="_blank" rel="noopener">📖&nbsp; Instrucciones de uso&nbsp; ↗</a>
+    </div>
+
+    <div class="access-footer">
+      <strong>Antes de comenzar</strong><br>
+      Tenga preparados los datos necesarios para la evaluación. Las instrucciones de uso pueden actualizarse sustituyendo el archivo PDF de instrucciones del programa.
+    </div>
   </div>
 </section>
 
