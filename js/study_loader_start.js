@@ -6,7 +6,7 @@
     const row=document.createElement('div');
     row.id='loadStudyStart';
     row.style.marginTop='16px';
-    row.innerHTML='<button type="button" class="secondary" id="loadStudyStartButton">Cargar estudio guardado</button><input id="loadStudyStartFile" type="file" accept=".json,.mapo.json,application/json" hidden>';
+    row.innerHTML='<button type="button" class="secondary" id="loadStudyStartButton">Cargar estudio guardado</button><input id="loadStudyStartFile" type="file" accept=".json,.mapo.json,.xlsx,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>';
     host.appendChild(row);
     document.getElementById('loadStudyStartButton').onclick=()=>document.getElementById('loadStudyStartFile').click();
     document.getElementById('loadStudyStartFile').onchange=e=>{const f=e.target.files?.[0];if(f&&window.MAPOStudyIO)window.MAPOStudyIO.loadStudyFile(f);e.target.value='';};
