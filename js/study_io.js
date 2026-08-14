@@ -23,5 +23,5 @@
   function addIOControls(){const heading=document.querySelector('#studyPanel .section-heading');if(!heading||document.getElementById('studyIO'))return;const wrap=document.createElement('div');wrap.id='studyIO';wrap.className='study-io-controls';wrap.innerHTML='<button type="button" id="saveStudy" class="secondary">Guardar estudio</button><button type="button" id="loadStudy" class="secondary">Cargar estudio</button><input id="loadStudyFile" type="file" accept=".json,.mapo.json,.xlsx,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>';heading.appendChild(wrap);$('saveStudy').onclick=saveStudy;$('loadStudy').onclick=()=>$('loadStudyFile').click();$('loadStudyFile').onchange=e=>{const f=e.target.files?.[0];if(f)loadStudyFile(f);e.target.value='';};}
   function init(){addIOControls();const next=$('nextStep'),prev=$('previousStep');if(next)next.onclick=()=>goStep(1);if(prev)prev.onclick=()=>goStep(-1);const change=$('changeStudy');if(change){const old=change.onclick;change.onclick=()=>{clearError();if(typeof old==='function')old();addIOControls();clearError();};}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-  window.MAPOStudyIO={saveStudy,loadStudyFile,captureCurrentStep};
+  window.MAPOStudyIO={saveStudy,loadStudyFile,captureCurrentStep,chooseFormat};
 })();
