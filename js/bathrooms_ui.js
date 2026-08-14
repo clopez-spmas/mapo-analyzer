@@ -35,6 +35,42 @@
       <div class="schedule-preview" id="bath_result_${k}"></div>`;
   }
 
+  function calculatePartialFamb(){
+    read('bath');
+    read('wc');
+    const pmB=(formData.bathTypes||[]).length?meanLocal('bath'):null;
+    const pmWC=(formData.wcTypes||[]).length?meanLocal('wc'):null;
+    const rooms=formData.roomTypes||[];
+    const pmH=rooms.length?meanLocalRoom(rooms):null;
+    const out=document.getElementById('partial_famb');
+    if(!out)return;
+    out.hidden=false;
+    if(pmB===null&&pmWC===null){
+      out.innerHTML='<strong>No se puede calcular todavía.</strong><br>Debe introducir al menos un tipo de baño para higiene o un tipo de baño con WC.';
+      return;
+    }
+    if(pmH===null){
+      const subtotal=(pmB||0)+(pmWC||0);
+      out.innerHTML=`<strong>Cálculo parcial de Famb</strong><br>PMB = ${pmB===null?'Pendiente':pmB.toFixed(2)} · PMWC = ${pmWC===null?'Pendiente':pmWC.toFixed(2)}<br><strong>Subtotal baños = ${subtotal.toFixed(2)}</strong><br><span>Famb completo queda pendiente de PMH (habitaciones). Este cálculo parcial no exige introducir habitaciones.</span>`;
+      return;
+    }
+    const pmamb=pmB+pmWC+pmH;
+    const famb=pmamb<=5.8?.75:pmamb<=11.6?1.25:1.5;
+    out.innerHTML=`<strong>Factor ambiente (Famb) = ${famb.toFixed(2)}</strong><br>PMB = ${pmB.toFixed(2)} · PMWC = ${pmWC.toFixed(2)} · PMH = ${pmH.toFixed(2)} · PMamb = ${pmamb.toFixed(2)}`;
+  }
+
+  function meanLocal(k){
+    const xs=formData[keyFor(k)]||[];let n=0,t=0;
+    xs.forEach(x=>{const u=Number(x.units||0);if(u>0){n+=u;t+=u*fields[k].reduce((s,f)=>s+(x[f[0]]===true?f[2]:0),0);}});
+    return n?t/n:null;
+  }
+
+  function meanLocalRoom(xs){
+    const roomFields=[['between',2],['foot',2],['bedSection',1],['underbed',2],['chairHeight',.5]];let n=0,t=0;
+    xs.forEach(x=>{const u=Number(x.units||0);if(u>0){n+=u;t+=u*roomFields.reduce((s,[f,p])=>s+(x[f]===true?p:0),0);}});
+    return n?t/n:null;
+  }
+
   function renderBathScreen(kind){
     const container=document.getElementById('formContainer');
     const title=titleFor(kind);
@@ -49,9 +85,7 @@
     });
     read(kind);
 
-    if(kind==='wc')document.getElementById('bathPartialFamb').onclick=()=>{
-      try{read('bath');read('wc');const r=window.calculateHospitalizacionFactors(formData),d=r.details||{},out=document.getElementById('partial_famb');out.hidden=false;out.innerHTML=`<strong>Factor ambiente (Famb) = ${r.famb===null?'Pendiente':Number(r.famb).toFixed(2)}</strong><br><span>PMB=${d.pmB===null?'Pendiente':d.pmB.toFixed(2)} · PMWC=${d.pmWC===null?'Pendiente':d.pmWC.toFixed(2)} · PMH=${d.pmH===null?'Pendiente':d.pmH.toFixed(2)}</span>`;}catch(e){const out=document.getElementById('partial_famb');out.hidden=false;out.textContent='No se puede calcular todavía: '+e.message;}
-    };
+    if(kind==='wc')document.getElementById('bathPartialFamb').onclick=calculatePartialFamb;
 
     document.getElementById('previousStep').hidden=currentStep===0;
     document.getElementById('nextStep').hidden=false;
