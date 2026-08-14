@@ -19,7 +19,12 @@
       b.onclick=()=>{try{if(window.MAPOSimulation?.open)window.MAPOSimulation.open();else throw Error('No se ha cargado el módulo de simulación.');}catch(e){alert('No se pudo abrir la simulación: '+e.message);}};heading.appendChild(b);
     }
   }
-  function watch(){const r=$('result');if(!r)return;new MutationObserver(()=>{if(!r.hidden&&lastResult)render();}).observe(r,{attributes:true,childList:true,subtree:true});}
+  function watch(){
+    const r=$('result'); if(!r)return;
+    /* Solo observamos el cambio de visibilidad. Observar el contenido generado por render()
+       provocaba una recursión infinita y podía dejar inactivos los botones. */
+    new MutationObserver(()=>{if(!r.hidden&&lastResult)render();}).observe(r,{attributes:true,attributeFilter:['hidden']});
+  }
   document.addEventListener('DOMContentLoaded',watch);
   window.MAPOResultsUI={render};
 })();
