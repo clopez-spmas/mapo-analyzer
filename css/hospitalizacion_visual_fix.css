@@ -26,13 +26,13 @@
   margin-top: 8px;
 }
 
-/* Sillas de ruedas: evita que el estilo global de label apile checkbox y texto. */
-.mob-table-wrap {
+/* Sillas de ruedas: estos estilos quedan aislados para no modificar la tabla de movilizaciones. */
+.wheelchair-table-wrap {
   overflow-x: auto;
   width: 100%;
 }
 
-.mob-table {
+.wheelchair-table {
   width: 100%;
   min-width: 900px;
   border-collapse: separate;
@@ -40,49 +40,49 @@
   table-layout: fixed;
 }
 
-.mob-table th,
-.mob-table td {
+.wheelchair-table th,
+.wheelchair-table td {
   padding: 10px 8px;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
   text-align: center;
 }
 
-.mob-table th {
+.wheelchair-table th {
   background: #edf2f7;
   color: #2d3748;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.mob-table th:first-child,
-.mob-table td:first-child {
+.wheelchair-table th:first-child,
+.wheelchair-table td:first-child {
   width: 30%;
   text-align: left;
 }
 
-.mob-table th:nth-child(2),
-.mob-table td:nth-child(2) {
+.wheelchair-table th:nth-child(2),
+.wheelchair-table td:nth-child(2) {
   width: 14%;
 }
 
-.mob-table th:nth-child(3),
-.mob-table td:nth-child(3),
-.mob-table th:nth-child(4),
-.mob-table td:nth-child(4),
-.mob-table th:nth-child(5),
-.mob-table td:nth-child(5),
-.mob-table th:nth-child(6),
-.mob-table td:nth-child(6) {
+.wheelchair-table th:nth-child(3),
+.wheelchair-table td:nth-child(3),
+.wheelchair-table th:nth-child(4),
+.wheelchair-table td:nth-child(4),
+.wheelchair-table th:nth-child(5),
+.wheelchair-table td:nth-child(5),
+.wheelchair-table th:nth-child(6),
+.wheelchair-table td:nth-child(6) {
   width: 9%;
 }
 
-.mob-table th:last-child,
-.mob-table td:last-child {
+.wheelchair-table th:last-child,
+.wheelchair-table td:last-child {
   width: 8%;
 }
 
-.mob-table td label {
+.wheelchair-table td label {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
@@ -93,7 +93,7 @@
   white-space: nowrap;
 }
 
-.mob-table .wc-criterion {
+.wheelchair-table .wc-criterion {
   width: 17px;
   height: 17px;
   margin: 0;
@@ -101,18 +101,18 @@
   flex: 0 0 auto;
 }
 
-.mob-table .wc-count {
+.wheelchair-table .wc-count {
   width: 100%;
   min-width: 75px;
   padding: 9px 10px;
 }
 
-.mob-table .wc-score {
+.wheelchair-table .wc-score {
   font-weight: 700;
   text-align: center;
 }
 
-.mob-table .mob-source {
+.wheelchair-table .mob-source {
   display: block;
   margin-top: 3px;
   color: #718096;
@@ -120,7 +120,7 @@
   font-weight: 400;
 }
 
-.mob-table .mob-section td {
+.wheelchair-table .mob-section td {
   padding: 9px 8px;
   background: #f7fafc;
   color: #005a9c;
