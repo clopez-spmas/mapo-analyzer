@@ -1,27 +1,115 @@
-/* MAPO Analyzer — simulación de mejoras. Trabaja sobre una copia y reutiliza el cálculo MAPO existente. */
+/* MAPO Analyzer — simulación de mejoras.
+   IMPORTANTE: módulo independiente. No modifica OCRA ni las fórmulas MAPO existentes.
+   La pantalla trabaja siempre sobre una copia de formData.
+*/
 (function(){
-const $=id=>document.getElementById(id),clone=o=>JSON.parse(JSON.stringify(o??{})),BEST={fs:.5,fa:.5,fc:.75,famb:.75,ff:.75},LABEL={fs:'Factor de elevación (FS)',fa:'Factor de ayudas menores (FA)',fc:'Factor de sillas de ruedas (FC)',famb:'Factor ambiente (Famb)',ff:'Factor formación (FF)'};
-const FIELDS={chair:[['brakes','Frenos inadecuados'],['arms','Reposabrazos inadecuados'],['back','Respaldo inadecuado'],['width','Anchura > 70 cm']],bath:[['space','Espacio insuficiente'],['door','Puerta < 85 cm'],['obstacles','Obstáculos fijos']],wc:[['space','Espacio insuficiente'],['height','Altura WC inadecuada'],['bar','Barra lateral ausente/inadecuada'],['door','Puerta < 85 cm'],['lateral','Espacio lateral < 80 cm']],room:[['between','Espacio cama-cama/pared < 90 cm'],['foot','Espacio libre pies < 120 cm'],['bedSection','Cama inadecuada'],['underbed','Espacio cama-suelo < 15 cm'],['chairHeight','Asiento < 50 cm']]};
-let base=null,sim=null;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const yn=v=>v===true||v==='yes',num=v=>Number(v||0);
-function calc(d){const old=formData;try{formData=d;const f=window.calculateHospitalizacionFactors(d),op=num(d.op),mapo=op>0?((num(d.nc)/op*f.fs)+(num(d.pc)/op*f.fa))*f.fc*f.famb*f.ff:null;return{f,mapo};}finally{formData=old;}}
-function radio(name,v,c){return `<label class="choice"><input type="radio" name="${name}" value="${v}" ${c?'checked':''}> ${v==='yes'?'Sí':'No'}</label>`;}
-function q(id,label){return `<div class="sim-question"><strong>${label}</strong><div class="choice-row">${radio(id,'yes',yn(sim[id]))}${radio(id,'no',sim[id]===false)}</div></div>`;}
-function tasks(){const shifts=['Mañana','Tarde','Noche'];return `<div class="sim-task-list">${MAPO_TASKS.map(t=>`<div class="sim-task"><strong>${esc(t.label)}</strong>${shifts.map((s,i)=>{const r=sim.tasks?.[t.id]?.[i]||{};return `<div class="sim-task-shift"><span>${s}</span><label>Manual<input type="number" min="0" data-st="${t.id}" data-ss="${i}" data-sk="tm" value="${r.tm??0}"></label><label>Con ayuda<input type="number" min="0" data-st="${t.id}" data-ss="${i}" data-sk="ta" value="${r.ta??0}"></label><label>Parcial manual<input type="number" min="0" data-st="${t.id}" data-ss="${i}" data-sk="pm" value="${r.pm??0}"></label><label>Parcial con ayuda<input type="number" min="0" data-st="${t.id}" data-ss="${i}" data-sk="pa" value="${r.pa??0}"></label></div>`}).join('')}</div>`}).join('')}</div>`;}
-function registry(k,title){const key={chair:'wheelchairTypes',bath:'bathTypes',wc:'wcTypes',room:'roomTypes'}[k],xs=sim[key]||[];return `<div class="sim-registry"><h4>${title}</h4>${xs.length?xs.map((x,i)=>`<div class="sim-registry-card"><div class="grid"><label>Descripción<input data-sr="${k}" data-si="${i}" data-sf="description" value="${esc(x.description||'')}"></label><label>Unidades<input type="number" min="0" data-sr="${k}" data-si="${i}" data-sf="units" value="${x.units??0}"></label></div><div class="sim-choice-grid">${FIELDS[k].map(([f,l])=>`<div><strong>${l}</strong><div class="choice-row">${radio(`${k}_${i}_${f}`,'yes',yn(x[f]))}${radio(`${k}_${i}_${f}`,'no',x[f]===false)}</div></div>`).join('')}</div></div>`).join(''):'<p>No hay registros que modificar.</p>'}</div>`;}
-function factor(k,f){let h=`<div class="simulation-factor"><div class="simulation-factor-head"><h3>${LABEL[k]}</h3><span>Actual: <b>${Number(f[k]).toFixed(2)}</b> · Mejor: <b>${BEST[k].toFixed(2)}</b></span></div>`;
-if(k==='fs')h+=q('fs_elevadores','¿Hay al menos 1 elevador utilizable por cada 8 pacientes NC?')+q('fs_camillas','¿Hay al menos 1 camilla regulable por cada 8 pacientes NC con los elementos requeridos?')+q('fs_camas3','¿Las camas regulables en altura con 3 nodos están disponibles para el 100%?')+`<details><summary>Modificar las tareas y su uso de ayudas</summary>${tasks()}</details>`;
-if(k==='fa')h+=q('fa_sabana','¿Hay sábana o tabla deslizante disponible?')+q('fa_dos','¿Hay al menos dos de las otras ayudas menores?')+q('fa_camas3','¿Todas las camas son regulables en altura y tienen 3 nodos?')+`<details><summary>Modificar las tareas y su uso de ayudas</summary>${tasks()}</details>`;
-if(k==='fc')h+=registry('chair','Tipos de sillas de ruedas y características');
-if(k==='famb')h+=registry('bath','Baños para higiene (PMB)')+registry('wc','Baños con WC (PMWC)')+registry('room','Habitaciones (PMH)');
-if(k==='ff')h+=q('ff_curso','¿La formación fue un curso teórico-práctico adecuado de al menos 6 horas?')+`<div class="sim-question"><strong>Porcentaje de plantilla cubierta</strong><input type="number" min="0" max="100" data-sfield="ff_cobertura" value="${sim.ff_cobertura??0}"> %</div>`+q('ff_antiguedad','¿La formación se realizó hace menos de 2 años?')+q('ff_eficacia','Si tiene más de 2 años, ¿se ha verificado su eficacia?')+q('ff_informacion','Si no existe curso adecuado, ¿se realizó información/adiestramiento al 90% y se verificó su eficacia?');
-return h+'</div>';}
-function sync(){document.querySelectorAll('#mapoSimulation input[type=radio]').forEach(r=>{if(!r.checked)return;const p=r.name.split('_'),k=p[0];const key={chair:'wheelchairTypes',bath:'bathTypes',wc:'wcTypes',room:'roomTypes'}[k];if(key&&/^\d+$/.test(p[1])){sim[key]??=[];sim[key][+p[1]]??={};sim[key][+p[1]][p.slice(2).join('_')]=r.value==='yes';}else sim[r.name]=r.value==='yes';});document.querySelectorAll('[data-sfield]').forEach(e=>sim[e.dataset.sfield]=Number(e.value||0));document.querySelectorAll('[data-sr]').forEach(e=>{const key={chair:'wheelchairTypes',bath:'bathTypes',wc:'wcTypes',room:'roomTypes'}[e.dataset.sr];sim[key]??=[];sim[key][+e.dataset.si]??={};sim[key][+e.dataset.si][e.dataset.sf]=e.type==='number'?Number(e.value||0):e.value;});document.querySelectorAll('[data-st]').forEach(e=>{sim.tasks??={};sim.tasks[e.dataset.st]??={};sim.tasks[e.dataset.st][+e.dataset.ss]??={};sim.tasks[e.dataset.st][+e.dataset.ss][e.dataset.sk]=Number(e.value||0);});}
-function render(){const host=$('mapoSimulation');if(!host)return;const {f,mapo}=calc(sim),keys=['fs','fa','fc','famb','ff'].filter(k=>Number.isFinite(Number(f[k]))&&Number(f[k])>BEST[k]);let h=`<div class="section-heading"><div><h2>Simulación de mejora del índice MAPO</h2><p>Se trabaja sobre una <strong>copia</strong>. El estudio original no se modifica.</p></div><button id="closeMapoSimulation" class="secondary">Cerrar simulación</button></div><div class="simulation-summary"><strong>MAPO actual:</strong> ${lastResult?.mapo==null?'—':Number(lastResult.mapo).toFixed(2)} → <strong>MAPO simulado:</strong> <span class="sim-score">${mapo==null?'—':Number(mapo).toFixed(2)}</span><p>Solo aparecen los factores que no están en su mejor valor posible.</p></div>`;h+=keys.length?keys.map(k=>factor(k,f)).join(''):'<div class="schedule-preview"><strong>Todos los factores están en su mejor valor posible.</strong></div>';h+=`<div class="actions"><button id="recalcMapoSimulation">Recalcular simulación</button><button id="resetMapoSimulation" class="secondary">Restablecer</button></div>`;host.innerHTML=h;bind();}
-function bind(){document.querySelectorAll('#mapoSimulation input').forEach(e=>e.addEventListener('change',()=>{sync();render();}));$('recalcMapoSimulation')?.addEventListener('click',()=>{sync();render();});$('resetMapoSimulation')?.addEventListener('click',()=>{sim=clone(base);render();});$('closeMapoSimulation')?.addEventListener('click',close);}
-function open(){if(selectedStudy!=='hospitalizacion'){alert('La simulación está disponible actualmente para Salas de hospitalización.');return;}base=clone(formData);sim=clone(formData);$('mapoSimulation').hidden=false;render();$('mapoSimulation').scrollIntoView({behavior:'smooth',block:'start'});}
-function close(){$('mapoSimulation').hidden=true;}
-function addButton(){const r=$('result');if(!r||$('openMapoSimulation'))return;const b=document.createElement('button');b.id='openMapoSimulation';b.type='button';b.className='secondary';b.textContent='Simular mejoras del índice MAPO';b.onclick=open;r.querySelector('.section-heading')?.appendChild(b);}
-window.MAPOSimulation={open,close};document.addEventListener('DOMContentLoaded',()=>{const r=$('result');if(r)new MutationObserver(()=>{if(!r.hidden)addButton();}).observe(r,{attributes:true});});
+  'use strict';
+
+  var baseData = null;
+  var simulationData = null;
+  var BEST = { fs:0.5, fa:0.5, fc:0.75, famb:0.75, ff:0.75 };
+  var LABEL = { fs:'FS — Elevación', fa:'FA — Ayudas menores', fc:'FC — Sillas de ruedas', famb:'Famb — Ambiente', ff:'FF — Formación' };
+
+  function clone(value){
+    try { return JSON.parse(JSON.stringify(value || {})); }
+    catch(e){ return {}; }
+  }
+
+  function get(id){ return document.getElementById(id); }
+
+  function getFactors(data){
+    try {
+      if(typeof window.calculateHospitalizacionFactors === 'function'){
+        return window.calculateHospitalizacionFactors(data) || {};
+      }
+    } catch(e){ console.error('MAPO simulación: cálculo de factores', e); }
+    return {
+      fs:Number(data && data.fs) || 0,
+      fa:Number(data && data.fa) || 0,
+      fc:Number(data && data.fc) || 0,
+      famb:Number(data && data.famb) || 0,
+      ff:Number(data && data.ff) || 0
+    };
+  }
+
+  function getMapo(data, factors){
+    var op=Number(data && data.op) || 0;
+    var nc=Number(data && data.nc) || 0;
+    var pc=Number(data && data.pc) || 0;
+    if(!op) return null;
+    return ((nc/op*Number(factors.fs||0))+(pc/op*Number(factors.fa||0))) * Number(factors.fc||0) * Number(factors.famb||0) * Number(factors.ff||0);
+  }
+
+  function factorCard(key,value){
+    var best=BEST[key];
+    var current=Number(value);
+    var improved=current>best;
+    return '<div class="simulation-factor">'+
+      '<div class="simulation-factor-head"><h3>'+LABEL[key]+'</h3><span>Actual: <b>'+current.toFixed(2)+'</b> · Mejor: <b>'+best.toFixed(2)+'</b></span></div>'+
+      '<p>'+ (improved ? 'Este factor no está en su mejor valor. Puede estudiarse una mejora.' : 'Este factor ya está en su mejor valor.') +'</p>'+
+      '<label>Valor simulado <input type="number" step="0.01" min="0" value="'+current.toFixed(2)+'" data-sim-factor="'+key+'"></label>'+
+      '</div>';
+  }
+
+  function calculateSimulation(){
+    var factors=getFactors(simulationData);
+    var inputs=document.querySelectorAll('#mapoSimulation [data-sim-factor]');
+    inputs.forEach(function(input){
+      var key=input.getAttribute('data-sim-factor');
+      var value=Number(input.value);
+      if(isFinite(value)) factors[key]=value;
+    });
+    return { factors:factors, mapo:getMapo(simulationData,factors) };
+  }
+
+  function render(){
+    var host=get('mapoSimulation');
+    if(!host) throw new Error('No existe la pantalla de simulación.');
+
+    var factors=getFactors(simulationData);
+    var result=calculateSimulation();
+    var currentMapo=getMapo(baseData,getFactors(baseData));
+    var keys=['fs','fa','fc','famb','ff'];
+    var html='<div class="section-heading"><div><h2>Simulación de mejora del índice MAPO</h2><p>La simulación se realiza sobre una copia. El estudio original no se modifica.</p></div><button type="button" id="closeMapoSimulation" class="secondary">Cerrar simulación</button></div>';
+    html+='<div class="simulation-summary"><strong>MAPO actual:</strong> '+(currentMapo==null?'—':currentMapo.toFixed(2))+' &nbsp;→&nbsp; <strong>MAPO simulado:</strong> <span class="sim-score">'+(result.mapo==null?'—':result.mapo.toFixed(2))+'</span></div>';
+    html+='<p>Modifique los valores de los factores para comprobar el efecto de una posible mejora. El estudio original permanece intacto.</p>';
+    keys.forEach(function(key){ if(Number(factors[key])>BEST[key]) html+=factorCard(key,factors[key]); });
+    html+='<div class="actions"><button type="button" id="recalcMapoSimulation">Recalcular simulación</button><button type="button" id="resetMapoSimulation" class="secondary">Restablecer</button></div>';
+    host.innerHTML=html;
+    host.hidden=false;
+
+    get('closeMapoSimulation').onclick=close;
+    get('recalcMapoSimulation').onclick=function(){
+      var inputs=host.querySelectorAll('[data-sim-factor]');
+      inputs.forEach(function(input){ var key=input.getAttribute('data-sim-factor'); simulationData[key]=Number(input.value); });
+      render();
+    };
+    get('resetMapoSimulation').onclick=function(){ simulationData=clone(baseData); render(); };
+    host.querySelectorAll('[data-sim-factor]').forEach(function(input){
+      input.addEventListener('input',function(){
+        var factors=getFactors(simulationData);
+        var mapo=getMapo(simulationData,factors);
+        var score=host.querySelector('.sim-score');
+        if(score && mapo!=null) score.textContent=mapo.toFixed(2);
+      });
+    });
+    host.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function open(){
+    var host=get('mapoSimulation');
+    try{
+      if(typeof formData === 'undefined') throw new Error('No hay datos del estudio disponibles.');
+      baseData=clone(formData);
+      simulationData=clone(formData);
+      render();
+    }catch(error){
+      console.error('MAPO simulación:',error);
+      if(host){ host.hidden=false; host.innerHTML='<div class="error"><strong>No se ha podido abrir la simulación.</strong><br>'+String(error.message||error)+'</div>'; host.scrollIntoView({behavior:'smooth',block:'start'}); }
+    }
+  }
+
+  function close(){ var host=get('mapoSimulation'); if(host) host.hidden=true; }
+
+  window.MAPOSimulation={open:open,close:close};
 })();
