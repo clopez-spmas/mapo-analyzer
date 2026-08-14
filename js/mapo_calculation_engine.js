@@ -1,13 +1,40 @@
 /* MAPO Analyzer — motor único de cálculo de factores de hospitalización.
    Recibe siempre los datos que se quieren evaluar. No depende de formData.
-   Mantiene exactamente el modelo de movilizaciones utilizado por el formulario:
-   tasks es la fuente de ST/LTA/SP/LPA; customTasks no altera esos totales. */
+   La fuente canónica de movilizaciones es mobilizations.entries, que es la estructura
+   utilizada por la pantalla de movilizaciones. tasks se mantiene como compatibilidad
+   con estudios antiguos. */
 (function(){
   'use strict';
   function yn(v){ return v===true || v==='yes'; }
   function num(v){ return Number(v||0); }
 
+  function normalizeEntries(entries){
+    const result={};
+    if(!entries || typeof entries!=='object') return result;
+    Object.entries(entries).forEach(([id,e])=>{
+      if(!e || typeof e!=='object') return;
+      result[id]={
+        manualTotal:Array.isArray(e.manualTotal)?e.manualTotal.reduce((a,v)=>a+num(v),0):num(e.manualTotal),
+        aidedTotal:Array.isArray(e.aidedTotal)?e.aidedTotal.reduce((a,v)=>a+num(v),0):num(e.aidedTotal),
+        manualPartial:Array.isArray(e.manualPartial)?e.manualPartial.reduce((a,v)=>a+num(v),0):num(e.manualPartial),
+        aidedPartial:Array.isArray(e.aidedPartial)?e.aidedPartial.reduce((a,v)=>a+num(v),0):num(e.aidedPartial)
+      };
+    });
+    return result;
+  }
+
+  function entriesHaveData(entries){
+    return Object.values(entries).some(e=>
+      num(e.manualTotal)+num(e.aidedTotal)+num(e.manualPartial)+num(e.aidedPartial)>0
+    );
+  }
+
   function taskEntries(data){
+    /* Fuente canónica: la pantalla de movilizaciones guarda aquí los datos reales. */
+    const mobilizationEntries=normalizeEntries(data?.mobilizations?.entries);
+    if(entriesHaveData(mobilizationEntries)) return mobilizationEntries;
+
+    /* Compatibilidad con estudios antiguos que todavía contienen tasks. */
     const tasks=data?.tasks;
     if(tasks && typeof tasks==='object' && Object.keys(tasks).length){
       const result={};
@@ -16,8 +43,6 @@
         if(Array.isArray(shifts)){
           shifts.forEach(r=>{tm+=num(r?.tm);ta+=num(r?.ta);pm+=num(r?.pm);pa+=num(r?.pa);});
         }else if(shifts && typeof shifts==='object'){
-          /* Formato normal: {0:{tm,ta,pm,pa},1:{...},2:{...}}.
-             También admitimos una tarea plana {tm,ta,pm,pa}. */
           if(['tm','ta','pm','pa'].some(k=>Object.prototype.hasOwnProperty.call(shifts,k))){
             tm=num(shifts.tm);ta=num(shifts.ta);pm=num(shifts.pm);pa=num(shifts.pa);
           }else{
@@ -28,9 +53,7 @@
       });
       return result;
     }
-    const entries=data?.mobilizations?.entries;
-    if(entries && typeof entries==='object')return entries;
-    return {};
+    return mobilizationEntries;
   }
 
   function rawMobilizationTotals(data){
