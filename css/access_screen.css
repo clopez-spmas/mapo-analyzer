@@ -1,0 +1,183 @@
+/* MAPO Analyzer — pantalla de acceso */
+
+body:has(#accessScreen:not([hidden])) {
+  background: #eef2f7;
+}
+
+body:has(#accessScreen:not([hidden])) .header {
+  display: none;
+}
+
+.access-screen {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  margin-top: 20px;
+  box-shadow: 0 8px 28px rgba(45,55,72,.12);
+}
+
+.access-hero {
+  background: linear-gradient(135deg, #245982 0%, #3179b8 100%);
+  color: #fff;
+  text-align: center;
+  padding: 44px 34px 42px;
+}
+
+.access-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.13);
+  font-size: .86rem;
+  margin-bottom: 16px;
+}
+
+.access-hero h1 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  line-height: 1.1;
+}
+
+.access-hero p {
+  max-width: 700px;
+  margin: 0 auto;
+  color: rgba(255,255,255,.94);
+  line-height: 1.55;
+  font-size: 1.02rem;
+}
+
+.access-content {
+  background: #fff;
+  text-align: center;
+  padding: 38px 42px 34px;
+}
+
+.access-content h2 {
+  margin: 0 0 12px;
+  color: #245982;
+  font-size: 1.55rem;
+}
+
+.access-intro {
+  max-width: 760px;
+  margin: 0 auto 28px;
+  color: #526477;
+  line-height: 1.6;
+}
+
+.access-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 820px;
+  margin: 0 auto 30px;
+}
+
+.access-feature {
+  min-height: 132px;
+  padding: 20px 16px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.access-feature-icon {
+  display: block;
+  font-size: 1.65rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.access-feature strong {
+  display: block;
+  color: #1f2d3d;
+  margin-bottom: 7px;
+}
+
+.access-feature span {
+  display: block;
+  color: #63758a;
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.access-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.access-actions #enterProgram,
+.access-actions .access-button {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 10px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.access-actions #enterProgram {
+  background: #245982;
+  box-shadow: 0 5px 14px rgba(36,89,130,.22);
+}
+
+.access-actions #enterProgram:hover {
+  background: #1b4769;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 17px rgba(36,89,130,.27);
+}
+
+.access-actions .access-button.secondary {
+  background: #fff;
+  color: #245982;
+  border: 2px solid #245982;
+}
+
+.access-actions .access-button.secondary:hover {
+  background: #f3f7fb;
+}
+
+.access-footer {
+  max-width: 800px;
+  margin: 30px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid #dbe4ee;
+  color: #63758a;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.access-footer strong {
+  color: #43566a;
+}
+
+@media (max-width: 720px) {
+  .access-screen {
+    margin-top: 10px;
+    border-radius: 12px;
+  }
+
+  .access-hero {
+    padding: 34px 22px 32px;
+  }
+
+  .access-content {
+    padding: 30px 20px 28px;
+  }
+
+  .access-features {
+    grid-template-columns: 1fr;
+  }
+}
