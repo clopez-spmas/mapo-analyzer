@@ -1,0 +1,135 @@
+/* Ajustes visuales de Hospitalización: pacientes y sillas de ruedas. */
+
+/* Pacientes: alinea los campos de número en las cuatro tarjetas aunque el texto descriptivo tenga distinta longitud. */
+.patient-list {
+  align-items: stretch;
+}
+
+.patient-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.patient-card > p {
+  line-height: 1.45;
+  margin-top: 8px;
+  margin-bottom: 18px;
+}
+
+.patient-card > label {
+  margin-top: auto;
+}
+
+.patient-card .patient-count {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Sillas de ruedas: evita que el estilo global de label apile checkbox y texto. */
+.mob-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.mob-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.mob-table th,
+.mob-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.mob-table th {
+  background: #edf2f7;
+  color: #2d3748;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mob-table th:first-child,
+.mob-table td:first-child {
+  width: 30%;
+  text-align: left;
+}
+
+.mob-table th:nth-child(2),
+.mob-table td:nth-child(2) {
+  width: 14%;
+}
+
+.mob-table th:nth-child(3),
+.mob-table td:nth-child(3),
+.mob-table th:nth-child(4),
+.mob-table td:nth-child(4),
+.mob-table th:nth-child(5),
+.mob-table td:nth-child(5),
+.mob-table th:nth-child(6),
+.mob-table td:nth-child(6) {
+  width: 9%;
+}
+
+.mob-table th:last-child,
+.mob-table td:last-child {
+  width: 8%;
+}
+
+.mob-table td label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mob-table .wc-criterion {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.mob-table .wc-count {
+  width: 100%;
+  min-width: 75px;
+  padding: 9px 10px;
+}
+
+.mob-table .wc-score {
+  font-weight: 700;
+  text-align: center;
+}
+
+.mob-table .mob-source {
+  display: block;
+  margin-top: 3px;
+  color: #718096;
+  font-size: .8rem;
+  font-weight: 400;
+}
+
+.mob-table .mob-section td {
+  padding: 9px 8px;
+  background: #f7fafc;
+  color: #005a9c;
+  font-weight: 700;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .patient-list {
+    grid-template-columns: 1fr;
+  }
+}
