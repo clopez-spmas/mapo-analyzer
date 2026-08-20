@@ -3,28 +3,281 @@
 'use strict';
 const INITIAL=5,MAX_CUSTOM_DAYS=7;
 const ALL_DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-const DAY_OPTIONS={weekdays:{label:'Lunes a viernes',days:['Lunes','Martes','Miércoles','Jueves','Viernes']},weekend:{label:'Sábado y domingo',days:['Sábado','Domingo']},longshort:{label:'Semana larga/semana corta',days:[...ALL_DAYS]}};
+const DAY_OPTIONS={
+  weekdays:{label:'Lunes a viernes',days:['Lunes','Martes','Miércoles','Jueves','Viernes']},
+  weekend:{label:'Sábado y domingo',days:['Sábado','Domingo']},
+  longshort:{label:'Semana larga/semana corta',days:[...ALL_DAYS]}
+};
 const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const defaultDays=()=>({type:'weekdays',selected:[...DAY_OPTIONS.weekdays.days]});
-function normalizeDays(r){if(!r.daysWorked)r.daysWorked=defaultDays();if(!Array.isArray(r.daysWorked.selected))r.daysWorked.selected=[...DAY_OPTIONS.weekdays.days];if(r.daysWorked.type==='longweek'||r.daysWorked.type==='shortweek')r.daysWorked={type:'longshort',selected:[...ALL_DAYS]};if(r.daysWorked.type!=='custom'&&!DAY_OPTIONS[r.daysWorked.type])r.daysWorked.type='weekdays';r.daysWorked.selected=r.daysWorked.selected.slice(0,MAX_CUSTOM_DAYS);return r.daysWorked;}
-const dayFactor=r=>normalizeDays(r).selected.length/7;
-const dayLabel=r=>{const d=normalizeDays(r);return d.type==='custom'?(d.selected.length?d.selected.join(', '):'Sin días seleccionados'):(DAY_OPTIONS[d.type]?.label||'Lunes a viernes');};
-function state(){window.formData=window.formData||{};const s=window.formData.workerSchedule=window.formData.workerSchedule||{};s.page=s.page||'full';s.mode=s.mode||'manual';s.full=Array.isArray(s.full)?s.full:[];s.partial=Array.isArray(s.partial)?s.partial:[];s.shifts=s.shifts||{morning:{start:'06:00',end:'14:00'},afternoon:{start:'14:00',end:'22:00'},night:{start:'22:00',end:'06:00'}};if(!s.full.length)for(let i=0;i<INITIAL;i++)s.full.push({start:'',end:'',people:'',label:'',daysWorked:defaultDays()});if(!s.partial.length)for(let i=0;i<INITIAL;i++)s.partial.push({start:'',end:'',people:'',reference:0,label:'',daysWorked:defaultDays()});s.full.forEach(normalizeDays);s.partial.forEach(normalizeDays);return s;}
-function mins(t){if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(t||''))throw Error('Hora no válida. Use formato 24 h (HH:MM).');const [h,m]=t.split(':').map(Number);return h*60+m;}
-function dur(a,b){let x=mins(a),y=mins(b);if(y<=x)y+=1440;return y-x;}
-function overlap(a,b,c,d){let s=mins(a),e=mins(b),p=mins(c),q=mins(d);if(e<=s)e+=1440;if(q<=p)q+=1440;let best=0;for(const z of [-1440,0,1440])best=Math.max(best,Math.max(0,Math.min(e,q+z)-Math.max(s,p+z)));return best;}
-function saveInputs(){const s=state();document.querySelectorAll('[data-v3-t]').forEach(e=>{const a=s[e.dataset.v3T],i=Number(e.dataset.v3I),f=e.dataset.v3F;a[i]??={};a[i][f]=e.type==='number'?(e.value===''?'':Number(e.value)):e.value;});}
-function reference(rows){let best=0;rows.forEach((r,i)=>{if(dur(r.start,r.end)>dur(rows[best].start,rows[best].end))best=i;});return best;}
-function calculate(){const s=state(),full=s.full.filter(r=>r.start&&r.end&&Number(r.people)>0),partial=s.partial.filter(r=>r.start&&r.end&&Number(r.people)>0);const A=full.reduce((x,r)=>x+Number(r.people)*dayFactor(r),0);const ref=full.length?reference(full):-1;const rh=ref>=0?dur(full[ref].start,full[ref].end):0;const D=partial.reduce((x,r)=>x+(rh?Number(r.people)*(dur(r.start,r.end)/rh)*dayFactor(r):0),0);const rows=[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].map(([name,key])=>{const sh=s.shifts[key];const calc=arr=>arr.reduce((x,r)=>{const h=dur(r.start,r.end);return x+Number(r.people)*dayFactor(r)*overlap(r.start,r.end,sh.start,sh.end)/h;},0);const fp=calc(full),pp=calc(partial);return{name,key,fullPresent:fp,partialPresent:pp,totalPresent:fp+pp,op:fp+pp};});return{A,D,OP:A+D,rows,reference:ref};}
-function ensureDialog(){let d=document.getElementById('daysDialog');if(!d){d=document.createElement('div');d.id='daysDialog';d.className='mapo-days-dialog';d.hidden=true;document.body.appendChild(d);}if(!document.getElementById('mapoDaysDialogStyle')){const st=document.createElement('style');st.id='mapoDaysDialogStyle';st.textContent='.mapo-days-dialog{position:fixed;inset:0;z-index:2147483000}.mapo-days-dialog[hidden]{display:none!important}.mapo-days-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.mapo-days-modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 32px));background:#fff;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.mapo-days-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.mapo-days-list label{padding:9px;border:1px solid #ddd;border-radius:8px}.mapo-days-actions{display:flex;justify-content:flex-end;gap:10px}.mapo-days-presets{display:flex;flex-wrap:wrap;gap:8px}.mapo-days-dialog button{cursor:pointer}';document.head.appendChild(st);}return d;}
-function openDaysDialog(index){saveInputs();const s=state(),arr=s.page==='partial'?s.partial:s.full,r=arr[index];if(!r)return;normalizeDays(r);const d=ensureDialog();d.dataset.index=String(index);d.hidden=false;d.innerHTML=`<div class="mapo-days-backdrop" data-days-close></div><div class="mapo-days-modal" role="dialog" aria-modal="true" aria-labelledby="mapoDaysTitle"><h3 id="mapoDaysTitle">Días trabajados</h3><p>Seleccione los días en los que trabaja este horario.</p><div class="mapo-days-presets"><button type="button" data-preset="weekdays">Lunes a viernes</button><button type="button" data-preset="weekend">Sábado y domingo</button><button type="button" data-preset="longshort">Semana larga/semana corta</button><button type="button" data-preset="custom">Personalizado</button></div><div class="mapo-days-list">${ALL_DAYS.map((day,i)=>`<label><input type="checkbox" data-day="${i}" ${r.daysWorked.selected.includes(day)?'checked':''}> ${day}</label>`).join('')}</div><div class="mapo-days-actions"><button type="button" class="secondary" data-days-close>Cancelar</button><button type="button" data-days-save>Guardar días</button></div></div>`;}
-function closeDaysDialog(){const d=document.getElementById('daysDialog');if(d){d.hidden=true;d.innerHTML='';d.dataset.index='';}}
-function saveDaysDialog(){const d=document.getElementById('daysDialog');if(!d)return;const index=Number(d.dataset.index);const s=state(),arr=s.page==='partial'?s.partial:s.full,r=arr[index];if(!r)return;const checks=[...d.querySelectorAll('[data-day]')],selected=checks.filter(c=>c.checked).map(c=>ALL_DAYS[Number(c.dataset.day)]);if(!selected.length){alert('Seleccione al menos un día trabajado.');return;}r.daysWorked={type:selected.length===5&&selected.every(x=>DAY_OPTIONS.weekdays.days.includes(x))?'weekdays':selected.length===2&&selected.every(x=>DAY_OPTIONS.weekend.days.includes(x))?'weekend':selected.length===7?'longshort':'custom',selected};closeDaysDialog();render();}
-function applyPreset(preset){const d=document.getElementById('daysDialog');if(!d)return;const days=preset==='weekdays'?DAY_OPTIONS.weekdays.days:preset==='weekend'?DAY_OPTIONS.weekend.days:preset==='longshort'?ALL_DAYS:[];d.querySelectorAll('[data-day]').forEach((c,i)=>c.checked=days.includes(ALL_DAYS[i]));}
-function removeSchedule(index){saveInputs();const s=state(),arr=s.page==='partial'?s.partial:s.full;if(index<0||index>=arr.length)return;if(arr.length<=1){arr[0]={start:'',end:'',people:'',label:'',daysWorked:defaultDays()};}else{arr.splice(index,1);}render();}
-function render(){const s=state(),host=document.getElementById('formContainer');if(!host)return;host.innerHTML=`<div class="step-title-row"><h3>Personas trabajadoras que realizan MMP</h3></div><div class="subnav"><button type="button" class="subnav-btn ${s.page==='full'?'active':''}" data-v3-page="full">Jornada completa</button><button type="button" class="subnav-btn ${s.page==='partial'?'active':''}" data-v3-page="partial">Horario parcial</button></div><div id="workerV3Page"></div><div id="workerV3Results"></div>`;renderPage();renderResults();bind();}
-function renderPage(){const s=state(),h=document.getElementById('workerV3Page'),arr=s.page==='partial'?s.partial:s.full;h.innerHTML=`<div class="worker-subpage"><h3>${s.page==='partial'?'Horarios parciales':'Horarios de jornada completa'}</h3><p>Introduzca entrada, salida, personas y días trabajados.</p>${arr.map((r,i)=>`<div class="registry-card worker-row"><div class="grid"><label>Hora de entrada<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="start" type="time" value="${esc(r.start)}"></label><label>Hora de salida<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="end" type="time" value="${esc(r.end)}"></label><label>Personas<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="people" type="number" min="0" step="1" value="${esc(r.people)}"></label><label>Días trabajados<button type="button" class="secondary" data-days-index="${i}">${esc(dayLabel(r))}</button></label></div><div class="worker-row-actions"><button type="button" class="secondary worker-delete" data-delete-index="${i}" aria-label="Eliminar este horario">Eliminar horario</button></div></div>`).join('')}</div>`;}
-function renderResults(){const b=document.getElementById('workerV3Results');if(!b)return;const r=calculate();b.innerHTML=`<table><thead><tr><th>Turno</th><th>Entrada</th><th>Salida</th><th>Jornada completa</th><th>Horario parcial</th><th>Personas presentes</th><th>OP</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${x.name}</td><td>${esc(state().shifts[x.key].start)}</td><td>${esc(state().shifts[x.key].end)}</td><td>${x.fullPresent.toFixed(3)}</td><td>${x.partialPresent.toFixed(3)}</td><td><strong>${x.totalPresent.toFixed(3)}</strong></td><td>${x.op.toFixed(3)}</td></tr>`).join('')}</tbody></table><p><strong>A:</strong> ${r.A.toFixed(3)} · <strong>D:</strong> ${r.D.toFixed(3)} · <strong>OP:</strong> ${r.OP.toFixed(3)}</p>`;window.formData.op=r.OP;window.formData.opByShift={};window.formData.presenceByShift={};r.rows.forEach(x=>{window.formData.opByShift[x.key]=x.op;window.formData.presenceByShift[x.key]=x.totalPresent;});}
-function bind(){const root=document.getElementById('formContainer');if(!root)return;if(root.dataset.workerBound!=='1'){root.dataset.workerBound='1';root.addEventListener('click',e=>{const page=e.target.closest('[data-v3-page]');if(page){saveInputs();state().page=page.dataset.v3Page;render();return;}const days=e.target.closest('[data-days-index]');if(days){e.preventDefault();e.stopPropagation();openDaysDialog(Number(days.dataset.daysIndex));return;}const del=e.target.closest('[data-delete-index]');if(del){e.preventDefault();e.stopPropagation();removeSchedule(Number(del.dataset.deleteIndex));return;}});root.addEventListener('input',e=>{if(e.target.matches('[data-v3-t]')){saveInputs();renderResults();}});}if(!document.body.dataset.mapoDaysBound){document.body.dataset.mapoDaysBound='1';document.body.addEventListener('click',e=>{const close=e.target.closest('[data-days-close]');if(close){closeDaysDialog();return;}const save=e.target.closest('[data-days-save]');if(save){saveDaysDialog();return;}const preset=e.target.closest('[data-preset]');if(preset){applyPreset(preset.dataset.preset);return;}});}}
-window.renderWorkerScheduleV3=render;window.saveWorkerScheduleV3=function(){saveInputs();return calculate();};window.mapoScheduleCanonical={calculate,render};
+
+/*
+ * La modalidad semana larga/semana corta representa cobertura del horario
+ * durante los 7 días de la semana. La alternancia A-B / B-A se refiere a
+ * qué trabajador concreto realiza cada semana, no a una reducción de la
+ * presencia del horario. Por ello su factor semanal es 7/7 = 1.
+ */
+function normalizeDays(r){
+  if(!r.daysWorked)r.daysWorked=defaultDays();
+  if(!Array.isArray(r.daysWorked.selected))r.daysWorked.selected=[...DAY_OPTIONS.weekdays.days];
+  if(r.daysWorked.type==='longweek'||r.daysWorked.type==='shortweek'){
+    r.daysWorked={type:'longshort',selected:[...ALL_DAYS]};
+  }
+  if(r.daysWorked.type!=='custom'&&!DAY_OPTIONS[r.daysWorked.type])r.daysWorked.type='weekdays';
+  r.daysWorked.selected=r.daysWorked.selected.slice(0,MAX_CUSTOM_DAYS);
+  return r.daysWorked;
+}
+
+function dayFactor(r){
+  const d=normalizeDays(r);
+  if(d.type==='longshort')return 1; // cobertura los 7 días
+  return d.selected.length/7;
+}
+
+const dayLabel=r=>{
+  const d=normalizeDays(r);
+  return d.type==='custom'?(d.selected.length?d.selected.join(', '):'Sin días seleccionados'):(DAY_OPTIONS[d.type]?.label||'Lunes a viernes');
+};
+
+function state(){
+  window.formData=window.formData||{};
+  const s=window.formData.workerSchedule=window.formData.workerSchedule||{};
+  s.page=s.page||'full';
+  s.mode=s.mode||'manual';
+  s.full=Array.isArray(s.full)?s.full:[];
+  s.partial=Array.isArray(s.partial)?s.partial:[];
+  s.shifts=s.shifts||{morning:{start:'06:00',end:'14:00'},afternoon:{start:'14:00',end:'22:00'},night:{start:'22:00',end:'06:00'}};
+  if(!s.full.length)for(let i=0;i<INITIAL;i++)s.full.push({start:'',end:'',people:'',label:'',daysWorked:defaultDays()});
+  if(!s.partial.length)for(let i=0;i<INITIAL;i++)s.partial.push({start:'',end:'',people:'',reference:0,label:'',daysWorked:defaultDays()});
+  s.full.forEach(normalizeDays);
+  s.partial.forEach(normalizeDays);
+  return s;
+}
+
+function mins(t){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(t||''))throw Error('Hora no válida. Use formato 24 h (HH:MM).');
+  const [h,m]=t.split(':').map(Number);
+  return h*60+m;
+}
+
+/* Duración de un horario, admitiendo salida al día siguiente. */
+function dur(a,b){
+  let x=mins(a),y=mins(b);
+  if(y<=x)y+=1440;
+  return y-x;
+}
+
+/*
+ * Solape real entre dos intervalos de hasta 24 h.
+ * Se prueban desplazamientos de ±24 h para que los turnos nocturnos y los
+ * horarios que atraviesan medianoche se asignen al turno correcto.
+ */
+function overlap(a,b,c,d){
+  let s=mins(a),e=mins(b),p=mins(c),q=mins(d);
+  if(e<=s)e+=1440;
+  if(q<=p)q+=1440;
+  let best=0;
+  for(const z of [-1440,0,1440])best=Math.max(best,Math.max(0,Math.min(e,q+z)-Math.max(s,p+z)));
+  return best;
+}
+
+function saveInputs(){
+  const s=state();
+  document.querySelectorAll('[data-v3-t]').forEach(e=>{
+    const a=s[e.dataset.v3T],i=Number(e.dataset.v3I),f=e.dataset.v3F;
+    a[i]??={};
+    a[i][f]=e.type==='number'?(e.value===''?'':Number(e.value)):e.value;
+  });
+}
+
+function reference(rows){
+  let best=0;
+  rows.forEach((r,i)=>{if(dur(r.start,r.end)>dur(rows[best].start,rows[best].end))best=i;});
+  return best;
+}
+
+/*
+ * Contribución de un horario a la presencia global.
+ * Jornada completa: 1 unidad de presencia por persona y día ponderado.
+ * Parcial: sus horas reales se expresan respecto de la jornada completa
+ * de referencia, conservando además su ponderación de días.
+ */
+function fullContribution(r){
+  return Number(r.people)*dayFactor(r);
+}
+
+function partialContribution(r,referenceHours){
+  if(!referenceHours)return 0;
+  return Number(r.people)*(dur(r.start,r.end)/referenceHours)*dayFactor(r);
+}
+
+/* Presencia de un horario dentro de un turno concreto. */
+function scheduleTurnContribution(r,turn,referenceHours,isPartial){
+  const h=dur(r.start,r.end);
+  if(!h)return 0;
+  const timeShare=overlap(r.start,r.end,turn.start,turn.end)/h;
+  const base=isPartial?partialContribution(r,referenceHours):fullContribution(r);
+  return base*timeShare;
+}
+
+/*
+ * Única base matemática del cálculo:
+ * - A = presencia equivalente de jornadas completas.
+ * - D = presencia equivalente de horarios parciales.
+ * - OP = A + D.
+ * - Cada turno se obtiene de esas mismas contribuciones, sin recalcular con
+ *   otra ponderación. Por construcción, la suma de mañana+tarde+noche es OP.
+ */
+function calculate(){
+  const s=state();
+  const full=s.full.filter(r=>r.start&&r.end&&Number(r.people)>0);
+  const partial=s.partial.filter(r=>r.start&&r.end&&Number(r.people)>0);
+
+  const A=full.reduce((sum,r)=>sum+fullContribution(r),0);
+  const ref=full.length?reference(full):-1;
+  const referenceHours=ref>=0?dur(full[ref].start,full[ref].end):0;
+  const D=partial.reduce((sum,r)=>sum+partialContribution(r,referenceHours),0);
+
+  const rows=[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].map(([name,key])=>{
+    const sh=s.shifts[key];
+    const fp=full.reduce((sum,r)=>sum+scheduleTurnContribution(r,sh,referenceHours,false),0);
+    const pp=partial.reduce((sum,r)=>sum+scheduleTurnContribution(r,sh,referenceHours,true),0);
+    return{
+      name,key,
+      fullPresent:fp,
+      partialPresent:pp,
+      totalPresent:fp+pp,
+      op:fp+pp
+    };
+  });
+
+  /* OP procede de la misma descomposición temporal que se muestra por turno. */
+  const OP=rows.reduce((sum,r)=>sum+r.op,0);
+
+  /* La suma de turnos y A+D sólo puede diferir por error numérico de coma
+     flotante. Conservamos el valor temporal de turnos como OP canónico. */
+  const totalBase=A+D;
+  const numericalDifference=OP-totalBase;
+
+  return{A,D,OP,rows,reference:ref,referenceHours,totalBase,numericalDifference};
+}
+
+function ensureDialog(){
+  let d=document.getElementById('daysDialog');
+  if(!d){d=document.createElement('div');d.id='daysDialog';d.className='mapo-days-dialog';d.hidden=true;document.body.appendChild(d);}
+  if(!document.getElementById('mapoDaysDialogStyle')){
+    const st=document.createElement('style');
+    st.id='mapoDaysDialogStyle';
+    st.textContent='.mapo-days-dialog{position:fixed;inset:0;z-index:2147483000}.mapo-days-dialog[hidden]{display:none!important}.mapo-days-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}.mapo-days-modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 32px));background:#fff;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.mapo-days-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.mapo-days-list label{padding:9px;border:1px solid #ddd;border-radius:8px}.mapo-days-actions{display:flex;justify-content:flex-end;gap:10px}.mapo-days-presets{display:flex;flex-wrap:wrap;gap:8px}.mapo-days-dialog button{cursor:pointer}';
+    document.head.appendChild(st);
+  }
+  return d;
+}
+
+function openDaysDialog(index){
+  saveInputs();
+  const s=state(),arr=s.page==='partial'?s.partial:s.full,r=arr[index];
+  if(!r)return;
+  normalizeDays(r);
+  const d=ensureDialog();
+  d.dataset.index=String(index);
+  d.hidden=false;
+  d.innerHTML=`<div class="mapo-days-backdrop" data-days-close></div><div class="mapo-days-modal" role="dialog" aria-modal="true" aria-labelledby="mapoDaysTitle"><h3 id="mapoDaysTitle">Días trabajados</h3><p>Seleccione los días en los que trabaja este horario.</p><div class="mapo-days-presets"><button type="button" data-preset="weekdays">Lunes a viernes</button><button type="button" data-preset="weekend">Sábado y domingo</button><button type="button" data-preset="longshort">Semana larga/semana corta</button><button type="button" data-preset="custom">Personalizado</button></div><div class="mapo-days-list">${ALL_DAYS.map((day,i)=>`<label><input type="checkbox" data-day="${i}" ${r.daysWorked.selected.includes(day)?'checked':''}> ${day}</label>`).join('')}</div><div class="mapo-days-actions"><button type="button" class="secondary" data-days-close>Cancelar</button><button type="button" data-days-save>Guardar días</button></div></div>`;
+}
+
+function closeDaysDialog(){
+  const d=document.getElementById('daysDialog');
+  if(d){d.hidden=true;d.innerHTML='';d.dataset.index='';}
+}
+
+function saveDaysDialog(){
+  const d=document.getElementById('daysDialog');
+  if(!d)return;
+  const index=Number(d.dataset.index);
+  const s=state(),arr=s.page==='partial'?s.partial:s.full,r=arr[index];
+  if(!r)return;
+  const checks=[...d.querySelectorAll('[data-day]')],selected=checks.filter(c=>c.checked).map(c=>ALL_DAYS[Number(c.dataset.day)]);
+  if(!selected.length){alert('Seleccione al menos un día trabajado.');return;}
+  r.daysWorked={type:selected.length===5&&selected.every(x=>DAY_OPTIONS.weekdays.days.includes(x))?'weekdays':selected.length===2&&selected.every(x=>DAY_OPTIONS.weekend.days.includes(x))?'weekend':selected.length===7?'longshort':'custom',selected};
+  closeDaysDialog();
+  render();
+}
+
+function applyPreset(preset){
+  const d=document.getElementById('daysDialog');
+  if(!d)return;
+  const days=preset==='weekdays'?DAY_OPTIONS.weekdays.days:preset==='weekend'?DAY_OPTIONS.weekend.days:preset==='longshort'?ALL_DAYS:[];
+  d.querySelectorAll('[data-day]').forEach((c,i)=>c.checked=days.includes(ALL_DAYS[i]));
+}
+
+function removeSchedule(index){
+  saveInputs();
+  const s=state(),arr=s.page==='partial'?s.partial:s.full;
+  if(index<0||index>=arr.length)return;
+  if(arr.length<=1)arr[0]={start:'',end:'',people:'',label:'',daysWorked:defaultDays()};
+  else arr.splice(index,1);
+  render();
+}
+
+function render(){
+  const s=state(),host=document.getElementById('formContainer');
+  if(!host)return;
+  host.innerHTML=`<div class="step-title-row"><h3>Personas trabajadoras que realizan MMP</h3></div><div class="subnav"><button type="button" class="subnav-btn ${s.page==='full'?'active':''}" data-v3-page="full">Jornada completa</button><button type="button" class="subnav-btn ${s.page==='partial'?'active':''}" data-v3-page="partial">Horario parcial</button></div><div id="workerV3Page"></div><div id="workerV3Results"></div>`;
+  renderPage();
+  renderResults();
+  bind();
+}
+
+function renderPage(){
+  const s=state(),h=document.getElementById('workerV3Page'),arr=s.page==='partial'?s.partial:s.full;
+  h.innerHTML=`<div class="worker-subpage"><h3>${s.page==='partial'?'Horarios parciales':'Horarios de jornada completa'}</h3><p>Introduzca entrada, salida, personas y días trabajados.</p>${arr.map((r,i)=>`<div class="registry-card worker-row"><div class="grid"><label>Hora de entrada<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="start" type="time" value="${esc(r.start)}"></label><label>Hora de salida<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="end" type="time" value="${esc(r.end)}"></label><label>Personas<input data-v3-t="${s.page}" data-v3-i="${i}" data-v3-f="people" type="number" min="0" step="1" value="${esc(r.people)}"></label><label>Días trabajados<button type="button" class="secondary" data-days-index="${i}">${esc(dayLabel(r))}</button></label></div><div class="worker-row-actions"><button type="button" class="secondary worker-delete" data-delete-index="${i}" aria-label="Eliminar este horario">Eliminar horario</button></div></div>`).join('')}</div>`;
+}
+
+function renderResults(){
+  const b=document.getElementById('workerV3Results');
+  if(!b)return;
+  const r=calculate();
+  b.innerHTML=`<table><thead><tr><th>Turno</th><th>Entrada</th><th>Salida</th><th>Jornada completa</th><th>Horario parcial</th><th>Personas presentes</th><th>OP</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${x.name}</td><td>${esc(state().shifts[x.key].start)}</td><td>${esc(state().shifts[x.key].end)}</td><td>${x.fullPresent.toFixed(3)}</td><td>${x.partialPresent.toFixed(3)}</td><td><strong>${x.totalPresent.toFixed(3)}</strong></td><td>${x.op.toFixed(3)}</td></tr>`).join('')}</tbody></table><p><strong>A:</strong> ${r.A.toFixed(3)} · <strong>D:</strong> ${r.D.toFixed(3)} · <strong>OP:</strong> ${r.OP.toFixed(3)}</p>`;
+  window.formData.op=r.OP;
+  window.formData.opByShift={};
+  window.formData.presenceByShift={};
+  r.rows.forEach(x=>{
+    window.formData.opByShift[x.key]=x.op;
+    window.formData.presenceByShift[x.key]=x.totalPresent;
+  });
+}
+
+function bind(){
+  const root=document.getElementById('formContainer');
+  if(!root)return;
+  if(root.dataset.workerBound!=='1'){
+    root.dataset.workerBound='1';
+    root.addEventListener('click',e=>{
+      const page=e.target.closest('[data-v3-page]');
+      if(page){saveInputs();state().page=page.dataset.v3Page;render();return;}
+      const days=e.target.closest('[data-days-index]');
+      if(days){e.preventDefault();e.stopPropagation();openDaysDialog(Number(days.dataset.daysIndex));return;}
+      const del=e.target.closest('[data-delete-index]');
+      if(del){e.preventDefault();e.stopPropagation();removeSchedule(Number(del.dataset.deleteIndex));return;}
+    });
+    root.addEventListener('input',e=>{
+      if(e.target.matches('[data-v3-t]')){saveInputs();renderResults();}
+    });
+  }
+  if(!document.body.dataset.mapoDaysBound){
+    document.body.dataset.mapoDaysBound='1';
+    document.body.addEventListener('click',e=>{
+      const close=e.target.closest('[data-days-close]');
+      if(close){closeDaysDialog();return;}
+      const save=e.target.closest('[data-days-save]');
+      if(save){saveDaysDialog();return;}
+      const preset=e.target.closest('[data-preset]');
+      if(preset){applyPreset(preset.dataset.preset);return;}
+    });
+  }
+}
+
+window.renderWorkerScheduleV3=render;
+window.saveWorkerScheduleV3=function(){saveInputs();return calculate();};
+window.mapoScheduleCanonical={calculate,render};
 })();
