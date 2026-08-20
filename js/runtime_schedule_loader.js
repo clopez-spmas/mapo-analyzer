@@ -1,4 +1,7 @@
-/* MAPO runtime loader: descubre automáticamente el motor de horarios más reciente. */
+/* MAPO runtime loader: descubre automáticamente el motor de horarios más reciente.
+ * Se ejecuta antes de los módulos que dependen del motor, por lo que la carga
+ * del motor seleccionado debe finalizar antes de continuar con index.html.
+ */
 (function(){
 'use strict';
 const API='https://api.github.com/repos/clopez-spmas/mapo-analyzer/contents/js?ref=main';
@@ -14,22 +17,25 @@ function load(name){
  const s=document.createElement('script');
  s.src=src;
  s.async=false;
- s.onload=()=>{window.mapoScheduleRuntimeLoaded=true;window.mapoScheduleRuntimeVersion=name;};
- s.onerror=e=>console.error('No se pudo cargar el motor MAPO de horarios:',name,e);
+ s.onload=function(){window.mapoScheduleRuntimeLoaded=true;window.mapoScheduleRuntimeVersion=name;};
+ s.onerror=function(e){console.error('No se pudo cargar el motor MAPO de horarios:',name,e);};
  document.head.appendChild(s);
 }
 function discover(){
  const xhr=new XMLHttpRequest();
- xhr.open('GET',API,true);
- xhr.setRequestHeader('Accept','application/vnd.github+json');
- xhr.onload=()=>{
-  try{
-   if(xhr.status>=200&&xhr.status<300){load(pickLatest(JSON.parse(xhr.responseText)));return;}
-  }catch(e){console.warn('No se pudo determinar automáticamente la versión del motor MAPO.',e);}
-  load(FALLBACK);
- };
- xhr.onerror=()=>load(FALLBACK);
- xhr.send();
+ try{
+  // Este loader se encuentra antes de los módulos dependientes en index.html.
+  // La consulta síncrona garantiza que el motor esté seleccionado y solicitado
+  // antes de que el parser continúe con dichos módulos.
+  xhr.open('GET',API,false);
+  xhr.setRequestHeader('Accept','application/vnd.github+json');
+  xhr.send();
+  if(xhr.status>=200&&xhr.status<300){
+   try{load(pickLatest(JSON.parse(xhr.responseText)));return;}
+   catch(e){console.warn('No se pudo determinar automáticamente la versión del motor MAPO.',e);}
+  }
+ }catch(e){console.warn('No se pudo consultar GitHub para determinar el motor MAPO.',e);}
+ load(FALLBACK);
 }
 discover();
 })();
