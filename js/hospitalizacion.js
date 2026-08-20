@@ -1,6 +1,4 @@
-/* Modelo guiado MAPO - Salas de hospitalización.
-   Las preguntas convierten condiciones observables en puntuaciones; el usuario no introduce FS/FA/FC/Famb/FF. */
-
+/* Modelo guiado MAPO — preguntas de hospitalización. El cálculo pertenece exclusivamente a mapo_calculation_engine.js. */
 const HOSPITALIZACION_QUESTIONS = {
   fs: [
     { id:'fs_elevadores', label:'¿Hay al menos 1 elevador utilizable por cada 8 pacientes no colaboradores (NC)?', help:'Cuente únicamente los elevadores utilizables para la elevación total. Compare su número con NC/8.', type:'yesno' },
@@ -34,40 +32,3 @@ const HOSPITALIZACION_QUESTIONS = {
     { id:'ff_informacion', label:'Si no existe curso adecuado, ¿se realizó al menos información/adiestramiento en el uso de equipos o se distribuyó material informativo al 90% de la plantilla y se verificó su eficacia?', help:'Esta es una condición específica que la documentación puntúa con FF=1.', type:'yesno' }
   ]
 };
-
-function yes(d,id){ return d[id] === true || d[id] === 'yes'; }
-function num(d,id){ return Number(d[id] || 0); }
-
-function calculateHospitalizacionFactors(d){
-  const fsSufficient = yes(d,'fs_elevadores') || yes(d,'fs_camillas') || yes(d,'fs_camas3');
-  const st=num(d,'fs_st_total'), lta=num(d,'fs_lta_total');
-  if(lta > st) throw new Error('Los levantamientos totales con ayuda no pueden superar el total de levantamientos totales.');
-  const fsAdequate = st > 0 && lta/st >= .90;
-  const fs = !fsSufficient && !fsAdequate ? 4 : fsSufficient && fsAdequate ? .5 : 2;
-
-  const faSufficient = (yes(d,'fa_sabana') && yes(d,'fa_dos')) || (yes(d,'fa_sabana') && yes(d,'fa_camas3'));
-  const sp=num(d,'fa_sp_total'), lpa=num(d,'fa_lpa_total');
-  if(lpa > sp) throw new Error('Los levantamientos parciales con ayuda no pueden superar el total de levantamientos parciales.');
-  const faAdequate = sp > 0 && lpa/sp >= .90;
-  const fa = faSufficient && faAdequate ? .5 : 1;
-
-  const na=num(d,'fc_na'), chairs=num(d,'fc_sillas'), pmsr=num(d,'fc_pmsr');
-  const fcSufficient = chairs >= na*.5;
-  let fc;
-  if(pmsr <= 1.33) fc = fcSufficient ? .75 : 1;
-  else if(pmsr <= 2.66) fc = fcSufficient ? 1.1 : 1.5;
-  else fc = fcSufficient ? 1.5 : 2;
-
-  const pmb=num(d,'famb_pmb'), pmwc=num(d,'famb_pmwc'), pmh=num(d,'famb_pmh');
-  const pmamb=pmb+pmwc+pmh;
-  const famb=pmamb<=5.8 ? .75 : pmamb<=11.6 ? 1.25 : 1.5;
-
-  const course=yes(d,'ff_curso'), coverage=num(d,'ff_cobertura'), recent=yes(d,'ff_antiguedad'), efficacy=yes(d,'ff_eficacia'), info=yes(d,'ff_informacion');
-  const adequateRecent=course && coverage>=75 && recent;
-  const adequateOld=course && coverage>=75 && !recent && efficacy;
-  const partialCourse=course && coverage>=50 && coverage<75 && recent;
-  const infoCondition=info;
-  const ff=(adequateRecent || adequateOld) ? .75 : (partialCourse || infoCondition) ? 1 : 2;
-
-  return {fs,fa,fc,famb,ff,details:{fsSufficient,fsAdequate,faSufficient,faAdequate,fcSufficient,pmsr,pmamb,ffCondition:{adequateRecent,adequateOld,partialCourse,infoCondition}}};
-}
