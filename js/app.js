@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id);
 let selectedStudy=null,currentStep=0,formData={},lastResult=null;
+window.MAPOReportState=()=>({form:formData,result:lastResult||{}});
 function yn(v){return v===true||v==='yes';}
 function num(v){return Number(v||0);}
 function partialFactorButton(key){const names={fs:'Factor de elevación (FS)',fa:'Factor de ayudas menores (FA)',fc:'Factor de sillas de ruedas (FC)',famb:'Factor ambiente (Famb)',ff:'Factor formación (FF)'};return `<div class="partial-factor-box"><button type="button" class="secondary" data-partial-factor="${key}">Cálculo parcial de ${key.toUpperCase()}</button><div id="partial_${key}" class="schedule-preview" hidden></div></div>`;}
