@@ -5,107 +5,25 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const TITLES={hospitalizacion:'Salas de hospitalización',ambulatorio:'Servicios ambulatorios',quirurgica:'Área quirúrgica'};
-const MODULES={
- hospitalizacion:[
-  ['Personas trabajadoras','Trabajadores que realizan movilización manual de pacientes.'],
-  ['Pacientes','Datos de pacientes colaboradores y no colaboradores.'],
-  ['Movilizaciones totales con ayuda','M_T_N'],
-  ['Movilizaciones parciales con ayuda','m-t-n'],
-  ['Movilizaciones totales sin ayuda','m-t-n'],
-  ['Movilizaciones parciales sin ayuda','m-t-n'],
-  ['Factor de elevación','Equipamiento para levantamientos totales.'],
-  ['Ayudas menores','Disponibilidad y adecuación de ayudas menores.'],
-  ['Factor de sillas de ruedas','Sillas de ruedas y puntuación de inadecuación.'],
-  ['Baños','Baños para higiene y baños con WC.'],
-  ['Habitaciones','Condiciones de las habitaciones y PMH.'],
-  ['Formación','Formación de las personas trabajadoras.']
- ],
- ambulatorio:[['Personas trabajadoras','Personas que realizan movilización manual de pacientes.'],['Pacientes','Pacientes incluidos en el estudio.'],['Factores del modelo','Factores específicos del servicio ambulatorio.']],
- quirurgica:[['Personas trabajadoras','Personas que realizan movilización manual.'],['Organización e intervenciones','Intervenciones y movilizaciones.'],['Factores del modelo','Factores específicos del área quirúrgica.']]
-};
+const MODULES={hospitalizacion:[['Personas trabajadoras','Trabajadores que realizan movilización manual de pacientes.'],['Pacientes','Datos de pacientes colaboradores y no colaboradores.'],['Movilizaciones totales con ayuda','M_T_N'],['Movilizaciones parciales con ayuda','m-t-n'],['Movilizaciones totales sin ayuda','m-t-n'],['Movilizaciones parciales sin ayuda','m-t-n'],['Factor de elevación','Equipamiento para levantamientos totales.'],['Ayudas menores','Disponibilidad y adecuación de ayudas menores.'],['Factor de sillas de ruedas','Sillas de ruedas y puntuación de inadecuación.'],['Baños','Baños para higiene y baños con WC.'],['Habitaciones','Condiciones de las habitaciones y PMH.'],['Formación','Formación de las personas trabajadoras.']],ambulatorio:[['Personas trabajadoras','Personas que realizan movilización manual de pacientes.'],['Pacientes','Pacientes incluidos en el estudio.'],['Factores del modelo','Factores específicos del servicio ambulatorio.']],quirurgica:[['Personas trabajadoras','Personas que realizan movilización manual.'],['Organización e intervenciones','Intervenciones y movilizaciones.'],['Factores del modelo','Factores específicos del área quirúrgica.']]};
 let chosenStudy=null;
 const show=(id,v)=>{const e=$(id);if(e)e.hidden=!v;};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function hideAll(){['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','mapoSimulation'].forEach(id=>show(id,false));}
 function saveStudy(){window.MAPOMultiRoom?.saveMultiStudy?.();}
 function loadStudy(){const f=$('loadMultiStudyFile');if(f){f.value='';f.click();}}
-function actions(host,prev,next){
- if(!host)return;
- host.querySelectorAll('.main-flow-actions,.module-flow-actions').forEach(e=>e.remove());
- const d=document.createElement('div');d.className='actions main-flow-actions';
- d.innerHTML='<button type="button" class="secondary nav-previous">Anterior</button><button type="button" class="secondary nav-save">Guardar estudio</button><button type="button" class="secondary nav-load">Cargar estudio</button><button type="button" class="nav-next">Siguiente</button>';
- host.appendChild(d);d.querySelector('.nav-previous').onclick=prev;d.querySelector('.nav-next').onclick=next;d.querySelector('.nav-save').onclick=saveStudy;d.querySelector('.nav-load').onclick=loadStudy;
-}
+function removeLegacyActions(host){if(!host)return;host.querySelectorAll('.main-flow-actions,.module-flow-actions').forEach(e=>e.remove());if(host.id==='roomSetup'){const old=host.querySelector(':scope > .actions');if(old)old.hidden=true;}if(host.id==='studyPanel'){const old=host.querySelector(':scope > .actions');if(old)old.hidden=true;}}
+function actions(host,prev,next){if(!host)return;removeLegacyActions(host);const d=document.createElement('div');d.className='actions main-flow-actions';d.innerHTML='<button type="button" class="secondary nav-previous">Anterior</button><button type="button" class="secondary nav-save">Guardar estudio</button><button type="button" class="secondary nav-load">Cargar estudio</button><button type="button" class="nav-next">Siguiente</button>';host.appendChild(d);d.querySelector('.nav-previous').onclick=prev;d.querySelector('.nav-next').onclick=next;d.querySelector('.nav-save').onclick=saveStudy;d.querySelector('.nav-load').onclick=loadStudy;}
 function home(){hideAll();show('accessScreen',true);}
 function typeScreen(){hideAll();show('studySelection',true);actions($('studySelection'),home,()=>{if(!chosenStudy){alert('Seleccione qué desea estudiar antes de continuar.');return;}config();});}
 function config(){hideAll();show('roomSetup',true);actions($('roomSetup'),typeScreen,()=>{window.MAPOMultiRoom?.beginStudy?.();setTimeout(hub,0);});}
 function hub(){if(!chosenStudy){typeScreen();return;}hideAll();show('moduleHub',true);renderHub();}
-function renderHub(){
- let h=$('moduleHub');
- if(!h){h=document.createElement('section');h.id='moduleHub';h.className='card module-hub';$('studySelection')?.insertAdjacentElement('afterend',h);}
- const mods=MODULES[chosenStudy]||[];
- h.innerHTML='<div class="module-hub-heading"><span class="module-hub-badge">Acceso directo a módulos</span><h2>'+esc(TITLES[chosenStudy]||'Estudio MAPO')+'</h2><p>Seleccione directamente el apartado que desea cumplimentar.</p></div><div class="module-hub-grid">'+mods.map((m,i)=>'<button type="button" class="module-hub-item" data-module="'+i+'"><span>Módulo '+(i+1)+'</span><strong>'+esc(m[0])+'</strong><small>'+esc(m[1])+'</small></button>').join('')+'</div><div class="module-hub-actions"><button type="button" id="hubCalculate">Cálculo MAPO</button><button type="button" id="hubSimulation" class="secondary">Simulación MAPO</button><button type="button" id="hubTables" class="secondary">Descargar tablas MAPO</button><button type="button" id="hubReport" class="secondary">Descargar informe MAPO</button></div>';
- h.querySelectorAll('[data-module]').forEach(b=>b.onclick=()=>openModule(Number(b.dataset.module)));
- $('hubCalculate').onclick=()=>openModule(mods.length-1);
- $('hubSimulation').onclick=()=>{$('openMapoSimulation')?.click();};
- $('hubTables').onclick=()=>{$('openReportTables')?.click();};
- $('hubReport').onclick=()=>{$('generateReport')?.click();};
- actions(h,config,()=>openModule(0));
-}
-function hideLegacyModuleButtons(){
- const p=$('studyPanel');if(!p)return;
- const old=new Set(['previousStep','nextStep','calculate']);
- p.querySelectorAll('button').forEach(b=>{if(old.has(b.id))b.hidden=true;});
- const formActions=p.querySelector(':scope > .actions');if(formActions)formActions.hidden=true;
-}
-function renderMobilizationCategory(category){
- if(typeof window.renderMobilizations!=='function')return;
- window.renderMobilizations();
- const host=$('formContainer');if(!host)return;
- const keys=['manualTotal','manualPartial','aidedTotal','aidedPartial'];
- const keep=keys[category];
- const table=host.querySelector('.mob-table');
- if(!table)return;
- table.querySelectorAll('tr').forEach(row=>{
-   if(row.classList.contains('mob-section'))return;
-   row.querySelectorAll('.mob-count').forEach(input=>{const td=input.closest('td');if(td)td.hidden=input.dataset.mobKey!==keep;});
- });
- const head=table.tHead;
- if(head){const rows=[...head.rows];
-   if(rows[0]){const cells=[...rows[0].cells];cells.forEach((c,i)=>{if(i>0)c.hidden=Math.floor((i-1)/3)!==category;});}
-   if(rows[1]){const cells=[...rows[1].cells];cells.forEach((c,i)=>{c.hidden=Math.floor(i/3)!==category;});}
- }
- const title=['Movilizaciones totales con ayuda','Movilizaciones parciales con ayuda','Movilizaciones totales sin ayuda','Movilizaciones parciales sin ayuda'][category];
- const code=['M_T_N','m-t-n','m-t-n','m-t-n'][category];
- const old=host.querySelector('.mobilization-screen-title');if(old)old.remove();
- const titleBox=document.createElement('div');titleBox.className='mobilization-screen-title schedule-preview';titleBox.innerHTML='<strong>Estamos en: '+title+'</strong> · Código: '+code+'<br><span>Introduzca únicamente las movilizaciones de esta categoría.</span>';
- host.insertBefore(titleBox,host.firstChild);
-}
-function openModule(index){
- if(!chosenStudy){typeScreen();return;}
- hideAll();show('studyPanel',true);
- hideLegacyModuleButtons();
- const isMob=chosenStudy==='hospitalizacion'&&index>=2&&index<=5;
- const realStep=isMob?2:(index>5?index-3:index);
- if(window.MAPOMultiRoom?.openSelectedModule)window.MAPOMultiRoom.openSelectedModule(chosenStudy,realStep);else{if(typeof window.selectStudy==='function')window.selectStudy(chosenStudy);currentStep=realStep;window.renderStep?.();}
- setTimeout(()=>{if(isMob)renderMobilizationCategory(index-2);hideLegacyModuleButtons();decorateModuleButtons(index);},0);
-}
-function decorateModuleButtons(index){
- const p=$('studyPanel');if(!p)return;
- p.querySelectorAll('.main-flow-actions,.module-flow-actions').forEach(e=>e.remove());
- const mods=MODULES[chosenStudy]||[];
- const d=document.createElement('div');d.className='actions main-flow-actions';
- d.innerHTML='<button type="button" class="secondary nav-previous">Anterior</button><button type="button" class="secondary nav-save">Guardar estudio</button><button type="button" class="secondary nav-load">Cargar estudio</button><button type="button" class="nav-next">Siguiente</button>';
- p.appendChild(d);
- d.querySelector('.nav-previous').onclick=()=>index>0?openModule(index-1):hub();
- d.querySelector('.nav-next').onclick=()=>index<mods.length-1?openModule(index+1):$('calculate')?.click();
- d.querySelector('.nav-save').onclick=saveStudy;d.querySelector('.nav-load').onclick=loadStudy;
-}
-function install(){
- const enter=$('enterProgram');
- if(enter)enter.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();typeScreen();},true);
- document.querySelectorAll('.study-option').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();chosenStudy=b.dataset.study;document.querySelectorAll('.study-option').forEach(x=>x.classList.toggle('selected',x===b));},true));
-}
+function renderHub(){let h=$('moduleHub');if(!h){h=document.createElement('section');h.id='moduleHub';h.className='card module-hub';$('studySelection')?.insertAdjacentElement('afterend',h);}const mods=MODULES[chosenStudy]||[];h.innerHTML='<div class="module-hub-heading"><span class="module-hub-badge">Acceso directo a módulos</span><h2>'+esc(TITLES[chosenStudy]||'Estudio MAPO')+'</h2><p>Seleccione directamente el apartado que desea cumplimentar.</p></div><div class="module-hub-grid">'+mods.map((m,i)=>'<button type="button" class="module-hub-item" data-module="'+i+'"><span>Módulo '+(i+1)+'</span><strong>'+esc(m[0])+'</strong><small>'+esc(m[1])+'</small></button>').join('')+'</div><div class="module-hub-actions"><button type="button" id="hubCalculate">Cálculo MAPO</button><button type="button" id="hubSimulation" class="secondary">Simulación MAPO</button><button type="button" id="hubTables" class="secondary">Descargar tablas MAPO</button><button type="button" id="hubReport" class="secondary">Descargar informe MAPO</button></div>';h.querySelectorAll('[data-module]').forEach(b=>b.onclick=()=>openModule(Number(b.dataset.module)));$('hubCalculate').onclick=()=>openModule(mods.length-1);$('hubSimulation').onclick=()=>{$('openMapoSimulation')?.click();};$('hubTables').onclick=()=>{$('openReportTables')?.click();};$('hubReport').onclick=()=>{$('generateReport')?.click();};actions(h,config,()=>openModule(0));}
+function hideLegacyModuleButtons(){const p=$('studyPanel');if(!p)return;['previousStep','nextStep','calculate'].forEach(id=>{const b=$(id);if(b)b.hidden=true;});const old=p.querySelector(':scope > .actions');if(old)old.hidden=true;}
+function renderMobilizationCategory(category){if(typeof window.renderMobilizations!=='function')return;window.renderMobilizations();const host=$('formContainer');if(!host)return;const keys=['manualTotal','manualPartial','aidedTotal','aidedPartial'],keep=keys[category],table=host.querySelector('.mob-table');if(!table)return;table.querySelectorAll('tr').forEach(row=>{if(row.classList.contains('mob-section'))return;row.querySelectorAll('.mob-count').forEach(input=>{const td=input.closest('td');if(td)td.hidden=input.dataset.mobKey!==keep;});});const head=table.tHead;if(head){const rows=[...head.rows];if(rows[0]){[...rows[0].cells].forEach((c,i)=>{if(i>0)c.hidden=Math.floor((i-1)/3)!==category;});}if(rows[1]){[...rows[1].cells].forEach((c,i)=>{c.hidden=Math.floor(i/3)!==category;});}}const title=['Movilizaciones totales con ayuda','Movilizaciones parciales con ayuda','Movilizaciones totales sin ayuda','Movilizaciones parciales sin ayuda'][category],code=['M_T_N','m-t-n','m-t-n','m-t-n'][category];const old=host.querySelector('.mobilization-screen-title');if(old)old.remove();const box=document.createElement('div');box.className='mobilization-screen-title schedule-preview';box.innerHTML='<strong>Estamos en: '+title+'</strong> · Código: '+code+'<br><span>Introduzca únicamente las movilizaciones de esta categoría.</span>';host.insertBefore(box,host.firstChild);}
+function openModule(index){if(!chosenStudy){typeScreen();return;}hideAll();show('studyPanel',true);hideLegacyModuleButtons();const isMob=chosenStudy==='hospitalizacion'&&index>=2&&index<=5,realStep=isMob?2:(index>5?index-3:index);if(window.MAPOMultiRoom?.openSelectedModule)window.MAPOMultiRoom.openSelectedModule(chosenStudy,realStep);else{if(typeof window.selectStudy==='function')window.selectStudy(chosenStudy);currentStep=realStep;window.renderStep?.();}setTimeout(()=>{if(isMob)renderMobilizationCategory(index-2);hideLegacyModuleButtons();decorateModuleButtons(index);},0);}
+function decorateModuleButtons(index){const p=$('studyPanel');if(!p)return;p.querySelectorAll('.main-flow-actions,.module-flow-actions').forEach(e=>e.remove());const mods=MODULES[chosenStudy]||[],d=document.createElement('div');d.className='actions main-flow-actions';d.innerHTML='<button type="button" class="secondary nav-previous">Anterior</button><button type="button" class="secondary nav-save">Guardar estudio</button><button type="button" class="secondary nav-load">Cargar estudio</button><button type="button" class="nav-next">Siguiente</button>';p.appendChild(d);d.querySelector('.nav-previous').onclick=()=>index>0?openModule(index-1):hub();d.querySelector('.nav-next').onclick=()=>index<mods.length-1?openModule(index+1):$('calculate')?.click();d.querySelector('.nav-save').onclick=saveStudy;d.querySelector('.nav-load').onclick=loadStudy;}
+function install(){const enter=$('enterProgram');if(enter)enter.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();typeScreen();},true);document.querySelectorAll('.study-option').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();chosenStudy=b.dataset.study;document.querySelectorAll('.study-option').forEach(x=>x.classList.toggle('selected',x===b));},true));}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 window.MAPOModuleNavigator={home,typeScreen,config,hub,openModule,selectType:key=>{chosenStudy=key;},getSelectedStudy:()=>chosenStudy};
 })();
