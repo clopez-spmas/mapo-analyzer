@@ -1,6 +1,6 @@
 /* MAPO Analyzer — gestión de múltiples salas/plantas/secciones.
    Este módulo NO calcula MAPO ni modifica ninguna fórmula o factor.
-   El almacenamiento de estudios se realiza exclusivamente mediante JSON. */
+   La navegación principal pertenece exclusivamente a module_navigator.js. */
 (function(){
   const $=id=>document.getElementById(id);
   const state={rooms:[],active:0,study:null};
@@ -20,6 +20,7 @@
   function readRoomNames(){document.querySelectorAll('[data-room-name]').forEach((e,i)=>{if(state.rooms[i])state.rooms[i].name=e.value.trim()||`Unidad ${i+1}`;});}
   function beginStudy(){readRoomNames();if(!state.rooms.length)return;state.study=null;show('roomSetup',false);show('studySelection',true);clearError();}
   function beginSelectedStudy(key){readRoomNames();state.study=key;state.active=Math.max(0,Math.min(state.rooms.length-1,state.active));const r=currentRoom();selectedStudy=key;currentStep=Number(r.currentStep)||0;formData=clone(r.formData);lastResult=r.lastResult?clone(r.lastResult):null;show('studySelection',false);show('studyPanel',true);show('result',false);show('globalResults',false);renderStep?.();syncStepButtons();updateRoomBanner();clearError();}
+  function openSelectedModule(key,step){beginSelectedStudy(key);currentStep=Math.max(0,Number(step)||0);if(currentRoom())currentRoom().currentStep=currentStep;renderStep?.();syncStepButtons();updateRoomBanner();}
   function switchRoom(index){if(index<0||index>=state.rooms.length)return;captureCurrentRoom();state.active=index;const r=currentRoom();selectedStudy=state.study;currentStep=Number(r.currentStep)||0;formData=clone(r.formData);lastResult=r.lastResult?clone(r.lastResult):null;show('result',false);show('globalResults',false);clearError();renderStep?.();syncStepButtons();updateRoomBanner();if(lastResult&&typeof renderLoadedResult==='function')renderLoadedResult();}
   function nextRoom(){captureCurrentRoom();if(state.active<state.rooms.length-1){switchRoom(state.active+1);return;}showGlobalResults();}
   function previousStep(){if(currentStep<=0)return;try{captureCurrentRoom();currentStep--;currentRoom().currentStep=currentStep;currentRoom().lastResult=null;lastResult=null;show('result',false);renderStep?.();syncStepButtons();clearError();updateRoomBanner();}catch(e){const b=$('error');if(b){b.textContent=e.message||String(e);b.hidden=false;}}}
@@ -30,12 +31,13 @@
   function defaultFilename(){const first=state.rooms[0]?.formData||{};const clean=v=>String(v||'MAPO').trim().replace(/[^\wáéíóúüñÁÉÍÓÚÜÑ-]+/g,'_').slice(0,60)||'MAPO';const date=first.fecha||new Date().toISOString().slice(0,10);return `${clean(first.empresa)}_multi_sala_${date}.json`;}
   async function saveMultiStudy(){try{captureCurrentRoom();const data={format:'MAPO Analyzer Multi-Room Study',savedAt:new Date().toISOString(),study:state.study,active:state.active,rooms:clone(state.rooms)};if(typeof window.MAPOStudyIO?.saveJson==='function'){await window.MAPOStudyIO.saveJson(data,defaultFilename());}else{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=defaultFilename();document.body.appendChild(a);a.click();a.remove();}clearError();}catch(e){if(e?.name==='AbortError')return;const b=$('error');if(b){b.textContent='No se pudo guardar el estudio: '+e.message;b.hidden=false;}}}
   async function loadMultiStudyFile(file){try{if(!file)return;const data=JSON.parse(await file.text());if(data?.format==='MAPO Analyzer Multi-Room Study'&&Array.isArray(data.rooms)){state.rooms=data.rooms.map((r,i)=>({name:r.name||`Unidad ${i+1}`,formData:r.formData&&typeof r.formData==='object'?r.formData:{},currentStep:Number(r.currentStep)||0,lastResult:r.lastResult||null}));state.active=Math.max(0,Math.min(state.rooms.length-1,Number(data.active)||0));state.study=data.study||null;show('roomSetup',false);show('accessScreen',false);if(state.study)beginSelectedStudy(state.study);else show('studySelection',true);clearError();return;}if(data?.format==='MAPO Analyzer Study'&&data.study){state.rooms=[{name:data.formData?.unidad||'Unidad 1',formData:data.formData||{},currentStep:Number(data.currentStep)||0,lastResult:data.lastResult||null}];state.active=0;state.study=data.study;beginSelectedStudy(data.study);return;}throw Error('El archivo no es un estudio MAPO válido.');}catch(e){const b=$('error');if(b){b.textContent='No se pudo cargar el estudio: '+e.message;b.hidden=false;}}}
-  function wireStudySelection(){document.querySelectorAll('.study-option').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();beginSelectedStudy(b.dataset.study);},true));}
-  function wireAccess(){const enter=$('enterProgram');if(enter)enter.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();showRoomSetup();},true);}
-  function wireSetup(){$('roomCount')?.addEventListener('input',e=>renderRoomNames(Number(e.target.value)));$('startRooms')?.addEventListener('click',beginStudy);$('saveMultiStudy')?.addEventListener('click',saveMultiStudy);$('loadMultiStudy')?.addEventListener('click',()=>$('loadMultiStudyFile')?.click());$('loadMultiStudyFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)loadMultiStudyFile(f);e.target.value='';});}
+  function installSaveLoad(){
+    $('saveMultiStudy')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();saveMultiStudy();},true);
+    $('loadMultiStudy')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();$('loadMultiStudyFile')?.click();},true);
+    $('loadMultiStudyFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)loadMultiStudyFile(f);e.target.value='';});
+  }
   function installRoomHeader(){const panel=$('studyPanel');if(!panel||$('roomNavigation'))return;const heading=panel.querySelector('.section-heading');const nav=document.createElement('div');nav.id='roomNavigation';if(heading)heading.insertAdjacentElement('afterend',nav);const banner=document.createElement('div');banner.id='currentRoomBanner';banner.className='schedule-preview';const fc=panel.querySelector('#formContainer');if(fc)fc.insertAdjacentElement('beforebegin',banner);renderRoomSelector();}
-  function wireNavigation(){const next=$('nextStep'),prev=$('previousStep'),calc=$('calculate');if(next)next.onclick=nextStep;if(prev)prev.onclick=previousStep;if(calc){originalCalculate=calc.onclick;calc.onclick=calculateRoom;}}
-  function init(){wireAccess();wireSetup();wireStudySelection();installRoomHeader();wireNavigation();if(!$('roomCount'))return;renderRoomNames(Number($('roomCount').value)||1);}
+  function init(){installSaveLoad();installRoomHeader();if(!$('roomCount'))return;renderRoomNames(Number($('roomCount').value)||1);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-  window.MAPOMultiRoom={state,saveMultiStudy,loadMultiStudyFile,showGlobalResults};
+  window.MAPOMultiRoom={state,beginStudy,beginSelectedStudy,openSelectedModule,saveMultiStudy,loadMultiStudyFile,showGlobalResults};
 })();
