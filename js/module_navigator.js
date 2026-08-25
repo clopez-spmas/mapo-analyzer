@@ -7,27 +7,10 @@
  const CATS=[['aidedTotal','Movilizaciones totales con ayuda'],['aidedPartial','Movilizaciones parciales con ayuda'],['manualTotal','Movilizaciones totales sin ayuda'],['manualPartial','Movilizaciones parciales sin ayuda']];
  const state=window.MAPOMobilizationSelection||{turn:null,category:null};window.MAPOMobilizationSelection=state;
  const capture=()=>{try{window.captureMobilizations?.()}catch(_){} };
- function saveStudy(){window.MAPOMultiRoom?.saveMultiStudy?.()||window.MAPOStudyIO?.saveJson?.();}
+ function saveStudy(){return window.MAPOMultiRoom?.saveMultiStudy?.();}
  function loadStudy(){$('loadMultiStudyFile')?.click();}
- function setupNavigation(){
-   const host=$('roomSetup');if(!host)return;
-   host.querySelector('#roomSetupNavigation')?.remove();
-   const bar=document.createElement('div');bar.id='roomSetupNavigation';bar.className='actions';
-   bar.innerHTML='<button type="button" class="secondary" id="roomSetupBack">Anterior</button><button type="button" class="secondary" id="roomSetupSave">Guardar estudio</button><button type="button" class="secondary" id="roomSetupLoad">Cargar estudio</button><button type="button" id="roomSetupNext">Siguiente</button>';
-   host.appendChild(bar);
-   $('roomSetupBack').onclick=()=>{host.hidden=true;$('studySelection').hidden=false;};
-   $('roomSetupSave').onclick=saveStudy;
-   $('roomSetupLoad').onclick=loadStudy;
-   $('roomSetupNext').onclick=()=>{window.MAPOMultiRoom?.beginSelectedStudy?.(window.MAPOMultiRoom?.state?.study||host.dataset.study||'hospitalizacion');};
- }
- function openStudySetup(key){
-   const host=$('roomSetup');if(!host)return;
-   host.dataset.study=key;
-   window.MAPOMultiRoom?.setStudyType?.(key);
-   $('studySelection').hidden=true;$('roomSetup').hidden=false;$('studyPanel').hidden=true;$('result').hidden=true;$('globalResults').hidden=true;
-   window.MAPOMultiRoom?.prepareRoomSetup?.();
-   setupNavigation();
- }
+ function setupNavigation(){const host=$('roomSetup');if(!host)return;host.querySelector('#roomSetupNavigation')?.remove();const bar=document.createElement('div');bar.id='roomSetupNavigation';bar.className='actions';bar.innerHTML='<button type="button" class="secondary" id="roomSetupBack">Anterior</button><button type="button" class="secondary" id="roomSetupSave">Guardar estudio</button><button type="button" class="secondary" id="roomSetupLoad">Cargar estudio</button><button type="button" id="roomSetupNext">Siguiente</button>';host.appendChild(bar);$('roomSetupBack').onclick=()=>{host.hidden=true;$('studySelection').hidden=false;};$('roomSetupSave').onclick=saveStudy;$('roomSetupLoad').onclick=loadStudy;$('roomSetupNext').onclick=()=>window.MAPOMultiRoom?.beginSelectedStudy?.(host.dataset.study||'hospitalizacion');const n=$('roomCount');if(n&&!n.dataset.navBound){n.dataset.navBound='1';n.addEventListener('input',()=>window.MAPOMultiRoom?.prepareRoomSetup?.());}}
+ function openStudySetup(key){const host=$('roomSetup');if(!host)return;host.dataset.study=key;window.MAPOMultiRoom?.setStudyType?.(key);$('studySelection').hidden=true;host.hidden=false;$('studyPanel').hidden=true;$('result').hidden=true;$('globalResults').hidden=true;window.MAPOMultiRoom?.prepareRoomSetup?.();setupNavigation();}
  function installStudySelection(){document.querySelectorAll('.study-option').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openStudySetup(b.dataset.study)},true));}
  const isMob=()=>{const d=$('studyDescription');return !!(d&&/Tareas de movilización/i.test(d.textContent||''));};
  function menu(){const h=$('formContainer');if(!h)return;h.innerHTML=`<div class="step-title-row"><h3>Tareas de movilización de pacientes</h3><p class="schedule-preview">Seleccione primero un turno y después una de las cuatro opciones. Solo se mostrará la combinación seleccionada.</p></div><div class="mobilization-navigation"><h4>Seleccione un turno</h4><div class="mobilization-turn-buttons">${TURNS.map((x,i)=>`<button type="button" class="secondary mob-turn-btn" data-turn="${i}">${x}</button>`).join('')}</div><div id="mobilizationOptions" class="mobilization-options" hidden></div></div>`;h.querySelectorAll('[data-turn]').forEach(b=>b.onclick=()=>cats(+b.dataset.turn));}
