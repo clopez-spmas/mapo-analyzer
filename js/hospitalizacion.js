@@ -1,5 +1,5 @@
 /* Modelo guiado MAPO — preguntas de hospitalización. El cálculo pertenece exclusivamente a mapo_calculation_engine.js. */
-const HOSPITALIZACION_QUESTIONS = {
+window.HOSPITALIZACION_QUESTIONS = window.HOSPITALIZACION_QUESTIONS || {
   fs: [
     { id:'fs_elevadores', label:'¿Hay al menos 1 elevador utilizable por cada 8 pacientes no colaboradores (NC)?', help:'Cuente únicamente los elevadores utilizables para la elevación total. Compare su número con NC/8.', type:'yesno' },
     { id:'fs_camillas', label:'¿Hay al menos 1 camilla regulable por cada 8 pacientes NC y, cuando se utiliza para la transferencia cama-camilla, se acompaña de tabla, sábana deslizante, rollboard o equivalente?', help:'Solo marque Sí si se cumplen las dos condiciones simultáneamente.', type:'yesno' },
