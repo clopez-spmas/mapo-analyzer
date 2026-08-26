@@ -18,11 +18,21 @@
  function ensureBar(){const panel=$('studyPanel'),bar=$('legacyStepActions');if(!panel||!bar)return null;let p=$('previousStep'),n=$('nextStep');if(!p){p=document.createElement('button');p.id='previousStep';p.type='button';p.className='secondary';p.textContent='Anterior';bar.insertBefore(p,bar.firstChild);}if(!n){n=document.createElement('button');n.id='nextStep';n.type='button';n.textContent='Siguiente';bar.appendChild(n);}return {p,n};}
  function bindStandard(){const c=ensureBar();if(!c)return;const {p,n}=c;if(p.dataset.navigationOwner!=='navigation_controller'){p.onclick=previous;p.dataset.navigationOwner='navigation_controller';}if(n.dataset.navigationOwner!=='navigation_controller'){n.onclick=next;n.dataset.navigationOwner='navigation_controller';}const step=current(),last=total()-1;p.hidden=step<=0;n.hidden=step>=last;const calc=$('calculate');if(calc)calc.hidden=step!==last;window.MAPOStudyIO?.ensureControls?.();}
  function bindRoomSetup(){const host=$('roomSetup');if(!host)return;let bar=$('roomSetupNavigation');if(!bar){bar=document.createElement('div');bar.id='roomSetupNavigation';bar.className='actions';bar.innerHTML='<button type="button" id="roomSetupBack" class="secondary">Anterior</button><button type="button" id="roomSetupSave" class="secondary">Guardar estudio</button><button type="button" id="roomSetupLoad" class="secondary">Cargar estudio</button><button type="button" id="roomSetupNext">Siguiente</button>';host.appendChild(bar);}
-  const back=$('roomSetupBack'),save=$('roomSetupSave'),load=$('roomSetupLoad'),nextBtn=$('roomSetupNext');
-  if(back&&back.dataset.navigationOwner!=='navigation_controller'){back.onclick=()=>{host.hidden=true;$('studySelection').hidden=false;};back.dataset.navigationOwner='navigation_controller';}
-  if(save&&save.dataset.navigationOwner!=='navigation_controller'){save.onclick=()=>multi()?.saveMultiStudy?.();save.dataset.navigationOwner='navigation_controller';}
-  if(load&&load.dataset.navigationOwner!=='navigation_controller'){load.onclick=()=>$('loadMultiStudyFile')?.click();load.dataset.navigationOwner='navigation_controller';}
-  if(nextBtn&&nextBtn.dataset.navigationOwner!=='navigation_controller'){nextBtn.onclick=()=>{try{const m=multi();if(!m?.state?.study)throw Error('Debe seleccionar un tipo de estudio.');m.beginSelectedStudy(m.state.study);}catch(e){showError(e);}};nextBtn.dataset.navigationOwner='navigation_controller';}
+  if(host.dataset.roomNavigationBound!=='navigation_controller'){
+   host.addEventListener('click',e=>{
+    const button=e.target.closest('#roomSetupBack,#roomSetupSave,#roomSetupLoad,#roomSetupNext');
+    if(!button||!host.contains(button))return;
+    if(button.id==='roomSetupBack'){e.preventDefault();e.stopImmediatePropagation();host.hidden=true;$('studySelection').hidden=false;return;}
+    if(button.id==='roomSetupSave'){e.preventDefault();e.stopImmediatePropagation();multi()?.saveMultiStudy?.();return;}
+    if(button.id==='roomSetupLoad'){e.preventDefault();e.stopImmediatePropagation();$('loadMultiStudyFile')?.click();return;}
+    if(button.id==='roomSetupNext'){
+     e.preventDefault();e.stopImmediatePropagation();
+     try{const m=multi();if(!m?.state?.study)throw Error('Debe seleccionar un tipo de estudio.');m.beginSelectedStudy(m.state.study);}catch(err){showError(err);}
+    }
+   },true);
+   host.dataset.roomNavigationBound='navigation_controller';
+  }
+  ['roomSetupBack','roomSetupSave','roomSetupLoad','roomSetupNext'].forEach(id=>{const b=$(id);if(b)b.dataset.navigationOwner='navigation_controller';});
  }
  function studySelection(){document.querySelectorAll('.study-option').forEach(b=>{if(b.dataset.navigationBound)return;b.dataset.navigationBound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();multi()?.openStudySetup?.(b.dataset.study);},true);});}
  function roomSetup(){const n=$('roomCount');if(n&&!n.dataset.navigationBound){n.dataset.navigationBound='1';const f=()=>multi()?.prepareRoomSetup?.();n.addEventListener('input',f);n.addEventListener('change',f);}}
