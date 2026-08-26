@@ -7,13 +7,8 @@ function data(){return typeof window.MAPOReportState==='function'?window.MAPORep
 function rows(t){return t.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('');}
 function table(title,heads,body){return '<div class="report-table-block"><h3>'+esc(title)+'</h3><table class="mapo-report-table"><thead><tr>'+heads.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';}
 const shifts=['Mañana','Tarde','Noche'];
-function timeMinutes(v){const m=String(v??'').match(/^(\d{1,2})(?::(\d{2}))?/);return m?Number(m[1])*60+Number(m[2]||0):NaN;}
-function durationHours(start,end){const a=timeMinutes(start),b=timeMinutes(end);if(!Number.isFinite(a)||!Number.isFinite(b))return null;let d=b-a;if(d<0)d+=1440;return d/60;}
-function turnoHours(r){return n(r.turnHours||r.hours||r.duration)||durationHours(r.start,r.end)||8;}
-function partialEntries(arr,i){const raw=arr[i];if(Array.isArray(raw))return raw;return raw&&Array.isArray(raw.entries)?raw.entries:[raw||{}];}
-function partialFraction(r){if(r.fraction!=null&&r.fraction!=='')return n(r.fraction);const h=durationHours(r.start,r.end);return h==null?0:h/turnoHours(r);}
 function personnelTable(f){
- const s=f.workerSchedule||{},full=s.full||[],partial=s.partial||[];
+ const s=f.workerSchedule||{},full=Array.isArray(s.full)?s.full:[],partial=Array.isArray(s.partial)?s.partial:[];
  const get=(a,i)=>a[i]||{};
  const totalFull=full.reduce((z,r)=>z+n(r.people),0);
  const auxEnf=f.auxEnfermeria??f.aux_enfermeria??'',auxGer=f.auxGeriatria??f.aux_geriatria??'',limit=f.personalLimitacionMMP??f.personal_limitacion_mmp??f.limitacionMMP??'';
@@ -25,17 +20,29 @@ function personnelTable(f){
  sh+='</tbody></table>';h+='<div class="report-table-block"><h4>Personal por turnos</h4>'+sh+'<div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';
  h+='<h4>1.1.2. Nº DE PERSONAS TRABAJADORAS QUE REALIZAN MMP A TIEMPO PARCIAL:</h4><p class="report-note"><strong>Turno y horario de presencia.</strong><br>(En el caso de horarios diferentes por turno se añaden las filas siguientes tantas veces como sea necesario)</p>';
  let ph='<table class="mapo-report-table personnel-partial"><thead><tr><th>TURNO</th><th>Horario de presencia</th><th>Fracción de unidad (C)</th><th>Nº personas trabajadoras (D)</th><th>Fracción de unidad por persona trabajadora (C×D)</th></tr></thead><tbody>';
- let op=totalFull;
+ let calculated=null;
+ try{calculated=window.WorkersScheduleV3?.calculate?.();}catch(_){calculated=null;}
+ const partialRows=calculated?.rows||[];
  for(let i=0;i<3;i++){
-   const entries=partialEntries(partial,i).filter(r=>r&&(r.people!==''||r.start||r.end||r.fraction!=null));
-   if(!entries.length){ph+='<tr><td><strong>'+shifts[i]+'</strong></td><td></td><td></td><td></td><td></td></tr>';continue;}
-   entries.forEach(r=>{const c=partialFraction(r),d=n(r.people),cd=c*d;op+=cd;ph+='<tr><td><strong>'+shifts[i]+'</strong></td><td>'+esc(r.start&&r.end?r.start+'-'+r.end:'')+'</td><td>'+esc(c.toFixed(2))+'</td><td>'+esc(d)+'</td><td>'+esc(cd.toFixed(2))+'</td></tr>';});
+   const entries=(partialRows[i]&&partialRows[i].partialPresent>0)?partialEntriesForReport(partial,i,partialRows[i],s):[];
+   if(!entries.length){ph+='<tr><td><strong>'+shifts[i]+'</strong></td><td></td><td>0.00</td><td>0</td><td>0.00</td></tr>';continue;}
+   entries.forEach(r=>{const c=r.c,d=n(r.people),cd=c*d;ph+='<tr><td><strong>'+shifts[i]+'</strong></td><td>'+esc(r.start&&r.end?r.start+'-'+r.end:'')+'</td><td>'+c.toFixed(2)+'</td><td>'+esc(d)+'</td><td>'+cd.toFixed(2)+'</td></tr>';});
  }
  ph+='</tbody></table>';
  h+='<div class="report-table-block"><h4>Personal a tiempo parcial</h4>'+ph+'<div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';
- h+='<div class="report-table-block personnel-op"><table class="mapo-report-table"><tbody><tr><th>Nº TOTAL DE PERSONAS TRABAJADORAS EN 24 HORAS (Op)</th><td>'+esc(op.toFixed(2))+'</td></tr><tr><td colspan="2">Total de personas trabajadoras/turno de todos los turnos (A) + Fracción de unidad por persona trabajadora (D).</td></tr></tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';
+ let op=calculated&&Number.isFinite(Number(calculated.OP))?Number(calculated.OP):totalFull;
+ h+='<div class="report-table-block personnel-op"><table class="mapo-report-table"><tbody><tr><th>Nº TOTAL DE PERSONAS TRABAJADORAS EN 24 HORAS (Op)</th><td>'+esc(op.toFixed(2))+'</td></tr><tr><td colspan="2">Total de personas trabajadoras/turno de todos los turnos (A) + Fracción de unidad por persona trabajadora (D), ponderadas según las horas de presencia y los días trabajados.</td></tr></tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';
  return h+'</div>';
 }
+function partialEntriesForReport(partial,i,row,s){
+ const turn=s.shifts?.[['morning','afternoon','night'][i]]||{};
+ const out=[];
+ for(const r of partial){if(!r||!r.start||!r.end||n(r.people)<=0)continue;const h=overlapHoursReport(r.start,r.end,turn.start,turn.end);if(h<=0)continue;const factor=dayFactorReport(r);out.push({start:r.start,end:r.end,people:r.people,c:(h/8)*factor});}
+ return out;
+}
+function timeMinutesReport(v){const m=String(v??'').match(/^(\d{1,2})(?::(\d{2}))?/);return m?Number(m[1])*60+Number(m[2]||0):NaN;}
+function overlapHoursReport(a,b,c,d){let s=timeMinutesReport(a),e=timeMinutesReport(b),p=timeMinutesReport(c),q=timeMinutesReport(d);if(![s,e,p,q].every(Number.isFinite))return 0;if(e<=s)e+=1440;if(q<=p)q+=1440;let best=0;for(const z of [-1440,0,1440])best=Math.max(best,Math.max(0,Math.min(e,q+z)-Math.max(s,p+z)));return best/60;}
+function dayFactorReport(r){const d=r?.daysWorked;if(!d)return 5/7;if(d.type==='longshort'||d.type==='longweek'||d.type==='shortweek')return 1;return Array.isArray(d.selected)?d.selected.length/7:5/7;}
 function taskRows(f){const all=[...(window.MAPO_TASKS||[]).map(x=>({...x,source:'MAPO'})),...(window.EXTRA_MAPO_TASKS||[]).map(x=>({...x,source:'Adicional'}))],t=f.tasks||{},out=[];all.forEach(x=>Object.entries(t[x.id]||{}).forEach(([i,r])=>out.push([x.source,x.label,shifts[+i]||'Turno '+(+i+1),n(r.tm),n(r.ta),n(r.pm),n(r.pa)])));(f.customTasks||[]).forEach(x=>out.push(['Personalizada',x.name||'','—',n(x.tm),n(x.ta),n(x.pm),n(x.pa)]));return out;}
 function tableOrEmpty(title,heads,body){return table(title,heads,body||'<tr><td colspan="'+heads.length+'">Sin datos registrados</td></tr>');}
 function build(key){const {form:f,result:r}=data(),t=r.taskTotals||{};switch(key){case'general':return table('Datos generales',['Campo','Valor'],rows([['Hospital / empresa',f.empresa||''],['Sala / unidad',f.unidad||''],['Fecha de evaluación',f.fecha||''],['Código de sala',f.codigo||''],['Número de camas',n(f.camas)]]));case'workers':return personnelTable(f);case'patients':{const p=f.patientTypes||{};return table('Tipología de pacientes',['Dato','Valor'],rows([['Autónomos',n(p.autonomo)],['Colaboradores',n(p.colaborador)],['No colaboradores',n(p.noColaborador)],['Encamados',n(p.encamado)],['NC',n(f.nc)],['PC',n(f.pc)],['NA',n(f.na)]]));}case'mobilizations':return tableOrEmpty('Movilizaciones',['Origen','Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],rows(taskRows(f)))+table('Totales de movilización',['Indicador','Valor'],rows([['ST',n(t.st)],['LTA',n(t.lta)],['% LTA',pct(t.pLTA)],['SP',n(t.sp)],['LPA',n(t.lpa)],['% LPA',pct(t.pLPA)],['STP',n(t.stp)]]));case'fs':return table('Factor de elevación (FS)',['Dato','Valor'],rows([['FS calculado',r.fs==null?'':n(r.fs).toFixed(2)],['% LTA',pct(t.pLTA)]]));case'fa':return table('Factor de ayudas menores (FA)',['Dato','Valor'],rows([['FA calculado',r.fa==null?'':n(r.fa).toFixed(2)],['% LPA',pct(t.pLPA)]]));case'wheelchairs':return table('Sillas de ruedas (FC)',['Dato','Valor'],rows([['FC',r.fc==null?'Pendiente':n(r.fc).toFixed(2)]]));case'bathrooms':return table('Baños (PMB y PMWC)',['Indicador','Valor'],rows([['PMB',r.details?.pmB==null?'':n(r.details.pmB).toFixed(2)],['PMWC',r.details?.pmWC==null?'':n(r.details.pmWC).toFixed(2)]]));case'rooms':return table('Habitaciones (PMH)',['Indicador','Valor'],rows([['PMH',r.details?.pmH==null?'':n(r.details.pmH).toFixed(2)]]));case'formation':return table('Factor de formación (FF)',['Dato','Valor'],rows([['FF',r.ff==null?'':n(r.ff).toFixed(2)]]));case'factors':return table('Resultado MAPO y factores',['Indicador','Valor'],rows([['MAPO',r.mapo==null?'':n(r.mapo).toFixed(2)],['Nivel de exposición',r.nivel||''],['FS',r.fs==null?'':n(r.fs).toFixed(2)],['FA',r.fa==null?'':n(r.fa).toFixed(2)],['FC',r.fc==null?'Pendiente':n(r.fc).toFixed(2)],['Famb',r.famb==null?'Pendiente':n(r.famb).toFixed(2)],['FF',r.ff==null?'':n(r.ff).toFixed(2)]]));default:return '<p>Tabla no disponible.</p>';}}
