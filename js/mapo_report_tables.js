@@ -1,4 +1,4 @@
-/* MAPO Analyzer — tablas completas para informe Word. Solo presentación; no modifica cálculos. */
+/* MAPO Analyzer — tablas para informe Word. Solo presentación; no modifica cálculos. */
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
@@ -10,11 +10,53 @@ function data(){return typeof window.MAPOReportState==='function'?window.MAPORep
 function rows(t){return t.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('');}
 function table(title,heads,body){return '<div class="report-table-block"><h3>'+esc(title)+'</h3><table class="mapo-report-table"><thead><tr>'+heads.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table><button type="button" class="copy-report-table">Copiar tabla</button></div>';}
 function taskRows(f){const all=[...(window.MAPO_TASKS||[]).map(x=>({...x,source:'MAPO'})),...(window.EXTRA_MAPO_TASKS||[]).map(x=>({...x,source:'Adicional'}))];const t=f.tasks||{};let out=[];all.forEach(x=>{Object.entries(t[x.id]||{}).forEach(([i,r])=>out.push([x.source,x.label,['Mañana','Tarde','Noche'][+i]||('Turno '+(+i+1)),n(r.tm),n(r.ta),n(r.pm),n(r.pa)]));});(f.customTasks||[]).forEach(x=>out.push(['Personalizada',x.name||'', '—',n(x.tm),n(x.ta),n(x.pm),n(x.pa)]));return out;}
-function workerRows(f){const s=f.workerSchedule||{},out=[];[['Jornada completa',s.full||[]],['Horario parcial',s.partial||[]]].forEach(([kind,arr])=>arr.filter(r=>r.start||r.end||r.people!=='').forEach((r,i)=>out.push([kind,i+1,r.start||'',r.end||'',n(r.people),r.daysWorked?.selected?.join(', ')||''])));return out;}
+function workerRows(f){const s=f.workerSchedule||{},out=[];const full=s.full||[],partial=s.partial||[];const shifts=['Mañana','Tarde','Noche'];
+ full.filter(r=>r.start||r.end||r.people!==''||r.reference!=='').forEach((r,i)=>out.push(['Jornada completa',shifts[i]||r.shift||'',r.start||'',r.end||'',n(r.people),r.daysWorked?.selected?.join(', ')||r.days||'']));
+ partial.filter(r=>r.start||r.end||r.people!==''||r.reference!=='').forEach((r,i)=>out.push(['Horario parcial',shifts[i]||r.shift||'',r.start||'',r.end||'',n(r.people),r.daysWorked?.selected?.join(', ')||r.days||'']));
+ return out;}
+function personnelRows(f){
+ const s=f.workerSchedule||{};
+ const full=s.full||[], partial=s.partial||[];
+ const find=(arr,i)=>arr[i]||{};
+ const out=[];
+ const max=Math.max(3,full.length,partial.length);
+ for(let i=0;i<max;i++){const r=find(full,i);const p=find(partial,i);out.push([shifts[i]||'',n(r.people),r.start&&r.end?(r.start+'-'+r.end):'',n(p.people),p.start&&p.end?(p.start+'-'+p.end):'',p.fraction!=null?n(p.fraction).toFixed(2):'']);}
+ return out;
+}
+const shifts=['Mañana','Tarde','Noche'];
+function personnelTable(f){
+ const s=f.workerSchedule||{};
+ const full=s.full||[], partial=s.partial||[];
+ const get=(a,i)=>a[i]||{};
+ const count=arr=>arr.reduce((z,r)=>z+n(r.people),0);
+ const total=count(full)+count(partial);
+ const auxEnf=f.auxEnfermeria??f.aux_enfermeria??f.auxEnfermeria??'';
+ const auxGer=f.auxGeriatria??f.aux_geriatria??f.auxGeriatria??'';
+ const limit=f.personalLimitacionMMP??f.personal_limitacion_mmp??f.limitacionMMP??'';
+ let html='<div class="report-table-block personnel-report">';
+ html+='<h3>1. ENTREVISTA</h3>';
+ html+='<h4>1.1. Nº DE PERSONAS TRABAJADORAS QUE REALIZAN MMP:</h4>';
+ html+='<p class="report-note"><strong>Número total de personas trabajadoras de planta.</strong></p>';
+ html+='<table class="mapo-report-table personnel-summary"><tbody>';
+ html+='<tr><th>Número total de personas trabajadoras de planta</th><td>'+esc(total)+'</td></tr>';
+ html+='<tr><th>Aux. enfermería</th><td>'+esc(auxEnf)+'</td></tr>';
+ html+='<tr><th>Aux. geriatría</th><td>'+esc(auxGer)+'</td></tr>';
+ html+='<tr><th>Personal con limitación para MMP</th><td>'+esc(limit)+'</td></tr></tbody></table>';
+ html+='<h4>1.1.1. Nº DE PERSONAS TRABAJADORAS QUE REALIZAN MMP DURANTE LOS 3 TURNOS:</h4>';
+ html+='<p class="report-note"><strong>Número de personas trabajadoras presentes en toda la duración de cada turno.</strong></p>';
+ html+='<table class="mapo-report-table personnel-shifts"><thead><tr><th>TURNO</th><th>Nº de personas trabajadoras/Turno (A)</th><th>Horario del turno</th></tr></thead><tbody>';
+ for(let i=0;i<3;i++){const r=get(full,i);html+='<tr><td><strong>'+shifts[i]+'</strong></td><td>'+esc(r.people===''?'':n(r.people))+'</td><td>'+esc(r.start&&r.end?(r.start+'-'+r.end):'')+'</td></tr>';}
+ html+='</tbody></table>';
+ html+='<h4>1.1.2. Nº DE PERSONAS TRABAJADORAS QUE REALIZAN MMP A TIEMPO PARCIAL:</h4>';
+ html+='<p class="report-note"><strong>Turno y horario de presencia.</strong><br>(En el caso de horarios diferentes por turno se añaden las filas siguientes tantas veces como sea necesario)</p>';
+ html+='<table class="mapo-report-table personnel-partial"><thead><tr><th>TURNO</th><th>Nº de personas trabajadoras a tiempo parcial (B)</th><th>Horario de presencia</th><th>Fracción de unidad (C)</th></tr></thead><tbody>';
+ for(let i=0;i<3;i++){const r=get(partial,i);let fraction=r.fraction;if(fraction==null&&r.start&&r.end){const m=x=>{const q=String(x).match(/^(\d{1,2})(?::(\d{2}))?$/);return q?Number(q[1])*60+Number(q[2]||0):NaN};const a=m(r.start),b=m(r.end);if(Number.isFinite(a)&&Number.isFinite(b)){let mins=b-a;if(mins<0)mins+=1440;fraction=mins/480;}}html+='<tr><td><strong>'+shifts[i]+'</strong></td><td>'+esc(r.people===''?'':n(r.people))+'</td><td>'+esc(r.start&&r.end?(r.start+'-'+r.end):'')+'</td><td>'+esc(fraction==null?'':n(fraction).toFixed(2))+'</td></tr>';}
+ html+='</tbody></table></div>';return html;
+}
 function tableOrEmpty(title,heads,body){return table(title,heads,body||'<tr><td colspan="'+heads.length+'">Sin datos registrados</td></tr>');}
 function build(key){const {form:f,result:r}=data(),t=r.taskTotals||{};switch(key){
 case'general':return table('Datos generales',['Campo','Valor'],rows([['Hospital / empresa',f.empresa||''],['Sala / unidad',f.unidad||''],['Fecha de evaluación',f.fecha||''],['Código de sala',f.codigo||''],['Número de camas',n(f.camas)]]));
-case'workers':return tableOrEmpty('Personas trabajadoras y horarios',['Tipo','Horario','Entrada','Salida','Personas','Días trabajados'],rows(workerRows(f)));
+case'workers':return personnelTable(f);
 case'patients':{const p=f.patientTypes||{},c=typeof window.getHospitalizacionPatientCounts==='function'?(()=>{try{return window.getHospitalizacionPatientCounts(f)}catch(e){return {nc:f.nc,pc:f.pc,na:f.na}}})():{};return table('Tipología de pacientes',['Dato','Valor'],rows([['Autónomos',n(p.autonomo)],['Colaboradores',n(p.colaborador)],['No colaboradores',n(p.noColaborador)],['Encamados',n(p.encamado)],['NC',n(c.nc)],['PC',n(c.pc)],['NA',n(c.na)]]));}
 case'mobilizations':{const rr=taskRows(f);return tableOrEmpty('Movilizaciones',['Origen','Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],rows(rr))+table('Totales de movilización',['Indicador','Valor'],rows([['ST',n(t.st)],['LTA',n(t.lta)],['% LTA',pct(t.pLTA)],['SP',n(t.sp)],['LPA',n(t.lpa)],['% LPA',pct(t.pLPA)],['STP',n(t.stp)]]));}
 case'fs':return table('Factor de elevación (FS)',['Dato','Valor'],rows([['Elevadores suficientes',yn(f.fs_elevadores)],['Camillas regulables y ayudas asociadas suficientes',yn(f.fs_camillas)],['Camas regulables de 3 nodos para el 100%',yn(f.fs_camas3)],['Levantamientos totales con ayuda',n(f.fs_lta_total)],['Levantamientos totales evaluados',n(f.fs_st_total)],['FS calculado',r.fs==null?'':n(r.fs).toFixed(2)],['% LTA',pct(t.pLTA)]]));
