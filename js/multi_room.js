@@ -1,16 +1,20 @@
-/* MAPO Analyzer — estado de unidades y navegación multi-sala.
-   Única fuente de verdad para salas/plantas/secciones. No calcula MAPO. */
+/* MAPO Analyzer — estado de unidades/salas.
+   Este módulo SOLO gestiona el estado multi-sala y sus datos.
+   La navegación pertenece exclusivamente a navigation_controller.js.
+   No crea botones de Anterior/Siguiente/Guardar/Cargar. */
 (function(){'use strict';
- const $=id=>document.getElementById(id),state={rooms:[],active:0,study:null};
- const clone=o=>JSON.parse(JSON.stringify(o??{})),show=(id,v)=>{const e=$(id);if(e)e.hidden=!v;},currentRoom=()=>state.rooms[state.active];
+ const $=id=>document.getElementById(id);
+ const state={rooms:[],active:0,study:null};
+ const clone=o=>JSON.parse(JSON.stringify(o??{}));
+ const show=(id,v)=>{const e=$(id);if(e)e.hidden=!v;};
+ const currentRoom=()=>state.rooms[state.active];
  const label=(r,i)=>r?.name?.trim()||`Unidad ${i+1}`;
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- function readNames(){document.querySelectorAll('[data-room-name]').forEach((e,i)=>{if(state.rooms[i])state.rooms[i].name=e.value.trim()||`Unidad ${i+1}`;});}
+ function readNames(){document.querySelectorAll('[data-room-name]').forEach((e,i)=>{if(state.rooms[i])state.rooms[i].name=e.value.trim()||`Planta/Sala/Sección ${i+1}`;});}
  function capture(){const r=currentRoom();if(!r)return;try{window.MAPOStudyIO?.captureCurrentStep?.()}catch(_){}r.formData=clone(window.formData||{});r.currentStep=Number(window.currentStep)||0;r.lastResult=window.lastResult?clone(window.lastResult):null;}
  function renderNames(n){n=Math.max(1,Math.min(50,Number(n)||1));readNames();const list=$('roomNames');if(!list)return;const old=state.rooms;state.rooms=Array.from({length:n},(_,i)=>({name:old[i]?.name||`Planta/Sala/Sección ${i+1}`,formData:old[i]?.formData||{},currentStep:old[i]?.currentStep||0,lastResult:old[i]?.lastResult||null}));list.innerHTML=state.rooms.map((r,i)=>`<label class="room-name-row"><span>Unidad ${i+1}</span><input data-room-name="${i}" type="text" value="${esc(r.name)}" placeholder="Ej.: Planta 2 · Medicina interna"></label>`).join('');}
- function roomSetupNav(){const h=$('roomSetup');if(!h)return;h.querySelector('#roomSetupNavigation')?.remove();const b=document.createElement('div');b.id='roomSetupNavigation';b.className='actions';b.innerHTML='<button type="button" id="roomSetupBack" class="secondary">Anterior</button><button type="button" id="roomSetupSave" class="secondary">Guardar estudio</button><button type="button" id="roomSetupLoad" class="secondary">Cargar estudio</button><button type="button" id="roomSetupNext">Siguiente</button>';h.appendChild(b);$('roomSetupBack').onclick=()=>{readNames();show('roomSetup',false);show('studySelection',true);};$('roomSetupSave').onclick=()=>window.MAPOMultiRoom.saveMultiStudy();$('roomSetupLoad').onclick=()=>$('loadMultiStudyFile')?.click();}
- function openStudySetup(key){state.study=key;state.active=0;show('accessScreen',false);show('studySelection',false);show('roomSetup',true);show('studyPanel',false);show('result',false);show('globalResults',false);prepareRoomSetup();}
- function prepareRoomSetup(){const n=$('roomCount');renderNames(Number(n?.value)||1);roomSetupNav();}
+ function openStudySetup(key){state.study=key;state.active=0;show('accessScreen',false);show('studySelection',false);show('roomSetup',true);show('studyPanel',false);show('result',false);show('globalResults',false);prepareRoomSetup();window.MAPONavigation?.bindStandard?.();}
+ function prepareRoomSetup(){const n=$('roomCount');renderNames(Number(n?.value)||1);window.MAPONavigation?.bindRoomSetup?.();}
  function setStudyType(k){state.study=k;}
  function beginSelectedStudy(key){readNames();if(!state.rooms.length)renderNames(1);state.study=key||state.study;const r=currentRoom();selectedStudy=state.study;currentStep=Number(r.currentStep)||0;formData=clone(r.formData);lastResult=r.lastResult?clone(r.lastResult):null;show('studySelection',false);show('roomSetup',false);show('studyPanel',true);show('result',false);show('globalResults',false);renderStep();updateBanner();}
  function updateBanner(){const b=$('currentRoomBanner'),r=currentRoom();if(b&&r)b.innerHTML=`<strong>Unidad en estudio:</strong> ${esc(label(r,state.active))}<span> · ${state.active+1} de ${state.rooms.length}</span>`;const s=$('roomSelector');if(s)s.innerHTML=state.rooms.map((r,i)=>`<option value="${i}" ${i===state.active?'selected':''}>${esc(label(r,i))}</option>`).join('');}
@@ -18,10 +22,9 @@
  function switchRoom(i){if(i<0||i>=state.rooms.length)return;capture();state.active=i;const r=currentRoom();selectedStudy=state.study;currentStep=Number(r.currentStep)||0;formData=clone(r.formData);lastResult=r.lastResult?clone(r.lastResult):null;show('result',false);renderStep();updateBanner();}
  function previousStep(){if(currentStep<=0)return;capture();currentStep--;currentRoom().currentStep=currentStep;currentRoom().lastResult=null;lastResult=null;renderStep();updateBanner();}
  function nextStep(){const total=MAPO_STUDIES[selectedStudy].steps.length;if(currentStep>=total-1)return;capture();currentStep++;currentRoom().currentStep=currentStep;currentRoom().lastResult=null;lastResult=null;renderStep();updateBanner();}
- function countListener(){const n=$('roomCount');if(!n||n.dataset.multiRoomBound)return;n.dataset.multiRoomBound='1';const f=()=>renderNames(Number(n.value)||1);n.addEventListener('input',f);n.addEventListener('change',f);}
  async function saveMultiStudy(){capture();await window.MAPOStudyIO.saveJson({format:'MAPO Analyzer Multi-Room Study',savedAt:new Date().toISOString(),study:state.study,active:state.active,rooms:clone(state.rooms)},'MAPO_estudio_multi_sala.json');}
- async function loadMultiStudyFile(file){try{const d=JSON.parse(await file.text());if(d?.format!=='MAPO Analyzer Multi-Room Study'||!Array.isArray(d.rooms))throw Error('El archivo no es un estudio MAPO multi-sala válido.');state.rooms=d.rooms.map((r,i)=>({name:r.name||`Unidad ${i+1}`,formData:r.formData||{},currentStep:Number(r.currentStep)||0,lastResult:r.lastResult||null}));state.active=Math.max(0,Math.min(state.rooms.length-1,Number(d.active)||0));state.study=d.study||null;if(state.study)beginSelectedStudy(state.study);else{show('roomSetup',true);renderNames(state.rooms.length);roomSetupNav();}}catch(e){const x=$('error');if(x){x.textContent=e.message;x.hidden=false;}}}
- function init(){countListener();$('loadMultiStudyFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)loadMultiStudyFile(f);e.target.value='';});setTimeout(()=>{header();if($('roomSetup')&&!$('roomSetup').hidden)prepareRoomSetup();},0);}
+ async function loadMultiStudyFile(file){try{const d=JSON.parse(await file.text());if(d?.format!=='MAPO Analyzer Multi-Room Study'||!Array.isArray(d.rooms))throw Error('El archivo no es un estudio MAPO multi-sala válido.');state.rooms=d.rooms.map((r,i)=>({name:r.name||`Unidad ${i+1}`,formData:r.formData||{},currentStep:Number(r.currentStep)||0,lastResult:r.lastResult||null}));state.active=Math.max(0,Math.min(state.rooms.length-1,Number(d.active)||0));state.study=d.study||null;if(state.study)beginSelectedStudy(state.study);else{show('roomSetup',true);renderNames(state.rooms.length);prepareRoomSetup();}}catch(e){const x=$('error');if(x){x.textContent=e.message;x.hidden=false;}}}
+ function init(){const n=$('roomCount');if(n&&!n.dataset.multiRoomBound){n.dataset.multiRoomBound='1';const f=()=>renderNames(Number(n.value)||1);n.addEventListener('input',f);n.addEventListener('change',f);}$('loadMultiStudyFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)loadMultiStudyFile(f);e.target.value='';});setTimeout(()=>header(),0);}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
- window.MAPOMultiRoom={state,openStudySetup,prepareRoomSetup,beginSelectedStudy,setStudyType,saveMultiStudy,loadMultiStudyFile,switchRoom,previousStep,nextStep};
+ window.MAPOMultiRoom={state,openStudySetup,prepareRoomSetup,beginSelectedStudy,setStudyType,saveMultiStudy,loadMultiStudyFile,switchRoom,previousStep,nextStep,renderNames};
 })();
