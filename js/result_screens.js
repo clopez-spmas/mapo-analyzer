@@ -10,7 +10,23 @@ function top(){window.scrollTo({top:0,behavior:'smooth'});}
 function show(id,after){hideAll();const e=$(id);if(!e)return;e.classList.add('result-independent-screen');setVisible(e,true);if(after)after(e);top();}
 function showResult(){show('result');}
 function showTables(){show('reportTablesPanel');}
-function showSimulation(){show('mapoSimulation',()=>{if(typeof window.renderMapoSimulation==='function')window.renderMapoSimulation();});}
+function showSimulation(){
+  hideAll();
+  const e=$('mapoSimulation');
+  if(!e)return;
+  e.classList.add('result-independent-screen');
+  setVisible(e,true);
+  try{
+    if(window.MAPOSimulation&&typeof window.MAPOSimulation.open==='function'){
+      window.MAPOSimulation.open();
+    }else if(typeof window.renderMapoSimulation==='function'){
+      window.renderMapoSimulation();
+    }
+  }catch(err){
+    e.innerHTML='<div class="error">No se pudo abrir la simulación: '+String(err.message||err)+'</div>';
+  }
+  top();
+}
 function showStudy(){hideAll();const e=$('studyPanel');if(e){e.classList.remove('result-independent-screen');setVisible(e,true);}top();}
 function bind(){document.addEventListener('click',e=>{const shortcut=e.target.closest('[data-result-screen]');if(shortcut){e.preventDefault();e.stopImmediatePropagation();const k=shortcut.dataset.resultScreen;if(k==='result')showResult();else if(k==='tables')showTables();else if(k==='simulation')showSimulation();return;}const b=e.target.closest('#openMapoSimulation,#openReportTables,#createReportTables');if(b){e.preventDefault();e.stopImmediatePropagation();if(b.id==='openMapoSimulation')showSimulation();else showTables();}},true);}
 function init(){ensureTablesPanel();bind();const main=document.querySelector('main.container');if(main)new MutationObserver(ensureTablesPanel).observe(main,{childList:true,subtree:true});}
