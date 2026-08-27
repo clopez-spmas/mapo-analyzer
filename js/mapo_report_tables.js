@@ -3,8 +3,8 @@
    No calcula MAPO ni modifica los datos de evaluación. */
 (function(){
 'use strict';
-const $=id=>document.getElementById(id), n=v=>Number(v||0), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const yn=v=>v===true?'Sí':v===false?'No':'', pct=v=>n(v).toFixed(1)+'%';
+const $=id=>document.getElementById(id),n=v=>Number(v||0),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const yn=v=>v===true?'Sí':v===false?'No':'',pct=v=>n(v).toFixed(1)+'%';
 const shifts=['Mañana','Tarde','Noche'];
 function data(){return typeof window.MAPOReportState==='function'?window.MAPOReportState():{form:{},result:{}};}
 function rows(t){return t.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('');}
@@ -26,54 +26,20 @@ function personnelTable(f){
  const op=calculated&&Number.isFinite(Number(calculated.OP))?Number(calculated.OP):totalFull;
  return h+'<div class="report-table-block personnel-op"><table class="mapo-report-table"><tbody><tr><th>Nº TOTAL DE PERSONAS TRABAJADORAS EN 24 HORAS (Op)</th><td>'+esc(op.toFixed(2))+'</td></tr><tr><td colspan="2">Total de personas trabajadoras/turno de todos los turnos (A) + Fracción de unidad por persona trabajadora (D), ponderadas según las horas de presencia y los días trabajados.</td></tr></tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div></div>';
 }
-/* Lee las dos estructuras que existen en la aplicación.
-   Prioridad: estructura actual form.tasks (pantalla de movilizaciones).
-   Compatibilidad: form.mobilizations.entries (versiones anteriores).
-   Solo lectura; no recalcula ni modifica formData. */
 function mobilizationRows(f){
- const out=[];
- const tasks=f.tasks&&typeof f.tasks==='object'?f.tasks:{};
- const catalog=Array.isArray(window.HOSPITALIZATION_MOBILIZATIONS)?window.HOSPITALIZATION_MOBILIZATIONS:[];
- const catalogById=new Map(catalog.map(x=>[x.id,x]));
- const sourceLabel=x=>x?.source==='Complementaria'?'Adicional':(x?.source||'MAPO');
- Object.keys(tasks).forEach(id=>{
-  const task=catalogById.get(id)||{id,name:id,source:'MAPO'};
-  const turns=tasks[id]&&typeof tasks[id]==='object'?tasks[id]:{};
-  for(let i=0;i<3;i++){
-   const r=turns[i]||{};
-   const tm=n(r.tm),ta=n(r.ta),pm=n(r.pm),pa=n(r.pa);
-   if(tm||ta||pm||pa)out.push([sourceLabel(task),task.name||id,shifts[i],tm,ta,pm,pa]);
-  }
- });
- /* Compatibilidad con datos guardados en la estructura antigua. */
- const legacy=f.mobilizations&&typeof f.mobilizations==='object'?f.mobilizations:null;
- const entries=legacy&&legacy.entries&&typeof legacy.entries==='object'?legacy.entries:{};
- if(Object.keys(tasks).length===0){
-  Object.keys(entries).forEach(id=>{
-   const task=catalogById.get(id)||((legacy.custom||[]).find(x=>x.id===id))||{id,name:id,source:'MAPO'};
-   const e=entries[id]||{};
-   for(let i=0;i<3;i++){
-    const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);
-    if(tm||ta||pm||pa)out.push([sourceLabel(task),task.name||id,shifts[i],tm,ta,pm,pa]);
-   }
-  });
- }
- /* Las personalizadas actuales no llevan turno en formData.customTasks.
-    No inventamos un turno ni repartimos sus cantidades: se muestran en una
-    fila agregada, conservando exactamente los valores introducidos. */
- const customs=Array.isArray(f.customTasks)?f.customTasks:[];
- customs.forEach((x,i)=>{
-  const tm=n(x.tm),ta=n(x.ta),pm=n(x.pm),pa=n(x.pa);
-  if(tm||ta||pm||pa)out.push(['Personalizada',x.name||`Movilización personalizada ${i+1}`,'',tm,ta,pm,pa]);
- });
- return out;
+ const out=[],tasks=f.tasks&&typeof f.tasks==='object'?f.tasks:{},catalog=Array.isArray(window.HOSPITALIZATION_MOBILIZATIONS)?window.HOSPITALIZATION_MOBILIZATIONS:[],catalogById=new Map(catalog.map(x=>[x.id,x])),sourceLabel=x=>x?.source==='Complementaria'?'Adicional':(x?.source||'MAPO');
+ Object.keys(tasks).forEach(id=>{const task=catalogById.get(id)||{id,name:id,source:'MAPO'},turns=tasks[id]&&typeof tasks[id]==='object'?tasks[id]:{};for(let i=0;i<3;i++){const r=turns[i]||{},tm=n(r.tm),ta=n(r.ta),pm=n(r.pm),pa=n(r.pa);if(tm||ta||pm||pa)out.push([task.name||id,shifts[i],tm,ta,pm,pa]);}});
+ const legacy=f.mobilizations&&typeof f.mobilizations==='object'?f.mobilizations:null,entries=legacy&&legacy.entries&&typeof legacy.entries==='object'?legacy.entries:{};
+ if(Object.keys(tasks).length===0)Object.keys(entries).forEach(id=>{const task=catalogById.get(id)||((legacy.custom||[]).find(x=>x.id===id))||{id,name:id,source:'MAPO'},e=entries[id]||{};for(let i=0;i<3;i++){const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);if(tm||ta||pm||pa)out.push([task.name||id,shifts[i],tm,ta,pm,pa]);}});
+ const customs=Array.isArray(f.customTasks)?f.customTasks:[];customs.forEach((x,i)=>{const tm=n(x.tm),ta=n(x.ta),pm=n(x.pm),pa=n(x.pa);if(tm||ta||pm||pa)out.push([x.name||`Movilización personalizada ${i+1}`,'',tm,ta,pm,pa]);});
+ const order=new Map(shifts.map((s,i)=>[s,i]));out.sort((a,b)=>(order.get(a[1])??99)-(order.get(b[1])??99)||String(a[0]).localeCompare(String(b[0]),'es',{sensitivity:'base'}));return out;
 }
 function tableOrEmpty(title,heads,body){return table(title,heads,body||'<tr><td colspan="'+heads.length+'">Sin datos registrados</td></tr>');}
 function build(key){const {form:f,result:r}=data(),t=r.taskTotals||{};switch(key){
 case'general':return table('Datos generales',['Campo','Valor'],rows([['Hospital / empresa',f.empresa||''],['Sala / unidad',f.unidad||''],['Fecha de evaluación',f.fecha||''],['Código de sala',f.codigo||''],['Número de camas',n(f.camas)]]));
 case'workers':return personnelTable(f);
 case'patients':{const p=f.patientTypes||{};return table('Tipología de pacientes',['Dato','Valor'],rows([['AUTÓNOMOS',n(p.autonomo)],['COLABORADORES',n(p.colaborador)],['NO COLABORADORES',n(p.noColaborador)],['ENCAMADOS',n(p.encamado)],['NC',n(f.nc)],['PC',n(f.pc)],['NA',n(f.na)]]));}
-case'mobilizations':return tableOrEmpty('Movilizaciones',['Origen','Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],rows(mobilizationRows(f)))+table('Totales de movilización',['Indicador','Valor'],rows([['ST',n(t.st)],['LTA',n(t.lta)],['% LTA',pct(t.pLTA)],['SP',n(t.sp)],['LPA',n(t.lpa)],['% LPA',pct(t.pLPA)],['STP',n(t.stp)]]));
+case'mobilizations':return tableOrEmpty('Movilizaciones',['Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],rows(mobilizationRows(f)))+table('Totales de movilización',['Indicador','Valor'],rows([['ST',n(t.st)],['LTA',n(t.lta)],['% LTA',pct(t.pLTA)],['SP',n(t.sp)],['LPA',n(t.lpa)],['% LPA',pct(t.pLPA)],['STP',n(t.stp)]]));
 case'fs':return table('Factor de elevación (FS)',['Dato','Valor'],rows([['FS calculado',r.fs==null?'':n(r.fs).toFixed(2)],['% LTA',pct(t.pLTA)]]));
 case'fa':return table('Factor de ayudas menores (FA)',['Dato','Valor'],rows([['FA calculado',r.fa==null?'':n(r.fa).toFixed(2)],['% LPA',pct(t.pLPA)]]));
 case'wheelchairs':{const w=f.wheelchairs||{},entries=w.entries||{},types=[...(window.WHEELCHAIR_PREDEFINED||[]),...(window.WHEELCHAIR_COMMON||[]),...(Array.isArray(w.custom)?w.custom:[])];let body='';types.forEach(x=>{const e=entries[x.id]||{},score=(e.brakes?0:1)+(e.arms?0:1)+(e.back?0:1)+(e.width?0:1);body+='<tr>'+[x.name||'',e.count??0,yn(e.brakes),yn(e.arms),yn(e.back),yn(e.width),score].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>';});if(!body)body='<tr><td colspan="7">Sin datos registrados</td></tr>';return table('Sillas de ruedas (FC)',['TIPO DE SILLA','Nº UNIDADES','FRENOS','REPOSABRAZOS','RESPALDO','ANCHURA','PUNTUACIÓN'],body);}
