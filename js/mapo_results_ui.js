@@ -17,7 +17,8 @@ const labels={
  Famb:'Factor ambiental: pondera las condiciones ambientales de la unidad',
  FF:'Factor de formación: pondera la formación del personal en movilización de pacientes'
 };
-function resultHtml(result,op){const t=result.taskTotals||{};const rows=[
+function resultHtml(result,op){const t=result.taskTotals||{},d=result.details||{};const fcDesc=`${labels.FC}. PMSR = ${d.pmsr==null?'Sin datos':n(d.pmsr).toFixed(2)}; sillas utilizables = ${n(d.tsr)}; suficiencia frente a NA = ${d.fcSufficient?'Sí':'No'}.`;
+const rows=[
 ['MAPO','Índice MAPO de exposición a la movilización manual de pacientes',n(result.mapo).toFixed(2)],
 ['Nivel de exposición','Nivel de exposición obtenido según el índice MAPO',result.nivel||''],
 ['OP',labels.OP,n(op).toFixed(3)],
@@ -29,7 +30,7 @@ function resultHtml(result,op){const t=result.taskTotals||{};const rows=[
 ['% LPA','Porcentaje de movilizaciones parciales realizadas con ayuda respecto al total',pct(t.pLPA)],
 ['FS',labels.FS,n(result.fs).toFixed(2)],
 ['FA',labels.FA,n(result.fa).toFixed(2)],
-['FC',labels.FC,n(result.fc).toFixed(2)],
+['FC',fcDesc,n(result.fc).toFixed(2)],
 ['Famb',labels.Famb,n(result.famb).toFixed(2)],
 ['FF',labels.FF,n(result.ff).toFixed(2)]];
 return '<table class="mapo-report-table mapo-result-table"><thead><tr><th>Indicador</th><th>Descripción</th><th>Valor</th></tr></thead><tbody>'+rows.map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join('')+'</tbody></table>';}
