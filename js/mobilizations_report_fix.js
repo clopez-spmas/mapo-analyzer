@@ -1,9 +1,7 @@
 /* MAPO Analyzer — compatibilidad histórica.
-   La tabla de movilizaciones se genera ahora exclusivamente en mapo_report_tables.js.
-   Este archivo no registra eventos ni modifica el DOM para evitar duplicidades. */
+   La generación de tablas pertenece exclusivamente a mapo_report_tables.js.
+   Este archivo no registra eventos, no observa el DOM y no modifica datos. */
 (function(){
-'use strict';
-window.MAPOMobilizationsReportFix={render:function(){
-  if(window.MAPOReportTables&&typeof window.MAPOReportTables.render==='function')return window.MAPOReportTables.render();
-}};
+  'use strict';
+  window.MAPOMobilizationsReportFix = Object.freeze({});
 })();
