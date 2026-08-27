@@ -65,16 +65,27 @@
     items.forEach(x=>{const u=num(x?.units);if(u<=0)return;const p=fields.reduce((s,f)=>s+(x?.[f[0]]===true?f[1]:0),0);units+=u;points+=u*p;});
     return units?points/units:null;
   }
-  const CHAIR_FIELDS=[['brakes',1],['arms',1],['back',1],['width',1]];
   const BATH_FIELDS=[['space',2],['door',1],['obstacles',1]];
   const WC_FIELDS=[['space',2],['height',1],['bar',1],['door',1],['lateral',1]];
   const ROOM_FIELDS=[['between',2],['foot',2],['bedSection',1],['underbed',2],['chairHeight',.5]];
 
   function wheelchairData(data){
-    const types=Array.isArray(data?.wheelchairTypes)?data.wheelchairTypes:[];
+    /* Fuente única: módulo Sillas de ruedas (formData.wheelchairs). */
+    const d=data?.wheelchairs;
+    if(!d || typeof d!=='object') return {types:[],tsr:0,pmsr:null,points:0};
+    const entries=d.entries&&typeof d.entries==='object'?d.entries:{};
+    const catalog=[];
+    if(Array.isArray(window.WHEELCHAIR_PREDEFINED)) catalog.push(...window.WHEELCHAIR_PREDEFINED);
+    if(Array.isArray(window.WHEELCHAIR_COMMON)) catalog.push(...window.WHEELCHAIR_COMMON);
+    if(Array.isArray(d.custom)) d.custom.forEach((x,i)=>catalog.push({...x,id:x.id||`wc_custom_${i}`}));
     let units=0,points=0;
-    types.forEach(x=>{const u=num(x?.units);if(u<=0)return;const p=CHAIR_FIELDS.reduce((s,f)=>s+(x?.[f[0]]===true?f[1]:0),0);units+=u;points+=u*p;});
-    return{types,tsr:units,pmsr:units?points/units:null,points};
+    Object.entries(entries).forEach(([id,e])=>{
+      const u=Math.max(0,Math.floor(num(e?.count)));
+      if(u<=0)return;
+      const p=(e?.brakes===true?0:1)+(e?.arms===true?0:1)+(e?.back===true?0:1)+(e?.width===true?0:1);
+      units+=u;points+=u*p;
+    });
+    return{types:catalog,tsr:units,pmsr:units?points/units:null,points};
   }
 
   function calculateHospitalizacionFactors(data){
@@ -86,19 +97,16 @@
     const faA=tt.sp>0&&tt.lpa/tt.sp>=.9;
     const fa=faS&&faA?.5:1;
 
-    /* Fuente canónica de FC: módulo Sillas de ruedas. */
     const wc=wheelchairData(d);
     const na=num(d.na)||num(d.nc)+num(d.pc);
     const fcS=wc.tsr>=na*.5;
     let fc=1;
     if(wc.pmsr!==null)fc=wc.pmsr<=1.33?(fcS?.75:1):wc.pmsr<=2.66?(fcS?1.12:1.5):(fcS?1.5:2);
 
-    /* Fuente canónica de Famb: módulos de baños y habitaciones. */
     const pmb=registryMean(d.bathTypes,BATH_FIELDS),pmwc=registryMean(d.wcTypes,WC_FIELDS),pmh=registryMean(d.roomTypes,ROOM_FIELDS);
     const pmamb=pmb!==null&&pmwc!==null&&pmh!==null?pmb+pmwc+pmh:null;
     const famb=pmamb===null?null:(pmamb<=5.8?.75:pmamb<=11.6?1.25:1.5);
 
-    /* Fuente canónica de FF: módulo de formación. */
     const course=yn(d.ff_curso),cov=num(d.ff_cobertura),recent=yn(d.ff_antiguedad),eff=yn(d.ff_eficacia),info=yn(d.ff_informacion);
     const ff=(course&&cov>=75&&(recent||eff))?.75:(course&&cov>=50&&cov<75&&recent)||info?1:2;
 
