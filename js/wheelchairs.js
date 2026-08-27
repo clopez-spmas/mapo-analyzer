@@ -27,3 +27,6 @@ function wheelchairTotals(){const d=captureWheelchairs(),types=wheelchairAllType
 function updateWheelchairSummary(){const r=wheelchairTotals(),na=num(formData.nc)+num(formData.pc),sufficient=r.total>=na*.5;const e=$('wcSummary');if(e)e.innerHTML=`<strong>Resultados automáticos</strong> · Sillas utilizables = <b>${r.total}</b> · PMSR = <b>${r.pmsr.toFixed(2)}</b> · Suficiencia frente a NA = <b>${sufficient?'Sí':'No'}</b> (criterio: ≥50% de NA = ${Math.ceil(na*.5)})`;}
 function validateWheelchairs(){const r=wheelchairTotals();if(r.total<=0)throw Error('Debe registrar al menos una silla de ruedas utilizable.');return r;}
 window.renderWheelchairs=renderWheelchairs;window.validateWheelchairs=validateWheelchairs;window.wheelchairTotals=wheelchairTotals;
+/* Exportación del catálogo para módulos de informe. No modifica la pantalla ni el cálculo. */
+window.WHEELCHAIR_PREDEFINED=WHEELCHAIR_PREDEFINED;
+window.WHEELCHAIR_COMMON=WHEELCHAIR_COMMON;
