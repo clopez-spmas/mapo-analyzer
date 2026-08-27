@@ -26,15 +26,47 @@ function personnelTable(f){
  const op=calculated&&Number.isFinite(Number(calculated.OP))?Number(calculated.OP):totalFull;
  return h+'<div class="report-table-block personnel-op"><table class="mapo-report-table"><tbody><tr><th>Nº TOTAL DE PERSONAS TRABAJADORAS EN 24 HORAS (Op)</th><td>'+esc(op.toFixed(2))+'</td></tr><tr><td colspan="2">Total de personas trabajadoras/turno de todos los turnos (A) + Fracción de unidad por persona trabajadora (D), ponderadas según las horas de presencia y los días trabajados.</td></tr></tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div></div>';
 }
-/* Única fuente para la tabla de movilizaciones: los registros introducidos en movilizations.entries. */
+/* Lee las dos estructuras que existen en la aplicación.
+   Prioridad: estructura actual form.tasks (pantalla de movilizaciones).
+   Compatibilidad: form.mobilizations.entries (versiones anteriores).
+   Solo lectura; no recalcula ni modifica formData. */
 function mobilizationRows(f){
- const d=f.mobilizations||{},entries=d.entries||{},custom=Array.isArray(d.custom)?d.custom:[];
+ const out=[];
+ const tasks=f.tasks&&typeof f.tasks==='object'?f.tasks:{};
  const catalog=Array.isArray(window.HOSPITALIZATION_MOBILIZATIONS)?window.HOSPITALIZATION_MOBILIZATIONS:[];
- const items=[...catalog,...custom.map(x=>({id:x.id,name:x.name||'',source:'Personalizada'}))],out=[];
- items.forEach(item=>{const e=entries[item.id];if(!e)return;for(let i=0;i<3;i++){
-   const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);
-   if(tm||ta||pm||pa)out.push([item.source==='Complementaria'?'Adicional':(item.source||'MAPO'),item.name,shifts[i],tm,ta,pm,pa]);
- }});return out;
+ const catalogById=new Map(catalog.map(x=>[x.id,x]));
+ const sourceLabel=x=>x?.source==='Complementaria'?'Adicional':(x?.source||'MAPO');
+ Object.keys(tasks).forEach(id=>{
+  const task=catalogById.get(id)||{id,name:id,source:'MAPO'};
+  const turns=tasks[id]&&typeof tasks[id]==='object'?tasks[id]:{};
+  for(let i=0;i<3;i++){
+   const r=turns[i]||{};
+   const tm=n(r.tm),ta=n(r.ta),pm=n(r.pm),pa=n(r.pa);
+   if(tm||ta||pm||pa)out.push([sourceLabel(task),task.name||id,shifts[i],tm,ta,pm,pa]);
+  }
+ });
+ /* Compatibilidad con datos guardados en la estructura antigua. */
+ const legacy=f.mobilizations&&typeof f.mobilizations==='object'?f.mobilizations:null;
+ const entries=legacy&&legacy.entries&&typeof legacy.entries==='object'?legacy.entries:{};
+ if(Object.keys(tasks).length===0){
+  Object.keys(entries).forEach(id=>{
+   const task=catalogById.get(id)||((legacy.custom||[]).find(x=>x.id===id))||{id,name:id,source:'MAPO'};
+   const e=entries[id]||{};
+   for(let i=0;i<3;i++){
+    const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);
+    if(tm||ta||pm||pa)out.push([sourceLabel(task),task.name||id,shifts[i],tm,ta,pm,pa]);
+   }
+  });
+ }
+ /* Las personalizadas actuales no llevan turno en formData.customTasks.
+    No inventamos un turno ni repartimos sus cantidades: se muestran en una
+    fila agregada, conservando exactamente los valores introducidos. */
+ const customs=Array.isArray(f.customTasks)?f.customTasks:[];
+ customs.forEach((x,i)=>{
+  const tm=n(x.tm),ta=n(x.ta),pm=n(x.pm),pa=n(x.pa);
+  if(tm||ta||pm||pa)out.push(['Personalizada',x.name||`Movilización personalizada ${i+1}`,'',tm,ta,pm,pa]);
+ });
+ return out;
 }
 function tableOrEmpty(title,heads,body){return table(title,heads,body||'<tr><td colspan="'+heads.length+'">Sin datos registrados</td></tr>');}
 function build(key){const {form:f,result:r}=data(),t=r.taskTotals||{};switch(key){
