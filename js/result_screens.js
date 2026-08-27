@@ -1,12 +1,14 @@
-/* MAPO Analyzer — compatibilidad de navegación histórica.
-   La navegación real pertenece a app.js / navigation_controller.js / module_navigator.js.
-   Este módulo no mueve nodos ni crea pantallas. */
+/* MAPO Analyzer — pantallas independientes de resultados. */
 (function(){
 'use strict';
-function showResult(){const e=document.getElementById('result');if(e)e.hidden=false;}
-function showTables(){const e=document.getElementById('reportTablesPanel');if(e)e.hidden=false;}
-function showStudy(){const e=document.getElementById('studyPanel');if(e)e.hidden=false;}
-function init(){}
+const $=id=>document.getElementById(id);
+function hideAll(){['studyPanel','result','globalResults','mapoSimulation','reportTablesPanel','templateAdmin'].forEach(id=>{const e=$(id);if(e)e.hidden=true;});}
+function showResult(){hideAll();const e=$('result');if(e)e.hidden=false;window.scrollTo({top:0,behavior:'smooth'});}
+function showTables(){hideAll();const e=$('reportTablesPanel');if(e)e.hidden=false;window.scrollTo({top:0,behavior:'smooth'});}
+function showSimulation(){hideAll();const e=$('mapoSimulation');if(e)e.hidden=false;window.scrollTo({top:0,behavior:'smooth'});if(typeof window.renderMapoSimulation==='function')window.renderMapoSimulation();}
+function showStudy(){hideAll();const e=$('studyPanel');if(e)e.hidden=false;window.scrollTo({top:0,behavior:'smooth'});}
+function bindShortcuts(){document.addEventListener('click',e=>{const b=e.target.closest('[data-result-screen]');if(!b)return;e.preventDefault();const key=b.dataset.resultScreen;if(key==='result')showResult();else if(key==='tables')showTables();else if(key==='simulation')showSimulation();});}
+function init(){bindShortcuts();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-window.MAPOResultScreens=Object.freeze({showResult,showTables,showStudy});
+window.MAPOResultScreens=Object.freeze({showResult,showTables,showSimulation,showStudy});
 })();
