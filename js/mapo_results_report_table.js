@@ -1,56 +1,13 @@
 /* Añade la tabla de resultados MAPO al selector de tablas para Word y mantiene las tablas de sillas conectadas al módulo fuente. */
 (function(){
 'use strict';
-function addSelector(){
-  const panel=document.getElementById('reportTablesPanel');
-  if(!panel || panel.querySelector('[data-report-table="mapoResults"]')) return;
-  const container=panel.querySelector('.report-table-selectors');
-  if(!container) return;
-  const label=document.createElement('label');
-  label.className='report-table-selector';
-  label.innerHTML='<input type="checkbox" data-report-table="mapoResults"> Resultados de la evaluación MAPO';
-  container.appendChild(label);
-}
-function resultBlock(){
-  const source=document.getElementById('breakdown')?.querySelector('.mapo-result-table');
-  if(!source) return null;
-  const block=document.createElement('div'); block.className='report-table-block mapo-results-report-block';
-  const h=document.createElement('h3'); h.textContent='Resultados de la evaluación MAPO'; block.appendChild(h);
-  const table=source.cloneNode(true); table.classList.add('mapo-report-table'); block.appendChild(table);
-  const actions=document.createElement('div'); actions.className='report-table-actions';
-  const b=document.createElement('button'); b.type='button'; b.className='copy-report-table'; b.textContent='Copiar tabla para Word';
-  b.onclick=async()=>{const html='<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'+table.outerHTML+'</body></html>',text=table.innerText;try{if(navigator.clipboard&&window.ClipboardItem)await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);else{const d=document.createElement('div');d.contentEditable='true';d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);const r=document.createRange();r.selectNodeContents(d);const s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy');s.removeAllRanges();d.remove();}b.textContent='✓ Tabla copiada';setTimeout(()=>b.textContent='Copiar tabla para Word',1800);}catch(e){b.textContent='No se pudo copiar';setTimeout(()=>b.textContent='Copiar tabla para Word',1800);}};
-  actions.appendChild(b); block.appendChild(actions); return block;
-}
+function addSelector(){const panel=document.getElementById('reportTablesPanel');if(!panel||panel.querySelector('[data-report-table="mapoResults"]'))return;const container=panel.querySelector('.report-table-selectors');if(!container)return;const label=document.createElement('label');label.className='report-table-selector';label.innerHTML='<input type="checkbox" data-report-table="mapoResults"> Resultados de la evaluación MAPO';container.appendChild(label);}
+function copyTable(button,table){const html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #b7b7b7;padding:8px}tr{page-break-inside:avoid}</style></head><body>'+table.outerHTML+'</body></html>',text=table.innerText;try{if(navigator.clipboard&&window.ClipboardItem)navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([text],{type:'text/plain'})})]);else{const d=document.createElement('div');d.contentEditable='true';d.style.position='fixed';d.style.left='-9999px';d.innerHTML=html;document.body.appendChild(d);const r=document.createRange();r.selectNodeContents(d);const s=window.getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy');s.removeAllRanges();d.remove();}button.textContent='✓ Tabla copiada';setTimeout(()=>button.textContent='Copiar tabla para Word',1800);}catch(e){button.textContent='No se pudo copiar';setTimeout(()=>button.textContent='Copiar tabla para Word',1800);}}
+function resultBlock(){const source=document.getElementById('breakdown')?.querySelector('.mapo-result-table');if(!source)return null;const block=document.createElement('div');block.className='report-table-block mapo-results-report-block';const h=document.createElement('h3');h.textContent='Resultados de la evaluación MAPO';block.appendChild(h);const table=source.cloneNode(true);table.classList.add('mapo-report-table');block.appendChild(table);const actions=document.createElement('div');actions.className='report-table-actions';const b=document.createElement('button');b.type='button';b.className='copy-report-table';b.textContent='Copiar tabla para Word';b.onclick=()=>copyTable(b,table);actions.appendChild(b);block.appendChild(actions);return block;}
 function appendResultIfSelected(){const host=document.getElementById('reportTables');if(!host)return;const cb=document.querySelector('#reportTablesPanel [data-report-table="mapoResults"]');if(!cb?.checked)return;host.querySelector('.mapo-results-report-block')?.remove();const block=resultBlock();if(block)host.appendChild(block);}
-function wheelchairReportTable(){
-  const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null, f=state?.form||{}, xs=Array.isArray(f.wheelchairTypes)?f.wheelchairTypes:[];
-  const valid=xs.filter(x=>Number(x?.units||0)>0); if(!valid.length)return null;
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const yn=v=>v===true?'Sí':v===false?'No':''; let units=0,points=0,body='';
-  valid.forEach((x,i)=>{const u=Number(x.units||0),p=(x.brakes?0:1)+(x.arms?0:1)+(x.back?0:1)+(x.width?0:1);units+=u;points+=u*p;body+=`<tr><td>${i+1}</td><td>${esc(x.description||'')}</td><td>${u}</td><td>${yn(x.brakes)}</td><td>${yn(x.arms)}</td><td>${yn(x.back)}</td><td>${yn(x.width)}</td><td>${p}</td><td>${u*p}</td></tr>`;});
-  body+=`<tr class="report-total-row"><th colspan="9">TOTAL SILLAS DE RUEDAS: ${units}</th></tr><tr class="report-total-row"><th colspan="9">PUNTUACIÓN TOTAL FC: ${points}</th></tr><tr class="report-total-row"><th colspan="9">PUNTUACIÓN MEDIA POR SILLA: ${(points/units).toFixed(2)}</th></tr>`;
-  const block=document.createElement('div');block.className='report-table-block wheelchair-source-report-block';block.innerHTML='<h3>Sillas de ruedas (FC)</h3><table class="mapo-report-table"><thead><tr><th>Nº</th><th>Tipo de silla</th><th>Nº de unidades</th><th>¿Dispone de frenos?</th><th>¿Dispone de reposabrazos?</th><th>¿Dispone de respaldo?</th><th>¿Anchura adecuada?</th><th>Puntuación parcial por unidad</th><th>Puntos totales del tipo</th></tr></thead><tbody>'+body+'</tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div>';
-  return block;
-}
-function replaceWheelchairReport(){
-  const host=document.getElementById('reportTables');if(!host)return;
-  const blocks=[...host.querySelectorAll('.report-table-block')];
-  const old=blocks.find(b=>(b.querySelector('h3')?.textContent||'').toLowerCase().includes('sillas de ruedas'));
-  if(!old)return; const fresh=wheelchairReportTable();if(!fresh)return;old.replaceWith(fresh);const b=fresh.querySelector('.copy-report-table');if(b)b.onclick=()=>window.MAPOReportTables?.render?.();
-}
-function simulationWheelchairMessage(){
-  const host=document.getElementById('mapoSimulation');if(!host||host.hidden)return;
-  const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null,xs=Array.isArray(state?.form?.wheelchairTypes)?state.form.wheelchairTypes:[];
-  const count=xs.reduce((s,x)=>s+Number(x?.units||0),0);if(!count)return;
-  host.querySelectorAll('.simulation-factor').forEach(sec=>{const h=sec.querySelector('h3');if(!h||!h.textContent.includes('Sillas de ruedas'))return;const p=[...sec.querySelectorAll('p.sim-muted')].find(x=>x.textContent.includes('No hay tipos de silla registrados'));if(p)p.textContent='No hay tipos de silla que generen puntuación. Se han registrado '+count+' sillas utilizables en el módulo de Sillas de ruedas.';});
-}
-function init(){
-  addSelector();
-  const panel=document.getElementById('reportTablesPanel');
-  if(panel){new MutationObserver(()=>{addSelector();}).observe(panel,{childList:true,subtree:true});panel.addEventListener('change',e=>{if(e.target?.matches('[data-report-table="mapoResults"]'))appendResultIfSelected();});}
-  const host=document.getElementById('reportTables');if(host)new MutationObserver(()=>{setTimeout(()=>{appendResultIfSelected();replaceWheelchairReport();},0);}).observe(host,{childList:true,subtree:true});
-  const sim=document.getElementById('mapoSimulation');if(sim)new MutationObserver(()=>setTimeout(simulationWheelchairMessage,0)).observe(sim,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
-}
+function wheelchairReportTable(){const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null,f=state?.form||{},xs=Array.isArray(f.wheelchairTypes)?f.wheelchairTypes:[],valid=xs.filter(x=>Number(x?.units||0)>0);if(!valid.length)return null;const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const yn=v=>v===true?'Sí':v===false?'No':'';let units=0,points=0,body='';valid.forEach((x,i)=>{const u=Number(x.units||0),p=(x.brakes?0:1)+(x.arms?0:1)+(x.back?0:1)+(x.width?0:1);units+=u;points+=u*p;body+=`<tr><td>${i+1}</td><td>${esc(x.description||'')}</td><td>${u}</td><td>${yn(x.brakes)}</td><td>${yn(x.arms)}</td><td>${yn(x.back)}</td><td>${yn(x.width)}</td><td>${p}</td><td>${u*p}</td></tr>`;});body+=`<tr class="report-total-row"><th colspan="9">TOTAL SILLAS DE RUEDAS: ${units}</th></tr><tr class="report-total-row"><th colspan="9">PUNTUACIÓN TOTAL FC: ${points}</th></tr><tr class="report-total-row"><th colspan="9">PUNTUACIÓN MEDIA POR SILLA: ${(points/units).toFixed(2)}</th></tr>`;const block=document.createElement('div');block.className='report-table-block wheelchair-source-report-block';block.innerHTML='<h3>Sillas de ruedas (FC)</h3><table class="mapo-report-table"><thead><tr><th>Nº</th><th>Tipo de silla</th><th>Nº de unidades</th><th>¿Dispone de frenos?</th><th>¿Dispone de reposabrazos?</th><th>¿Dispone de respaldo?</th><th>¿Anchura adecuada?</th><th>Puntuación parcial por unidad</th><th>Puntos totales del tipo</th></tr></thead><tbody>'+body+'</tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div>';const b=block.querySelector('.copy-report-table'),table=block.querySelector('table');if(b)b.onclick=()=>copyTable(b,table);return block;}
+function replaceWheelchairReport(){const host=document.getElementById('reportTables');if(!host)return;const old=[...host.querySelectorAll('.report-table-block')].find(b=>(b.querySelector('h3')?.textContent||'').toLowerCase().includes('sillas de ruedas'));if(!old)return;const fresh=wheelchairReportTable();if(fresh)old.replaceWith(fresh);}
+function simulationWheelchairMessage(){const host=document.getElementById('mapoSimulation');if(!host||host.hidden)return;const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null,xs=Array.isArray(state?.form?.wheelchairTypes)?state.form.wheelchairTypes:[],count=xs.reduce((s,x)=>s+Number(x?.units||0),0);if(!count)return;host.querySelectorAll('.simulation-factor').forEach(sec=>{const h=sec.querySelector('h3');if(!h||!h.textContent.includes('Sillas de ruedas'))return;const p=[...sec.querySelectorAll('p.sim-muted')].find(x=>x.textContent.includes('No hay tipos de silla registrados'));if(p)p.textContent='No hay tipos de silla que generen puntuación. Se han registrado '+count+' sillas utilizables en el módulo de Sillas de ruedas.';});}
+function init(){addSelector();const panel=document.getElementById('reportTablesPanel');if(panel){new MutationObserver(()=>addSelector()).observe(panel,{childList:true,subtree:true});panel.addEventListener('change',e=>{if(e.target?.matches('[data-report-table="mapoResults"]'))appendResultIfSelected();});}const host=document.getElementById('reportTables');if(host)new MutationObserver(()=>setTimeout(()=>{appendResultIfSelected();replaceWheelchairReport();},0)).observe(host,{childList:true,subtree:true});const sim=document.getElementById('mapoSimulation');if(sim)new MutationObserver(()=>setTimeout(simulationWheelchairMessage,0)).observe(sim,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
