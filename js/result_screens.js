@@ -9,10 +9,12 @@ function hideAll(){ensureTablesPanel();IDS.forEach(id=>setVisible($(id),false));
 function top(){window.scrollTo({top:0,behavior:'smooth'});}
 function backToAccess(){
   hideAll();
-  if(typeof window.showHospitalizacionDashboard==='function'){
-    window.showHospitalizacionDashboard();
+  if(window.MAPOMultiRoom&&typeof window.MAPOMultiRoom.openHospitalDashboard==='function'){
+    window.MAPOMultiRoom.openHospitalDashboard();
+  }else if(typeof window.showHospitalizacionDashboard==='function'){
     const p=$('studyPanel');
     if(p)setVisible(p,true);
+    window.showHospitalizacionDashboard();
   }else if($('studyPanel')){
     setVisible($('studyPanel'),true);
     if(typeof window.renderStep==='function')window.renderStep();
