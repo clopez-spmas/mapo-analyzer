@@ -8,7 +8,7 @@
  const label=(r,i)=>r?.name?.trim()||`Unidad ${i+1}`;
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function readNames(){document.querySelectorAll('[data-room-name]').forEach((e,i)=>{if(state.rooms[i])state.rooms[i].name=e.value.trim()||`Planta/Sala/Sección ${i+1}`;});}
- function capture(){const r=currentRoom();if(!r)return;try{window.MAPOStudyIO?.captureCurrentStep?.()}catch(_){}r.formData=clone(window.formData||{});r.currentStep=Number(window.currentStep)||0;r.lastResult=window.lastResult?clone(window.lastResult):null;}
+ function capture(){const r=currentRoom();if(!r)return;try{window.MAPOStudyIO?.captureCurrentStep?.()}catch(_){}const s=typeof window.MAPOReportState==='function'?window.MAPOReportState():null;r.formData=clone(s?.form||window.formData||{});r.currentStep=Number(window.currentStep)||0;r.lastResult=clone(s?.result||{});}
  function renderNames(n){n=Math.max(1,Math.min(50,Number(n)||1));readNames();const list=$('roomNames');if(!list)return;const old=state.rooms;state.rooms=Array.from({length:n},(_,i)=>({name:old[i]?.name||`Planta/Sala/Sección ${i+1}`,formData:old[i]?.formData||{},currentStep:old[i]?.currentStep||0,lastResult:old[i]?.lastResult||null}));list.innerHTML=state.rooms.map((r,i)=>`<label class="room-name-row"><span>Unidad ${i+1}</span><input data-room-name="${i}" type="text" value="${esc(r.name)}" placeholder="Ej.: Planta 2 · Medicina interna"></label>`).join('');}
  function openStudySetup(key){state.study=key;state.active=0;show('accessScreen',false);show('studySelection',false);show('roomSetup',true);show('moduleHub',false);show('studyPanel',false);show('result',false);show('globalResults',false);prepareRoomSetup();window.MAPONavigation?.bindStandard?.();}
  function prepareRoomSetup(){const n=$('roomCount');renderNames(Number(n?.value)||1);window.MAPONavigation?.bindRoomSetup?.();}
@@ -17,11 +17,11 @@
  function openHospitalDashboard(){
    const r=currentRoom();
    if(!r)return;
-   if(selectedStudy===state.study && window.formData && window.lastResult){capture();}
+   if(selectedStudy===state.study && typeof window.MAPOReportState==='function')capture();
    selectedStudy=state.study;
    currentStep=Number(r.currentStep)||0;
    formData=clone(r.formData||{});
-   lastResult=r.lastResult?clone(r.lastResult):null;
+   lastResult=Object.keys(r.lastResult||{}).length?clone(r.lastResult):null;
    show('roomSetup',false);show('moduleHub',false);show('studyPanel',true);show('result',false);show('globalResults',false);show('mapoSimulation',false);show('reportTablesPanel',false);show('templateAdmin',false);
    if(typeof window.showHospitalizacionDashboard==='function')window.showHospitalizacionDashboard();
    else if(typeof window.renderStep==='function')window.renderStep();
