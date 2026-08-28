@@ -1,24 +1,22 @@
 /* MAPO Analyzer — adaptadores de solo lectura para informes.
-   No modifica fórmulas ni el estado de cálculo. Convierte la estructura que
-   utiliza la pantalla actual de movilizaciones (tasks/customTasks) a la
-   estructura de lectura que utiliza el generador de tablas. */
+   Este módulo adapta el modelo actual de movilizaciones al modelo de lectura
+   utilizado por las tablas de informe. No modifica fórmulas ni el estado de cálculo. */
 (function(){
 'use strict';
 function makeMobilizationView(form){
- const tasks=form.tasks||{},customTasks=Array.isArray(form.customTasks)?form.customTasks:[];
- const entries={};
- Object.keys(tasks).forEach(id=>{
-   const shifts=tasks[id]||{};
-   entries[id]={manualTotal:[0,0,0],aidedTotal:[0,0,0],manualPartial:[0,0,0],aidedPartial:[0,0,0]};
-   for(let i=0;i<3;i++){const r=shifts[i]||{};entries[id].manualTotal[i]=Number(r.tm||0);entries[id].aidedTotal[i]=Number(r.ta||0);entries[id].manualPartial[i]=Number(r.pm||0);entries[id].aidedPartial[i]=Number(r.pa||0);}
+ const source=form.mobilizations||{},entries=source.entries&&typeof source.entries==='object'?source.entries:{};
+ const tasks={};
+ Object.keys(entries).forEach(id=>{
+   const e=entries[id]||{},tm=e.manualTotal||[],ta=e.aidedTotal||[],pm=e.manualPartial||[],pa=e.aidedPartial||{};
+   tasks[id]={};
+   for(let i=0;i<3;i++)tasks[id][i]={tm:Number(tm[i]||0),ta:Number(ta[i]||0),pm:Number(pm[i]||0),pa:Number(pa[i]||0)};
  });
- const custom=[];
- customTasks.forEach((x,i)=>{
-   const id=x.id||`custom_report_${i}`;
-   custom.push({id,name:x.name||'',source:'Personalizada'});
-   entries[id]={manualTotal:[Number(x.tm||0),0,0],aidedTotal:[Number(x.ta||0),0,0],manualPartial:[Number(x.pm||0),0,0],aidedPartial:[Number(x.pa||0),0,0]};
+ const custom=Array.isArray(source.custom)?source.custom:[];
+ const customTasks=custom.map((x,i)=>{
+   const id=x.id||`custom_${i}`,e=entries[id]||{};
+   return {id,name:x.name||'',tm:Number((e.manualTotal||[])[0]||0),ta:Number((e.aidedTotal||[])[0]||0),pm:Number((e.manualPartial||[])[0]||0),pa:Number((e.aidedPartial||[])[0]||0)};
  });
- return {entries,custom};
+ return {tasks,customTasks,mobilizations:source};
 }
 function install(){
  if(typeof window.MAPOReportState!=='function')return false;
@@ -27,8 +25,9 @@ function install(){
  const wrappedState=function(){
    const state=originalState.apply(this,arguments)||{form:{},result:{}};
    const form=state.form||{};
-   if((!form.mobilizations||!form.mobilizations.entries||!Object.keys(form.mobilizations.entries).length) && form.tasks){
-     state.form=Object.assign({},form,{mobilizations:makeMobilizationView(form)});
+   const view=makeMobilizationView(form);
+   if(Object.keys(view.tasks).length||view.customTasks.length){
+     state.form=Object.assign({},form,{tasks:view.tasks,customTasks:view.customTasks,mobilizations:view.mobilizations});
    }
    return state;
  };
