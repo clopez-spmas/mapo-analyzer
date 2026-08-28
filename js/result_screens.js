@@ -7,6 +7,21 @@ function ensureTablesPanel(){const p=$('reportTablesPanel'),main=document.queryS
 function setVisible(el,visible){if(!el)return;el.hidden=!visible;el.setAttribute('aria-hidden',visible?'false':'true');el.style.removeProperty('display');}
 function hideAll(){ensureTablesPanel();IDS.forEach(id=>setVisible($(id),false));}
 function top(){window.scrollTo({top:0,behavior:'smooth'});}
+function restoreStoredResult(){
+  const mr=window.MAPOMultiRoom, rooms=mr?.state?.rooms;
+  const room=Array.isArray(rooms)?rooms[mr.state.active]:null;
+  if(!room)return false;
+  const stored=room.lastResult;
+  if(!stored||typeof stored!=='object'||!Object.keys(stored).length)return false;
+  if(typeof window.MAPOReportState==='function'){
+    const current=window.MAPOReportState();
+    if(!current?.result||!Object.keys(current.result).length){
+      if(typeof window.MAPOMultiRoom.openHospitalDashboard==='function')window.MAPOMultiRoom.openHospitalDashboard();
+      else if(typeof window.MAPOResultStateRestore==='function')window.MAPOResultStateRestore(room.formData||{},stored);
+    }
+  }
+  return true;
+}
 function backToAccess(){
   hideAll();
   if(window.MAPOMultiRoom&&typeof window.MAPOMultiRoom.openHospitalDashboard==='function'){
@@ -23,7 +38,11 @@ function backToAccess(){
 }
 function addBackButton(el){if(!el||el.querySelector(':scope > .result-screen-navigation'))return;const bar=document.createElement('div');bar.className='result-screen-navigation actions';const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='← Volver a accesos directos';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();backToAccess();});bar.appendChild(b);el.insertBefore(bar,el.firstChild);}
 function show(id,after){hideAll();const e=$(id);if(!e)return;e.classList.add('result-independent-screen');setVisible(e,true);addBackButton(e);if(after)after(e);top();}
-function showResult(){show('result');if(typeof window.MAPOResultsUI?.render==='function')window.MAPOResultsUI.render();}
+function showResult(){
+  restoreStoredResult();
+  show('result');
+  if(typeof window.MAPOResultsUI?.render==='function')window.MAPOResultsUI.render();
+}
 function showTables(){show('reportTablesPanel');}
 function showSimulation(){show('mapoSimulation',e=>{try{if(window.MAPOSimulation&&typeof window.MAPOSimulation.open==='function')window.MAPOSimulation.open();}catch(err){const old=e.querySelector('.simulation-open-error');if(!old){const p=document.createElement('p');p.className='error simulation-open-error';p.textContent='No se pudo abrir la simulación: '+String(err.message||err);e.appendChild(p);}}});}
 function bind(){
