@@ -1,52 +1,41 @@
-/* MAPO Analyzer — navegación independiente de resultados, tablas y simulación. */
+/* MAPO Analyzer — gestor único de pantallas independientes. */
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const IDS=['studyPanel','result','globalResults','mapoSimulation','reportTablesPanel','templateAdmin'];
-function ensureTablesPanel(){const p=$('reportTablesPanel'),main=document.querySelector('main.container');if(p&&main&&p.parentElement!==main)main.appendChild(p);return p;}
-function setVisible(el,visible){if(!el)return;el.hidden=!visible;el.setAttribute('aria-hidden',visible?'false':'true');if(el.id!=='studyPanel')el.style.display=visible?'block':'none';else el.style.removeProperty('display');}
-function hideAll(){ensureTablesPanel();IDS.forEach(id=>setVisible($(id),false));}
-function top(){window.scrollTo({top:0,behavior:'smooth'});}
-function restoreResultState(){
-  const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null;
-  if(state?.result&&Object.keys(state.result).length)return true;
-  const mr=window.MAPOMultiRoom;
-  const room=mr?.state?.rooms?.[mr.state.active];
-  if(room?.lastResult&&Object.keys(room.lastResult).length&&mr&&typeof mr.restoreCurrentRoom==='function')mr.restoreCurrentRoom();
-  const restored=typeof window.MAPOReportState==='function'?window.MAPOReportState():null;
-  return !!(restored?.result&&Object.keys(restored.result).length);
-}
+const SCREEN_IDS=['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','mapoSimulation','reportTablesPanel','templateAdmin'];
+function setScreen(id,visible){const el=$(id);if(!el)return;el.hidden=!visible;el.setAttribute('aria-hidden',visible?'false':'true');el.style.removeProperty('display');}
+function hideScreens(){SCREEN_IDS.forEach(id=>setScreen(id,false));}
+function top(){window.scrollTo({top:0,behavior:'auto'});}
+function syncCurrentRoom(){const mr=window.MAPOMultiRoom;if(mr&&typeof mr.syncCurrentRoom==='function')mr.syncCurrentRoom();}
 function addBackButton(el){if(!el||el.querySelector(':scope > .result-screen-navigation'))return;const bar=document.createElement('div');bar.className='result-screen-navigation actions';const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='← Volver a accesos directos';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();backToAccess();});bar.appendChild(b);el.insertBefore(bar,el.firstChild);}
-function show(id,after){hideAll();const e=$(id);if(!e)return;e.classList.add('result-independent-screen');setVisible(e,true);addBackButton(e);if(after)after(e);top();}
+function open(id,after){hideScreens();const el=$(id);if(!el)return false;el.classList.add('result-independent-screen');setScreen(id,true);addBackButton(el);if(typeof after==='function')after(el);top();return true;}
+function renderResult(){const state=typeof window.MAPOReportState==='function'?window.MAPOReportState():null;const result=state?.result;if(!result||!Object.keys(result).length)return false;if(typeof window.MAPOResultsUI?.render==='function')window.MAPOResultsUI.render();return true;}
 function showResult(){
-  restoreResultState();
-  show('result');
-  const e=$('result');
-  if(!e)return;
-  e.hidden=false;
-  e.removeAttribute('hidden');
-  e.style.display='block';
-  if(typeof window.MAPOResultsUI?.render==='function')window.MAPOResultsUI.render();
-  requestAnimationFrame(()=>{if(e.hidden)return;if(typeof window.MAPOResultsUI?.render==='function')window.MAPOResultsUI.render();});
+  syncCurrentRoom();
+  if(!open('result'))return false;
+  renderResult();
+  const el=$('result');
+  if(el){el.hidden=false;el.removeAttribute('hidden');el.style.removeProperty('display');}
+  return true;
 }
-function showTables(){show('reportTablesPanel');}
-function showSimulation(){show('mapoSimulation',e=>{try{if(window.MAPOSimulation&&typeof window.MAPOSimulation.open==='function')window.MAPOSimulation.open();}catch(err){const old=e.querySelector('.simulation-open-error');if(!old){const p=document.createElement('p');p.className='error simulation-open-error';p.textContent='No se pudo abrir la simulación: '+String(err.message||err);e.appendChild(p);}}});}
+function showTables(){return open('reportTablesPanel');}
+function showSimulation(){return open('mapoSimulation',()=>{try{window.MAPOSimulation?.open?.();}catch(e){}});}
 function backToAccess(){
-  hideAll();
+  syncCurrentRoom();
   const mr=window.MAPOMultiRoom;
-  if(mr&&typeof mr.openHospitalDashboard==='function'){mr.openHospitalDashboard();top();return;}
-  if(typeof window.showHospitalizacionDashboard==='function'){const p=$('studyPanel');if(p)setVisible(p,true);window.showHospitalizacionDashboard();top();return;}
-  const p=$('studyPanel');if(p){setVisible(p,true);if(typeof window.renderStep==='function')window.renderStep();}top();
+  if(mr&&typeof mr.openHospitalDashboard==='function'){mr.openHospitalDashboard();top();return true;}
+  if(typeof window.showHospitalizacionDashboard==='function'){$('studyPanel')?.removeAttribute('hidden');window.showHospitalizacionDashboard();top();return true;}
+  return open('studyPanel',()=>window.renderStep?.());
 }
 function bind(){
- document.addEventListener('click',e=>{
-   const shortcut=e.target.closest('[data-result-screen]');
-   if(shortcut){e.preventDefault();e.stopImmediatePropagation();const k=shortcut.dataset.resultScreen;if(k==='result')showResult();else if(k==='tables')showTables();else if(k==='simulation')showSimulation();return;}
-   const b=e.target.closest('#openMapoSimulation,#openReportTables,#createReportTables');
-   if(b){e.preventDefault();e.stopImmediatePropagation();if(b.id==='openMapoSimulation')showSimulation();else showTables();return;}
- },true);
+  document.addEventListener('click',e=>{
+    const shortcut=e.target.closest('[data-result-screen]');
+    if(shortcut){e.preventDefault();e.stopImmediatePropagation();const k=shortcut.dataset.resultScreen;if(k==='result')showResult();else if(k==='tables')showTables();else if(k==='simulation')showSimulation();return;}
+    const legacy=e.target.closest('#openMapoSimulation,#openReportTables,#createReportTables');
+    if(legacy){e.preventDefault();e.stopImmediatePropagation();if(legacy.id==='openMapoSimulation')showSimulation();else showTables();return;}
+  },true);
 }
-function init(){ensureTablesPanel();bind();}
+function init(){bind();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.MAPOResultScreens=Object.freeze({showResult,showTables,showSimulation,backToAccess});
 })();
