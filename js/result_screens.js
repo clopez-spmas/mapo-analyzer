@@ -10,7 +10,12 @@ function addBackButton(el){if(!el||el.querySelector(':scope > .result-screen-nav
 function makeVisible(el){let node=el;while(node&&node!==document.body){node.hidden=false;node.removeAttribute('aria-hidden');node.style.removeProperty('display');node=node.parentElement;}el.hidden=false;el.removeAttribute('aria-hidden');}
 function open(id,after){const el=$(id);if(!el)return false;hideScreens();makeVisible(el);addBackButton(el);if(typeof after==='function')after(el);makeVisible(el);top();return true;}
 function showResult(){return open('result',function(){if(typeof window.MAPOResultsUI?.render==='function'){try{window.MAPOResultsUI.render();}catch(e){const x=$('error');if(x){x.textContent='No se pudieron presentar los resultados: '+(e.message||e);x.hidden=false;}}}});}
-function showTables(){return open('reportTablesPanel');}
+function showTables(){
+  if(!document.getElementById('reportTablesPanel')&&typeof window.MAPOReportTables?.ensurePanel==='function')window.MAPOReportTables.ensurePanel();
+  const opened=open('reportTablesPanel');
+  if(opened&&typeof window.MAPOReportTables?.render==='function')window.MAPOReportTables.render();
+  return opened;
+}
 function showSimulation(){return open('mapoSimulation',function(){try{window.MAPOSimulation?.open?.();}catch(_){}});}
 function backToAccess(){const mr=window.MAPOMultiRoom;if(mr&&typeof mr.openHospitalDashboard==='function'){mr.openHospitalDashboard();top();return true;}if(typeof window.showHospitalizacionDashboard==='function'){$('studyPanel')?.removeAttribute('hidden');window.showHospitalizacionDashboard();top();return true;}hideScreens();const p=$('studyPanel');if(!p)return false;p.hidden=false;window.renderStep?.();top();return true;}
 function bindLegacy(){document.addEventListener('click',function(e){const legacy=e.target.closest('#openMapoSimulation,#openReportTables,#createReportTables');if(!legacy)return;e.preventDefault();e.stopImmediatePropagation();legacy.id==='openMapoSimulation'?showSimulation():showTables();},true);}
