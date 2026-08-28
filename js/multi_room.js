@@ -17,6 +17,7 @@
  function openHospitalDashboard(){
    const r=currentRoom();
    if(!r)return;
+   if(selectedStudy===state.study && window.formData && window.lastResult){capture();}
    selectedStudy=state.study;
    currentStep=Number(r.currentStep)||0;
    formData=clone(r.formData||{});
@@ -27,7 +28,7 @@
  }
  function openModule(step){const study=MAPO_STUDIES[state.study];if(!study||step<0||step>=study.steps.length)return;readNames();const r=currentRoom();selectedStudy=state.study;currentStep=step;formData=clone(r.formData||{});lastResult=r.lastResult?clone(r.lastResult):null;r.currentStep=step;show('moduleHub',false);show('roomSetup',false);show('studyPanel',true);show('result',false);show('globalResults',false);renderStep();updateBanner();}
  function beginSelectedStudy(key){readNames();if(!state.rooms.length)renderNames(1);state.study=key||state.study;const r=currentRoom();selectedStudy=state.study;currentStep=Number(r?.currentStep)||0;formData=clone(r?.formData||{});lastResult=r?.lastResult?clone(r.lastResult):null;if(state.study==='hospitalizacion')openHospitalDashboard();else renderModuleHub();}
- function updateBanner(){const b=$('currentRoomBanner'),r=currentRoom();if(b&&r)b.innerHTML=`<strong>Unidad en estudio:</strong> ${esc(label(r,state.active))}<span> · ${state.active+1} de ${state.rooms.length}</span>`;const s=$('roomSelector');if(s)s.innerHTML=state.rooms.map((r,i)=>`<option value="${i}" ${i===state.active?'selected':''}>${esc(label(r,i))}</option>`).join('');}
+ function updateBanner(){const b=$('currentRoomBanner'),r=currentRoom();if(b&&r)b.innerHTML=`<strong>Unidad de estudio:</strong> ${esc(label(r,state.active))}<span> · ${state.active+1} de ${state.rooms.length}</span>`;const s=$('roomSelector');if(s)s.innerHTML=state.rooms.map((r,i)=>`<option value="${i}" ${i===state.active?'selected':''}>${esc(label(r,i))}</option>`).join('');}
  function header(){const p=$('studyPanel');if(!p||$('roomNavigation'))return;const h=p.querySelector('.section-heading'),nav=document.createElement('div');nav.id='roomNavigation';if(h)h.insertAdjacentElement('afterend',nav);nav.innerHTML='<div class="schedule-preview"><strong>Unidad de estudio</strong><label>Seleccionar sala/planta/sección <select id="roomSelector"></select></label></div>';$('roomSelector').onchange=e=>switchRoom(Number(e.target.value));const banner=document.createElement('div');banner.id='currentRoomBanner';banner.className='schedule-preview';const fc=p.querySelector('#formContainer');if(fc)fc.insertAdjacentElement('beforebegin',banner);updateBanner();}
  function switchRoom(i){if(i<0||i>=state.rooms.length)return;capture();state.active=i;const r=currentRoom();selectedStudy=state.study;currentStep=Number(r.currentStep)||0;formData=clone(r.formData);lastResult=r.lastResult?clone(r.lastResult):null;show('result',false);if(state.study==='hospitalizacion')openHospitalDashboard();else renderModuleHub();}
  function previousStep(){if(currentStep<=0)return;capture();currentStep--;currentRoom().currentStep=currentStep;currentRoom().lastResult=null;lastResult=null;renderStep();updateBanner();}
