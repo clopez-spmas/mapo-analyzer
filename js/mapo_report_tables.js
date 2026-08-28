@@ -13,18 +13,19 @@ function data(){
 }
 function rows(t){return t.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('');}
 function table(title,heads,body){return '<div class="report-table-block"><h3>'+esc(title)+'</h3><table class="mapo-report-table"><thead><tr>'+heads.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table><div class="report-table-actions"><button type="button" class="copy-report-table">Copiar tabla para Word</button></div></div>';}
-function mobilizationSource(f){return f?.mobilizations&&typeof f.mobilizations==='object'?f.mobilizations:{entries:{},custom:[]};}
+function mobilizationSource(f){
+  if(f?.mobilizations&&typeof f.mobilizations==='object'&&f.mobilizations.entries&&typeof f.mobilizations.entries==='object')return f.mobilizations;
+  return {entries:{},custom:[]};
+}
 function mobilizationCatalog(){return Array.isArray(window.HOSPITALIZATION_MOBILIZATIONS)?window.HOSPITALIZATION_MOBILIZATIONS:[];}
 function mobilizationRows(f){
-  const d=mobilizationSource(f),entries=d.entries&&typeof d.entries==='object'?d.entries:{},catalog=mobilizationCatalog(),by=new Map(catalog.map(x=>[x.id,x])),out=[];
-  Object.keys(entries).forEach(id=>{
-    const e=entries[id]||{},task=by.get(id),name=task?.name||d.custom?.find(x=>x.id===id)?.name||id;
-    for(let i=0;i<3;i++){
-      const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);
-      if(tm||ta||pm||pa)out.push([name,shifts[i],tm,ta,pm,pa]);
-    }
-  });
-  return out.sort((a,b)=>{const sa=shifts.indexOf(a[1]),sb=shifts.indexOf(b[1]);return sa-sb||String(a[0]).localeCompare(String(b[0]),'es');});
+  const d=mobilizationSource(f),entries=d.entries||{},catalog=mobilizationCatalog(),by=new Map(catalog.map(x=>[x.id,x])),out=[];
+  const add=(id,name,i,e)=>{const tm=n(e.manualTotal?.[i]),ta=n(e.aidedTotal?.[i]),pm=n(e.manualPartial?.[i]),pa=n(e.aidedPartial?.[i]);if(tm||ta||pm||pa)out.push([name,shifts[i],tm,ta,pm,pa]);};
+  for(let i=0;i<3;i++){
+    catalog.forEach(task=>{const e=entries[task.id];if(e)add(task.id,task.name,i,e);});
+    (Array.isArray(d.custom)?d.custom:[]).forEach(x=>{const e=entries[x.id];if(e)add(x.id,x.name||x.id,i,e);});
+  }
+  return out;
 }
 function mobilizationTotals(f,r){
   const d=mobilizationSource(f),entries=d.entries&&typeof d.entries==='object'?d.entries:{};
@@ -45,7 +46,7 @@ function qval(f,id){const v=f?.[id];return v===true?'Sí':v===false?'No':v===nul
 function build(key){const {form:f,result:r}=data(),t=r.taskTotals||{};switch(key){
 case'general':return table('Datos generales',['Campo','Valor'],rows([['Hospital / empresa',f.empresa||''],['Sala / unidad',f.unidad||''],['Fecha de evaluación',f.fecha||''],['Código de sala',f.codigo||''],['Número de camas',n(f.camas)]]));
 case'patients':{const p=f.patientTypes||{};return table('Tipología de pacientes',['Dato','Valor'],rows([['AUTÓNOMOS',n(p.autonomo)],['COLABORADORES',n(p.colaborador)],['NO COLABORADORES',n(p.noColaborador)],['ENCAMADOS',n(p.encamado)],['NC',n(f.nc)],['PC',n(f.pc)],['NA',n(f.na)]]));}
-case'mobilizations':{const m=mobilizationTotals(f,r),body=mobilizationRows(f);const taskRows=body.length?body.map(x=>x.map(v=>'<td>'+esc(v)+'</td>').join('')).join(''):'<tr><td colspan="6">Sin movilizaciones registradas</td></tr>';const totalRows=[['ST',m.st,'','','',''],['LTA',m.lta,'','','',''],['% LTA',pct(m.pLTA),'','','',''],['SP',m.sp,'','','',''],['LPA',m.lpa,'','','',''],['% LPA',pct(m.pLPA),'','','',''],['STP',m.stp,'','','','']].map((x,i)=>'<tr class="report-total-row"><th>'+esc(x[0])+'</th><td>'+esc(x[1])+'</td><td></td><td></td><td></td><td></td></tr>').join('');return table('Movilizaciones',['Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],taskRows+totalRows);}
+case'mobilizations':{const m=mobilizationTotals(f,r),body=mobilizationRows(f);const taskRows=body.length?rows(body):'<tr><td colspan="6">Sin movilizaciones registradas</td></tr>';const totalRows=rows([['ST',m.st,'','','',''],['LTA',m.lta,'','','',''],['% LTA',pct(m.pLTA),'','','',''],['SP',m.sp,'','','',''],['LPA',m.lpa,'','','',''],['% LPA',pct(m.pLPA),'','','',''],['STP',m.stp,'','','','']]);return table('Movilizaciones',['Tarea','Turno','Total manual','Total con ayuda','Parcial manual','Parcial con ayuda'],taskRows+totalRows);}
 case'fs':return table('Factor de elevación (FS)',['Dato','Valor'],rows([['¿Hay al menos 1 elevador utilizable por cada 8 pacientes no colaboradores (NC)?',qval(f,'fs_elevadores')],['¿Hay al menos 1 camilla regulable por cada 8 pacientes NC y, cuando se utiliza para la transferencia cama-camilla, se acompaña de tabla, sábana deslizante, rollboard o equivalente?',qval(f,'fs_camillas')],['¿Las camas regulables en altura con 3 nodos están disponibles para el 100% de los pacientes de la unidad?',qval(f,'fs_camas3')],['Número de levantamientos totales realizados con equipamiento de ayuda (movilizaciones)',n(t.lta)],['Número total de levantamientos totales evaluados (movilizaciones)',n(t.st)],['FS calculado',r.fs==null?'':n(r.fs).toFixed(2)],['% LTA',pct(t.pLTA)]]));
 case'fa':return table('Factor de ayudas menores (FA)',['Dato','Valor'],rows([['¿Hay sábana o tabla deslizante disponible?',qval(f,'fa_sabana')],['¿Hay además al menos dos de las otras ayudas menores indicadas en la ficha?',qval(f,'fa_dos')],['¿Todas las camas de la unidad son regulables en altura y tienen 3 nodos de articulación?',qval(f,'fa_camas3')],['Número de levantamientos parciales (movilizaciones parciales) realizados con equipamiento de ayuda',n(t.lpa)],['Número total de levantamientos parciales (movilizaciones parciales) evaluados',n(t.sp)],['FA calculado',r.fa==null?'':n(r.fa).toFixed(2)],['% LPA',pct(t.pLPA)]]));
 case'wheelchairs':{const w=f.wheelchairs||{},e=w.entries||{},types=[...(window.WHEELCHAIR_PREDEFINED||[]),...(window.WHEELCHAIR_COMMON||[]),...(Array.isArray(w.custom)?w.custom:[])];let body='',totalUnits=0,totalPoints=0;types.forEach(x=>{const v=e[x.id]||{},units=n(v.count);if(units<=0)return;const score=(v.brakes?0:1)+(v.arms?0:1)+(v.back?0:1)+(v.width?0:1);totalUnits+=units;totalPoints+=units*score;body+='<tr>'+[x.name||'',units,yn(v.brakes),yn(v.arms),yn(v.back),yn(v.width),score,units*score].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>';});body+=body?'<tr class="report-total-row"><th colspan="8">TOTAL SILLAS DE RUEDAS: '+esc(totalUnits)+'</th></tr><tr class="report-total-row"><th colspan="8">PUNTUACIÓN TOTAL FC: '+esc(totalPoints)+'</th></tr><tr class="report-total-row"><th colspan="8">PUNTUACIÓN MEDIA POR SILLA: '+esc(totalUnits?(totalPoints/totalUnits).toFixed(2):'Pendiente')+'</th></tr>':'';return table('Sillas de ruedas (FC)',['Tipo de silla','Nº de unidades','¿Dispone de frenos?','¿Dispone de reposabrazos?','¿Dispone de respaldo?','¿Anchura adecuada?','Puntuación parcial por unidad','Puntos totales del tipo'],body||'<tr><td colspan="8">Sin datos registrados</td></tr>');}
