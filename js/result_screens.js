@@ -26,19 +26,6 @@ function show(id,after){hideAll();const e=$(id);if(!e)return;e.classList.add('re
 function showResult(){show('result');}
 function showTables(){show('reportTablesPanel');}
 function showSimulation(){show('mapoSimulation',e=>{try{if(window.MAPOSimulation&&typeof window.MAPOSimulation.open==='function')window.MAPOSimulation.open();}catch(err){const old=e.querySelector('.simulation-open-error');if(!old){const p=document.createElement('p');p.className='error simulation-open-error';p.textContent='No se pudo abrir la simulación: '+String(err.message||err);e.appendChild(p);}}});}
-function ensureDashboardShortcuts(){
-  const host=$('formContainer');
-  if(!host)return;
-  const grid=host.querySelector('.dashboard-grid');
-  if(!grid)return;
-  ['result','tables','simulation'].forEach(k=>grid.querySelector(`[data-result-screen="${k}"]`)?.remove());
-  const defs=[
-    ['result','✓','Resultados MAPO','Consultar el resultado de la evaluación y los factores MAPO.','Resultado'],
-    ['tables','▤','Tablas para informe Word','Seleccionar y preparar las tablas para copiar al informe.','Informe'],
-    ['simulation','↗','Simulación MAPO','Simular mejoras y comprobar su efecto sobre el índice MAPO.','Simulación']
-  ];
-  defs.forEach(d=>{const b=document.createElement('button');b.type='button';b.className='dashboard-card dashboard-result-shortcut';b.dataset.resultScreen=d[0];b.innerHTML=`<span class="dashboard-number">${d[1]}</span><span><strong>${d[2]}</strong><small>${d[3]}</small><em>${d[4]}</em></span>`;grid.appendChild(b);});
-}
 function bind(){
  document.addEventListener('click',e=>{
    const shortcut=e.target.closest('[data-result-screen]');
@@ -52,9 +39,6 @@ function bind(){
 function init(){
  ensureTablesPanel();
  bind();
- const main=document.querySelector('main.container');
- if(main)new MutationObserver(()=>{ensureTablesPanel();ensureDashboardShortcuts();}).observe(main,{childList:true,subtree:true});
- ensureDashboardShortcuts();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 window.MAPOResultScreens=Object.freeze({showResult,showTables,showSimulation,backToAccess});
