@@ -18,39 +18,41 @@ const HELP_OPTIONS=[0,25,50,75,90,100];
 function taskCatalog(){return[...(window.HOSPITALIZATION_MOBILIZATIONS||[]),...(window.MAPO_TASKS||[]),...(window.EXTRA_MAPO_TASKS||[])];}
 function taskLabel(id){const x=taskCatalog().find(v=>String(v.id)===String(id));if(x)return x.name||x.label;const custom=simulationData?.mobilizations?.custom||simulationData?.customTasks||[];if(String(id).startsWith('custom_')){const direct=custom.find(v=>String(v.id)===String(id));if(direct?.name)return direct.name;const idx=Number(String(id).split('_').pop());if(Number.isInteger(idx)&&custom[idx]?.name)return custom[idx].name;}return String(id);}
 function taskEntries(d){if(typeof window.MAPOCalculationEngine?.taskEntries==='function')return window.MAPOCalculationEngine.taskEntries(d);return{};}
-function taskRows(d,k){
+function mobilizationGroupStats(d){
   const shifts=['Mañana','Tarde','Noche'];
-  const groups=[];
-  const entries=d?.mobilizations?.entries&&typeof d.mobilizations.entries==='object'
-    ? d.mobilizations.entries
-    : (d?.tasks&&typeof d.tasks==='object'?d.tasks:{});
+  const entries=d?.mobilizations?.entries&&typeof d.mobilizations.entries==='object'?d.mobilizations.entries:(d?.tasks&&typeof d.tasks==='object'?d.tasks:{});
   const sums=shifts.map(()=>({totalManual:0,totalAided:0,partialManual:0,partialAided:0}));
   Object.values(entries).forEach(e=>{
-    const tm=Array.isArray(e?.manualTotal)?e.manualTotal:e?.tm!==undefined?[e.tm]:[];
-    const ta=Array.isArray(e?.aidedTotal)?e.aidedTotal:e?.ta!==undefined?[e.ta]:[];
-    const pm=Array.isArray(e?.manualPartial)?e.manualPartial:e?.pm!==undefined?[e.pm]:[];
-    const pa=Array.isArray(e?.aidedPartial)?e.aidedPartial:e?.pa!==undefined?[e.pa]:[];
-    for(let i=0;i<3;i++){
-      sums[i].totalManual+=n(tm[i]);
-      sums[i].totalAided+=n(ta[i]);
-      sums[i].partialManual+=n(pm[i]);
-      sums[i].partialAided+=n(pa[i]);
-    }
-  });
+    const tm=Array.isArray(e?.manualTotal)?e.manualTotal:e?.tm!==undefined?[e.tm]:[],ta=Array.isArray(e?.aidedTotal)?e.aidedTotal:e?.ta!==undefined?[e.ta]:[],pm=Array.isArray(e?.manualPartial)?e.manualPartial:e?.pm!==undefined?[e.pm]:[],pa=Array.isArray(e?.aidedPartial)?e.aidedPartial:e?.pa!==undefined?[e.pa]:[];
+    for(let i=0;i<3;i++){sums[i].totalManual+=n(tm[i]);sums[i].totalAided+=n(ta[i]);sums[i].partialManual+=n(pm[i]);sums[i].partialAided+=n(pa[i]);}
+  }); return sums;
+}
+function groupKey(i,k){return i+'|'+k;}
+function groupRatio(stats,i,k,ratios){
+  const s=stats[i]||{},total=k==='total'?n(s.totalManual)+n(s.totalAided):n(s.partialManual)+n(s.partialAided); if(!total)return 0;
+  const aided=k==='total'?n(s.totalAided):n(s.partialAided),key=groupKey(i,k);
+  return ratios&&ratios[key]!==undefined?Math.max(0,Math.min(100,n(ratios[key]))):100*aided/total;
+}
+function taskRows(d,k){
+  const shifts=['Mañana','Tarde','Noche'],groups=[],stats=mobilizationGroupStats(d),ratios=d?.simulationMobilizationGroups||{};
   shifts.forEach((shift,i)=>{
-    const s=sums[i];
-    const total=s.totalManual+s.totalAided;
-    const partial=s.partialManual+s.partialAided;
-    const addGroup=(kind,label,count,denominator)=>{
-      const pct=denominator>0?count/denominator*100:0;
-      groups.push(`<div class="sim-task-row"><div><strong>${esc(shift)} — ${esc(label)}</strong><span>${pct.toFixed(1)}%</span></div></div>`);
+    const s=stats[i],total=n(s.totalManual)+n(s.totalAided),partial=n(s.partialManual)+n(s.partialAided);
+    const add=(kind,label)=>{
+      const pct=groupRatio(stats,i,kind,ratios);
+      groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
     };
-    addGroup('total','Levantamiento total con ayuda',s.totalAided,total);
-    addGroup('total','Levantamiento total sin ayuda',s.totalManual,total);
-    addGroup('partial','Levantamiento parcial con ayuda',s.partialAided,partial);
-    addGroup('partial','Levantamiento parcial sin ayuda',s.partialManual,partial);
-  });
-  return groups.join('');
+    if(total) { add('total','Levantamiento total con ayuda'); add('total','Levantamiento total sin ayuda'); }
+    if(partial) { add('partial','Levantamiento parcial con ayuda'); add('partial','Levantamiento parcial sin ayuda'); }
+  }); return groups.join('');
+}
+function buildTaskOverrides(d){
+  const stats=mobilizationGroupStats(d),entries=d?.mobilizations?.entries&&typeof d.mobilizations.entries==='object'?d.mobilizations.entries:(d?.tasks&&typeof d.tasks==='object'?d.tasks:{}),ratios=d?.simulationMobilizationGroups||{},out={};
+  Object.entries(entries).forEach(([id,e])=>{
+    const tm=Array.isArray(e?.manualTotal)?e.manualTotal:e?.tm!==undefined?[e.tm]:[],ta=Array.isArray(e?.aidedTotal)?e.aidedTotal:e?.ta!==undefined?[e.ta]:[],pm=Array.isArray(e?.manualPartial)?e.manualPartial:e?.pm!==undefined?[e.pm]:[],pa=Array.isArray(e?.aidedPartial)?e.aidedPartial:e?.pa!==undefined?[e.pa]:[];
+    let total=0,totalAided=0,partial=0,partialAided=0;
+    for(let i=0;i<3;i++){const t=n(tm[i])+n(ta[i]),p=n(pm[i])+n(pa[i]);if(t){total+=t;totalAided+=t*groupRatio(stats,i,'total',ratios)/100;}if(p){partial+=p;partialAided+=p*groupRatio(stats,i,'partial',ratios)/100;}}
+    out[id]={total:total?100*totalAided/total:undefined,partial:partial?100*partialAided/partial:undefined};
+  }); return out;
 }
 const regFields={bath:[['space','Espacio suficiente para usar ayudas'],['door','Puerta de al menos 85 cm'],['obstacles','Sin obstáculos fijos']],wc:[['space','Espacio suficiente para silla de ruedas'],['height','Altura del WC adecuada'],['bar','Barra lateral adecuada'],['door','Puerta de al menos 85 cm'],['lateral','Espacio lateral de al menos 80 cm']],room:[['between','Espacio cama-cama/pared de al menos 90 cm'],['foot','Espacio libre en pies de al menos 120 cm'],['bedSection','Cama adecuada'],['underbed','Espacio cama-suelo de al menos 15 cm'],['chairHeight','Asiento de al menos 50 cm']]};
 function registry(xs,k){if(!Array.isArray(xs)||!xs.length)return '<p class="sim-muted">No hay registros.</p>';let h='';xs.forEach((x,i)=>{const fields=regFields[k];if(!fields.some(([f])=>x[f]===true))return;h+=`<div class="sim-registry-card"><strong>${esc(x.description||`${k==='bath'?'Baño':k==='wc'?'WC':'Habitación'} tipo ${i+1}`)}</strong> — ${n(x.units)} unidad(es)<div class="sim-option-grid">${fields.map(([f,l])=>check(`${k}|${i}|${f}`,l,x[f]===true)).join('')}</div></div>`;});return h||'<p class="sim-good">No hay características inadecuadas registradas.</p>';}
@@ -62,9 +64,18 @@ if(k==='fc')h+='<h4>Sillas de ruedas que generan puntuación</h4>'+wheelchairRow
 if(k==='famb')h+='<h4>Baños para higiene</h4>'+registry(d.bathTypes,'bath')+'<h4>Baños con WC</h4>'+registry(d.wcTypes,'wc')+'<h4>Habitaciones</h4>'+registry(d.roomTypes,'room');
 if(k==='ff')h+='<h4>Formación</h4>'+check('ff_curso','Existe curso teórico-práctico adecuado de al menos 6 horas',yn(d.ff_curso))+`<label class="sim-option sim-number"><span>Porcentaje de plantilla cubierta</span><input type="number" min="0" max="100" data-sim-key="ff_cobertura" value="${n(d.ff_cobertura)}"> %</label>`+check('ff_antiguedad','La formación tiene menos de 2 años',yn(d.ff_antiguedad))+check('ff_eficacia','Si tiene más de 2 años, se ha verificado su eficacia',yn(d.ff_eficacia))+check('ff_informacion','Existe información/adiestramiento al 90% y eficacia verificada',yn(d.ff_informacion));
 return h+'</section>';}
-function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').forEach(i=>{const p=i.dataset.simKey.split('|');if(p.length===3){const k=p[0],idx=Number(p[1]),f=p[2],key=k==='chair'?'wheelchairTypes':k==='bath'?'bathTypes':k==='wc'?'wcTypes':'roomTypes';simulationData[key]??=[];simulationData[key][idx]??={};if(k==='chair')simulationData[key][idx][f]=!i.checked;else simulationData[key][idx][f]=i.checked;}else simulationData[i.dataset.simKey]=i.type==='checkbox'?i.checked:Number(i.value||0);});simulationData.simulationMobilizationRatios??={};document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{const id=sel.dataset.simMob,kind=sel.dataset.simMobKind;simulationData.simulationMobilizationRatios[id]??={};simulationData.simulationMobilizationRatios[id][kind]=Number(sel.value);});simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
+function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').forEach(i=>{const p=i.dataset.simKey.split('|');if(p.length===3){const k=p[0],idx=Number(p[1]),f=p[2],key=k==='chair'?'wheelchairTypes':k==='bath'?'bathTypes':k==='wc'?'wcTypes':'roomTypes';simulationData[key]??=[];simulationData[key][idx]??={};if(k==='chair')simulationData[key][idx][f]=!i.checked;else simulationData[key][idx][f]=i.checked;}else simulationData[i.dataset.simKey]=i.type==='checkbox'?i.checked:Number(i.value||0);});simulationData.simulationMobilizationGroups??={};
+document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{simulationData.simulationMobilizationGroups[groupKey(Number(sel.dataset.simMob),sel.dataset.simMobKind)]=Math.max(0,Math.min(100,Number(sel.value||0)));});
+simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
+simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
 function flattenChanges(base,current,path='',out=[]){if(typeof base==='object'&&base!==null&&typeof current==='object'&&current!==null){if(Array.isArray(base)||Array.isArray(current)){const len=Math.max(base?.length||0,current?.length||0);for(let i=0;i<len;i++)flattenChanges(base?.[i],current?.[i],path?`${path}[${i}]`:`[${i}]`,out);}else{new Set([...Object.keys(base),...Object.keys(current)]).forEach(k=>{if(k!=='simulationMobilizationRatios')flattenChanges(base[k],current[k],path?`${path}.${k}`:k,out);});}return out;}if(String(base??'')!==String(current??''))out.push({path,from:base,to:current});return out;}
-function simulationChanges(base,current){const out=[];Object.entries(current?.simulationMobilizationRatios||{}).forEach(([id,r])=>{const e=taskEntries(base)[id];if(!e)return;Object.entries(r).forEach(([kind,v])=>{const total=kind==='total'?n(e.manualTotal)+n(e.aidedTotal):n(e.manualPartial)+n(e.aidedPartial),aided=kind==='total'?n(e.aidedTotal):n(e.aidedPartial);if(!total)return;const raw=aided/total*100;if(Math.abs(Number(v)-raw)>.001)out.push({path:`tasks.${id}.${kind}`,from:raw,to:Number(v),percent:true,label:taskLabel(id)});});});return out;}
+function simulationChanges(base,current){
+  const out=[],stats=mobilizationGroupStats(base),ratios=current?.simulationMobilizationGroups||{},shifts=['Mañana','Tarde','Noche'];
+  shifts.forEach((shift,i)=>['total','partial'].forEach(kind=>{
+    const from=groupRatio(stats,i,kind,null),key=groupKey(i,kind),to=ratios[key]!==undefined?n(ratios[key]):from;
+    if(Math.abs(to-from)>.001)out.push({path:'mobilizations.'+key,from,to,percent:true,label:shift+' — '+(kind==='total'?'Levantamiento total':'Levantamiento parcial')});
+  })); return out;
+}
 function isPercentPath(path){return /(^|\.)(ff_cobertura|cobertura|coverage|percent|porcentaje)(\.|$)/i.test(path);}
 function formatChangeValue(v,path,percent=false){if(v===true)return 'Sí';if(v===false)return 'No';if(v===null||v===undefined||v==='')return '—';if(percent||isPercentPath(path))return `${Number(v).toLocaleString('es-ES',{maximumFractionDigits:2})} %`;if(typeof v==='number'&&Number.isFinite(v))return Number(v).toLocaleString('es-ES',{maximumFractionDigits:2});return String(v);}
 function labelChange(c){const labels={ff_curso:'Curso teórico-práctico ≥ 6 h',ff_cobertura:'Cobertura de formación',ff_antiguedad:'Formación < 2 años',ff_eficacia:'Eficacia verificada',ff_informacion:'Información/adiestramiento',fs_elevadores:'Elevadores suficientes',fs_camillas:'Camillas regulables suficientes',fs_camas3:'Camas regulables de 3 nodos',fa_sabana:'Sábana/tabla deslizante',fa_dos:'Al menos dos ayudas menores adicionales',fa_camas3:'Todas las camas regulables y de 3 nodos'};return c.label||labels[c.path]||c.path;}
