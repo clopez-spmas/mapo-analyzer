@@ -19,43 +19,38 @@ function taskCatalog(){return[...(window.HOSPITALIZATION_MOBILIZATIONS||[]),...(
 function taskLabel(id){const x=taskCatalog().find(v=>String(v.id)===String(id));if(x)return x.name||x.label;const custom=simulationData?.mobilizations?.custom||simulationData?.customTasks||[];if(String(id).startsWith('custom_')){const direct=custom.find(v=>String(v.id)===String(id));if(direct?.name)return direct.name;const idx=Number(String(id).split('_').pop());if(Number.isInteger(idx)&&custom[idx]?.name)return custom[idx].name;}return String(id);}
 function taskEntries(d){if(typeof window.MAPOCalculationEngine?.taskEntries==='function')return window.MAPOCalculationEngine.taskEntries(d);return{};}
 function taskRows(d,k){
-  const entries=taskEntries(d),overrides=d?.simulationMobilizationRatios||{},out=[];
   const shifts=['Mañana','Tarde','Noche'];
-  const groups=[
-    ['Mañana','total','Levantamiento total'],['Mañana','partial','Levantamiento parcial'],
-    ['Tarde','total','Levantamiento total'],['Tarde','partial','Levantamiento parcial'],
-    ['Noche','total','Levantamiento total'],['Noche','partial','Levantamiento parcial']
-  ];
-  const agg={};
-  shifts.forEach((shift,si)=>{['total','partial'].forEach(kind=>{
-    const key=shift+'|'+kind;agg[key]={total:0,aided:0};
-    Object.values(entries).forEach(e=>{
-      const idx=si;
-      const total=n(e.manualTotalByShift?.[idx])+n(e.aidedTotalByShift?.[idx]);
-      const aided=n(e.aidedTotalByShift?.[idx]);
-      const partial=n(e.manualPartialByShift?.[idx])+n(e.aidedPartialByShift?.[idx]);
-      const aidedPartial=n(e.aidedPartialByShift?.[idx]);
-      agg[key].total+=kind==='total'?total:partial;
-      agg[key].aided+=kind==='total'?aided:aidedPartial;
-    });
-  });});
-  // Compatibilidad con el modelo agregado que no conserva el turno por tarea.
-  const hasShiftData=Object.values(agg).some(g=>g.total>0);
-  if(!hasShiftData){
-    const all={total:0,aided:0,partial:0,aidedPartial:0};
-    Object.values(entries).forEach(e=>{all.total+=n(e.manualTotal)+n(e.aidedTotal);all.aided+=n(e.aidedTotal);all.partial+=n(e.manualPartial)+n(e.aidedPartial);all.aidedPartial+=n(e.aidedPartial);});
-    const each=shifts.map(shift=>({shift,total:all.total/3,aided:all.aided/3,partial:all.partial/3,aidedPartial:all.aidedPartial/3}));
-    each.forEach(x=>{agg[x.shift+'|total']={total:x.total,aided:x.aided};agg[x.shift+'|partial']={total:x.partial,aided:x.aidedPartial};});
-  }
-  groups.forEach(([shift,kind,label])=>{
-    const g=agg[shift+'|'+kind];
-    if(!g||g.total<=0)return;
-    const rawPct=g.aided/g.total*100;
-    const id='group_'+shift+'_'+kind;
-    const selected=overrides[id]?.[kind]??Math.round(rawPct);
-    out.push(`<div class="sim-task-row"><div><strong>${esc(shift)} — ${esc(label)}</strong><span>Actual: ${rawPct.toFixed(1)}% con ayuda</span></div><label>Simular % con ayuda<select data-sim-mob="${esc(id)}" data-sim-mob-kind="${kind}">${HELP_OPTIONS.map(v=>`<option value="${v}" ${Number(v)===Number(selected)?'selected':''}>${v} %</option>`).join('')}</select></label></div>`);
+  const groups=[];
+  const entries=d?.mobilizations?.entries&&typeof d.mobilizations.entries==='object'
+    ? d.mobilizations.entries
+    : (d?.tasks&&typeof d.tasks==='object'?d.tasks:{});
+  const sums=shifts.map(()=>({totalManual:0,totalAided:0,partialManual:0,partialAided:0}));
+  Object.values(entries).forEach(e=>{
+    const tm=Array.isArray(e?.manualTotal)?e.manualTotal:e?.tm!==undefined?[e.tm]:[];
+    const ta=Array.isArray(e?.aidedTotal)?e.aidedTotal:e?.ta!==undefined?[e.ta]:[];
+    const pm=Array.isArray(e?.manualPartial)?e.manualPartial:e?.pm!==undefined?[e.pm]:[];
+    const pa=Array.isArray(e?.aidedPartial)?e.aidedPartial:e?.pa!==undefined?[e.pa]:[];
+    for(let i=0;i<3;i++){
+      sums[i].totalManual+=n(tm[i]);
+      sums[i].totalAided+=n(ta[i]);
+      sums[i].partialManual+=n(pm[i]);
+      sums[i].partialAided+=n(pa[i]);
+    }
   });
-  return out.length?out.join(''):'<p class="sim-muted">No hay levantamientos registrados.</p>';
+  shifts.forEach((shift,i)=>{
+    const s=sums[i];
+    const total=s.totalManual+s.totalAided;
+    const partial=s.partialManual+s.partialAided;
+    const addGroup=(kind,label,count,denominator)=>{
+      const pct=denominator>0?count/denominator*100:0;
+      groups.push(`<div class="sim-task-row"><div><strong>${esc(shift)} — ${esc(label)}</strong><span>${pct.toFixed(1)}%</span></div></div>`);
+    };
+    addGroup('total','Levantamiento total con ayuda',s.totalAided,total);
+    addGroup('total','Levantamiento total sin ayuda',s.totalManual,total);
+    addGroup('partial','Levantamiento parcial con ayuda',s.partialAided,partial);
+    addGroup('partial','Levantamiento parcial sin ayuda',s.partialManual,partial);
+  });
+  return groups.join('');
 }
 const regFields={bath:[['space','Espacio suficiente para usar ayudas'],['door','Puerta de al menos 85 cm'],['obstacles','Sin obstáculos fijos']],wc:[['space','Espacio suficiente para silla de ruedas'],['height','Altura del WC adecuada'],['bar','Barra lateral adecuada'],['door','Puerta de al menos 85 cm'],['lateral','Espacio lateral de al menos 80 cm']],room:[['between','Espacio cama-cama/pared de al menos 90 cm'],['foot','Espacio libre en pies de al menos 120 cm'],['bedSection','Cama adecuada'],['underbed','Espacio cama-suelo de al menos 15 cm'],['chairHeight','Asiento de al menos 50 cm']]};
 function registry(xs,k){if(!Array.isArray(xs)||!xs.length)return '<p class="sim-muted">No hay registros.</p>';let h='';xs.forEach((x,i)=>{const fields=regFields[k];if(!fields.some(([f])=>x[f]===true))return;h+=`<div class="sim-registry-card"><strong>${esc(x.description||`${k==='bath'?'Baño':k==='wc'?'WC':'Habitación'} tipo ${i+1}`)}</strong> — ${n(x.units)} unidad(es)<div class="sim-option-grid">${fields.map(([f,l])=>check(`${k}|${i}|${f}`,l,x[f]===true)).join('')}</div></div>`;});return h||'<p class="sim-good">No hay características inadecuadas registradas.</p>';}
