@@ -18,7 +18,45 @@ const HELP_OPTIONS=[0,25,50,75,90,100];
 function taskCatalog(){return[...(window.HOSPITALIZATION_MOBILIZATIONS||[]),...(window.MAPO_TASKS||[]),...(window.EXTRA_MAPO_TASKS||[])];}
 function taskLabel(id){const x=taskCatalog().find(v=>String(v.id)===String(id));if(x)return x.name||x.label;const custom=simulationData?.mobilizations?.custom||simulationData?.customTasks||[];if(String(id).startsWith('custom_')){const direct=custom.find(v=>String(v.id)===String(id));if(direct?.name)return direct.name;const idx=Number(String(id).split('_').pop());if(Number.isInteger(idx)&&custom[idx]?.name)return custom[idx].name;}return String(id);}
 function taskEntries(d){if(typeof window.MAPOCalculationEngine?.taskEntries==='function')return window.MAPOCalculationEngine.taskEntries(d);return{};}
-function taskRows(d,k){const entries=taskEntries(d),overrides=d?.simulationMobilizationRatios||{},out=[];Object.entries(entries).forEach(([id,e])=>{const total=n(e.manualTotal)+n(e.aidedTotal),aided=n(e.aidedTotal),totalP=n(e.manualPartial)+n(e.aidedPartial),aidedP=n(e.aidedPartial),totalK=k==='fs'?total:totalP,aidedK=k==='fs'?aided:aidedP;if(!totalK)return;const rawPct=aidedK/totalK*100,kind=k==='fs'?'total':'partial',selected=overrides[id]?.[kind]??Math.round(rawPct);if(rawPct<90)out.push(`<div class="sim-task-row"><div><strong>${esc(taskLabel(id))}</strong><span>Actual: ${aidedK}/${totalK} con ayuda (${rawPct.toFixed(1)}%)</span></div><label>Simular % con ayuda<select data-sim-mob="${esc(id)}" data-sim-mob-kind="${kind}">${HELP_OPTIONS.map(v=>`<option value="${v}" ${Number(v)===Number(selected)?'selected':''}>${v} %</option>`).join('')}</select></label></div>`);});return out.length?out.join(''):'<p class="sim-good">No hay tareas por debajo del 90% con ayuda.</p>';}
+function taskRows(d,k){
+  const entries=taskEntries(d),overrides=d?.simulationMobilizationRatios||{},out=[];
+  const shifts=['Mañana','Tarde','Noche'];
+  const groups=[
+    ['Mañana','total','Levantamiento total'],['Mañana','partial','Levantamiento parcial'],
+    ['Tarde','total','Levantamiento total'],['Tarde','partial','Levantamiento parcial'],
+    ['Noche','total','Levantamiento total'],['Noche','partial','Levantamiento parcial']
+  ];
+  const agg={};
+  shifts.forEach((shift,si)=>{['total','partial'].forEach(kind=>{
+    const key=shift+'|'+kind;agg[key]={total:0,aided:0};
+    Object.values(entries).forEach(e=>{
+      const idx=si;
+      const total=n(e.manualTotalByShift?.[idx])+n(e.aidedTotalByShift?.[idx]);
+      const aided=n(e.aidedTotalByShift?.[idx]);
+      const partial=n(e.manualPartialByShift?.[idx])+n(e.aidedPartialByShift?.[idx]);
+      const aidedPartial=n(e.aidedPartialByShift?.[idx]);
+      agg[key].total+=kind==='total'?total:partial;
+      agg[key].aided+=kind==='total'?aided:aidedPartial;
+    });
+  });});
+  // Compatibilidad con el modelo agregado que no conserva el turno por tarea.
+  const hasShiftData=Object.values(agg).some(g=>g.total>0);
+  if(!hasShiftData){
+    const all={total:0,aided:0,partial:0,aidedPartial:0};
+    Object.values(entries).forEach(e=>{all.total+=n(e.manualTotal)+n(e.aidedTotal);all.aided+=n(e.aidedTotal);all.partial+=n(e.manualPartial)+n(e.aidedPartial);all.aidedPartial+=n(e.aidedPartial);});
+    const each=shifts.map(shift=>({shift,total:all.total/3,aided:all.aided/3,partial:all.partial/3,aidedPartial:all.aidedPartial/3}));
+    each.forEach(x=>{agg[x.shift+'|total']={total:x.total,aided:x.aided};agg[x.shift+'|partial']={total:x.partial,aided:x.aidedPartial};});
+  }
+  groups.forEach(([shift,kind,label])=>{
+    const g=agg[shift+'|'+kind];
+    if(!g||g.total<=0)return;
+    const rawPct=g.aided/g.total*100;
+    const id='group_'+shift+'_'+kind;
+    const selected=overrides[id]?.[kind]??Math.round(rawPct);
+    out.push(`<div class="sim-task-row"><div><strong>${esc(shift)} — ${esc(label)}</strong><span>Actual: ${rawPct.toFixed(1)}% con ayuda</span></div><label>Simular % con ayuda<select data-sim-mob="${esc(id)}" data-sim-mob-kind="${kind}">${HELP_OPTIONS.map(v=>`<option value="${v}" ${Number(v)===Number(selected)?'selected':''}>${v} %</option>`).join('')}</select></label></div>`);
+  });
+  return out.length?out.join(''):'<p class="sim-muted">No hay levantamientos registrados.</p>';
+}
 const regFields={bath:[['space','Espacio suficiente para usar ayudas'],['door','Puerta de al menos 85 cm'],['obstacles','Sin obstáculos fijos']],wc:[['space','Espacio suficiente para silla de ruedas'],['height','Altura del WC adecuada'],['bar','Barra lateral adecuada'],['door','Puerta de al menos 85 cm'],['lateral','Espacio lateral de al menos 80 cm']],room:[['between','Espacio cama-cama/pared de al menos 90 cm'],['foot','Espacio libre en pies de al menos 120 cm'],['bedSection','Cama adecuada'],['underbed','Espacio cama-suelo de al menos 15 cm'],['chairHeight','Asiento de al menos 50 cm']]};
 function registry(xs,k){if(!Array.isArray(xs)||!xs.length)return '<p class="sim-muted">No hay registros.</p>';let h='';xs.forEach((x,i)=>{const fields=regFields[k];if(!fields.some(([f])=>x[f]===true))return;h+=`<div class="sim-registry-card"><strong>${esc(x.description||`${k==='bath'?'Baño':k==='wc'?'WC':'Habitación'} tipo ${i+1}`)}</strong> — ${n(x.units)} unidad(es)<div class="sim-option-grid">${fields.map(([f,l])=>check(`${k}|${i}|${f}`,l,x[f]===true)).join('')}</div></div>`;});return h||'<p class="sim-good">No hay características inadecuadas registradas.</p>';}
 function wheelchairRows(d){const xs=d.wheelchairTypes||[];if(!xs.length)return '<p class="sim-muted">No hay tipos de silla registrados.</p>';let h='';xs.forEach((x,i)=>{if(!['brakes','arms','back','width'].some(f=>x[f]===true))return;h+=`<div class="sim-registry-card"><strong>${esc(x.description||`Silla tipo ${i+1}`)}</strong> — ${n(x.units)} unidad(es)<div class="sim-option-grid">${check(`chair|${i}|brakes`,'Frenos adecuados',x.brakes!==true)}${check(`chair|${i}|arms`,'Reposabrazos adecuados',x.arms!==true)}${check(`chair|${i}|back`,'Respaldo adecuado',x.back!==true)}${check(`chair|${i}|width`,'Anchura adecuada',x.width!==true)}</div></div>`;});return h||'<p class="sim-good">No hay características inadecuadas registradas.</p>';}
