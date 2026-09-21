@@ -39,7 +39,7 @@ function taskRows(d,k){
     const s=stats[i],total=n(s.totalManual)+n(s.totalAided),partial=n(s.partialManual)+n(s.partialAided);
     const add=(kind,label,role)=>{
       const aidedPct=groupRatio(stats,i,kind,ratios),pct=role==='aided'?aidedPct:100-aidedPct;
-      groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" data-sim-mob-role="'+role+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
+      groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" data-sim-mob-role="'+role+'" data-sim-mob-original="'+pct.toFixed(1)+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
     };
     if(k==='fs' && total) { add('total','Levantamiento total con ayuda','aided'); add('total','Levantamiento total sin ayuda','manual'); }
     if(k==='fa' && partial) { add('partial','Levantamiento parcial con ayuda','aided'); add('partial','Levantamiento parcial sin ayuda','manual'); }
@@ -68,7 +68,10 @@ function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').f
 document.querySelectorAll('#mapoSimulation [data-sim-mob][data-sim-mob-role="aided"]').forEach(sel=>{
   const i=Number(sel.dataset.simMob),kind=sel.dataset.simMobKind;
   const value=Math.max(0,Math.min(100,Number(sel.value||0)));
-  simulationData.simulationMobilizationGroups[groupKey(i,kind)]=value;
+  const original=Math.max(0,Math.min(100,Number(sel.dataset.simMobOriginal||0)));
+  const key=groupKey(i,kind);
+  if(Math.abs(value-original)>0.001) simulationData.simulationMobilizationGroups[key]=value;
+  else delete simulationData.simulationMobilizationGroups[key];
 });
 simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
 simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
