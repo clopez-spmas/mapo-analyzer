@@ -65,11 +65,10 @@ if(k==='famb')h+='<h4>Baños para higiene</h4>'+registry(d.bathTypes,'bath')+'<h
 if(k==='ff')h+='<h4>Formación</h4>'+check('ff_curso','Existe curso teórico-práctico adecuado de al menos 6 horas',yn(d.ff_curso))+`<label class="sim-option sim-number"><span>Porcentaje de plantilla cubierta</span><input type="number" min="0" max="100" data-sim-key="ff_cobertura" value="${n(d.ff_cobertura)}"> %</label>`+check('ff_antiguedad','La formación tiene menos de 2 años',yn(d.ff_antiguedad))+check('ff_eficacia','Si tiene más de 2 años, se ha verificado su eficacia',yn(d.ff_eficacia))+check('ff_informacion','Existe información/adiestramiento al 90% y eficacia verificada',yn(d.ff_informacion));
 return h+'</section>';}
 function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').forEach(i=>{const p=i.dataset.simKey.split('|');if(p.length===3){const k=p[0],idx=Number(p[1]),f=p[2],key=k==='chair'?'wheelchairTypes':k==='bath'?'bathTypes':k==='wc'?'wcTypes':'roomTypes';simulationData[key]??=[];simulationData[key][idx]??={};if(k==='chair')simulationData[key][idx][f]=!i.checked;else simulationData[key][idx][f]=i.checked;}else simulationData[i.dataset.simKey]=i.type==='checkbox'?i.checked:Number(i.value||0);});simulationData.simulationMobilizationGroups??={};
-document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{
-  const i=Number(sel.dataset.simMob),kind=sel.dataset.simMobKind,role=sel.dataset.simMobRole;
+document.querySelectorAll('#mapoSimulation [data-sim-mob][data-sim-mob-role="aided"]').forEach(sel=>{
+  const i=Number(sel.dataset.simMob),kind=sel.dataset.simMobKind;
   const value=Math.max(0,Math.min(100,Number(sel.value||0)));
-  if(role==='aided') simulationData.simulationMobilizationGroups[groupKey(i,kind)]=value;
-  else simulationData.simulationMobilizationGroups[groupKey(i,kind)]=100-value;
+  simulationData.simulationMobilizationGroups[groupKey(i,kind)]=value;
 });
 simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
 simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
