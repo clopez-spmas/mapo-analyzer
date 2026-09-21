@@ -41,8 +41,8 @@ function taskRows(d,k){
       const pct=groupRatio(stats,i,kind,ratios);
       groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
     };
-    if(total) { add('total','Levantamiento total con ayuda'); add('total','Levantamiento total sin ayuda'); }
-    if(partial) { add('partial','Levantamiento parcial con ayuda'); add('partial','Levantamiento parcial sin ayuda'); }
+    if(k==='fs' && total) { add('total','Levantamiento total con ayuda'); add('total','Levantamiento total sin ayuda'); }
+    if(k==='fa' && partial) { add('partial','Levantamiento parcial con ayuda'); add('partial','Levantamiento parcial sin ayuda'); }
   }); return groups.join('');
 }
 function buildTaskOverrides(d){
@@ -68,7 +68,7 @@ function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').f
 document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{simulationData.simulationMobilizationGroups[groupKey(Number(sel.dataset.simMob),sel.dataset.simMobKind)]=Math.max(0,Math.min(100,Number(sel.value||0)));});
 simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
 simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
-function flattenChanges(base,current,path='',out=[]){if(typeof base==='object'&&base!==null&&typeof current==='object'&&current!==null){if(Array.isArray(base)||Array.isArray(current)){const len=Math.max(base?.length||0,current?.length||0);for(let i=0;i<len;i++)flattenChanges(base?.[i],current?.[i],path?`${path}[${i}]`:`[${i}]`,out);}else{new Set([...Object.keys(base),...Object.keys(current)]).forEach(k=>{if(k!=='simulationMobilizationRatios')flattenChanges(base[k],current[k],path?`${path}.${k}`:k,out);});}return out;}if(String(base??'')!==String(current??''))out.push({path,from:base,to:current});return out;}
+function flattenChanges(base,current,path='',out=[]){if(typeof base==='object'&&base!==null&&typeof current==='object'&&current!==null){if(Array.isArray(base)||Array.isArray(current)){const len=Math.max(base?.length||0,current?.length||0);for(let i=0;i<len;i++)flattenChanges(base?.[i],current?.[i],path?`${path}[${i}]`:`[${i}]`,out);}else{new Set([...Object.keys(base),...Object.keys(current)]).forEach(k=>{if(k!=='simulationMobilizationRatios'&&k!=='simulationMobilizationGroups')flattenChanges(base[k],current[k],path?`${path}.${k}`:k,out);});}return out;}if(String(base??'')!==String(current??''))out.push({path,from:base,to:current});return out;}
 function simulationChanges(base,current){
   const out=[],stats=mobilizationGroupStats(base),ratios=current?.simulationMobilizationGroups||{},shifts=['Mañana','Tarde','Noche'];
   shifts.forEach((shift,i)=>['total','partial'].forEach(kind=>{
