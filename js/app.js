@@ -25,7 +25,7 @@ $('changeStudy').onclick=()=>{selectedStudy=null;$('studyPanel').hidden=true;$('
 $('nextStep').onclick=()=>{try{saveStep();currentStep++;renderStep();$('error').hidden=true;}catch(e){$('error').textContent=e.message;$('error').hidden=false;}};
 $('previousStep').onclick=()=>{try{saveStep();currentStep--;renderStep();}catch(e){$('error').textContent=e.message;$('error').hidden=false;}};
 $('calculate').onclick=()=>{try{saveStep();if(selectedStudy!=='hospitalizacion')throw Error('Este modelo aún está en construcción.');if(num(formData.op)<=0)throw Error('OP debe ser mayor que 0.');const f=window.MAPOCalculationEngine.calculateHospitalizacionFactors(formData),mapo=((num(formData.nc)/num(formData.op)*f.fs)+(num(formData.pc)/num(formData.op)*f.fa))*f.fc*f.famb*f.ff,nivel=mapo===0?'Ausente':mapo<=1.5?'Irrelevante':mapo<=5?'Medio':'Alto';lastResult={mapo,nivel,...f};$('mapoValue').textContent=`MAPO = ${mapo.toFixed(2)}`;$('classification').textContent=`Nivel de exposición: ${nivel}`;$('breakdown').innerHTML=`<p><strong>OP:</strong> ${num(formData.op).toFixed(3)}</p><p><strong>ST:</strong> ${f.taskTotals.st} · <strong>LTA:</strong> ${f.taskTotals.lta} · <strong>SP:</strong> ${f.taskTotals.sp} · <strong>LPA:</strong> ${f.taskTotals.lpa}</p><p><strong>%LTA:</strong> ${f.taskTotals.pLTA.toFixed(1)}% · <strong>%LPA:</strong> ${f.taskTotals.pLPA.toFixed(1)}%</p><p><strong>FS:</strong> ${f.fs} · <strong>FA:</strong> ${f.fa} · <strong>FC:</strong> ${f.fc} · <strong>Famb:</strong> ${f.famb} · <strong>FF:</strong> ${f.ff}</p>`;$('result').hidden=false;$('error').hidden=true;openResultScreen();}catch(e){$('error').textContent=e.message;$('error').hidden=false;$('result').hidden=true;}};
-$('generateReport').onclick=()=>{if(!openReportTablesScreen())$('error').textContent='No se ha cargado la pantalla de Tablas para Word.';};
+
 $('openMapoSimulation')?.addEventListener('click',e=>{if(typeof window.MAPOResultScreens?.showSimulation==='function'){e.preventDefault();e.stopImmediatePropagation();openSimulationScreen();}});
 window.renderStep=renderStep;
 window.saveStep=saveStep;
@@ -33,3 +33,36 @@ window.selectStudy=selectStudy;
 window.openMapoResultScreen=openResultScreen;
 window.openReportTablesScreen=openReportTablesScreen;
 window.openMapoSimulationScreen=openSimulationScreen;
+
+(function(){
+'use strict';
+let mapoHasUnsavedChanges=false;
+const closeButton=document.getElementById('closeProgram');
+function markMapoDirty(){mapoHasUnsavedChanges=true;}
+function clearMapoDirty(){mapoHasUnsavedChanges=false;}
+async function saveBeforeClose(){
+  if(typeof window.MAPOStudyIO?.saveJson!=='function'||typeof window.MAPOStudyIO?.captureCurrentStep!=='function')throw new Error('El módulo de guardado no está disponible.');
+  window.MAPOStudyIO.captureCurrentStep();
+  await window.MAPOStudyIO.saveJson({format:'MAPO Analyzer Study',savedAt:new Date().toISOString(),study:selectedStudy,currentStep,formData:JSON.parse(JSON.stringify(formData||{})),lastResult:lastResult?JSON.parse(JSON.stringify(lastResult)):null});
+}
+function showMapoCloseDialog(){
+  if(document.getElementById('mapoCloseDialog'))return;
+  const overlay=document.createElement('div');
+  overlay.id='mapoCloseDialog';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  overlay.innerHTML='<div class="card" style="max-width:520px;width:100%;margin:0;text-align:center"><h2>Antes de cerrar</h2><p>¿Desea guardar los datos del estudio antes de cerrar el programa?</p><div class="actions" style="justify-content:center"><button type="button" id="mapoCloseSave">Guardar y cerrar</button><button type="button" id="mapoCloseNoSave" class="secondary">Cerrar sin guardar</button><button type="button" id="mapoCloseCancel" class="secondary">Cancelar</button></div></div>';
+  document.body.appendChild(overlay);
+  document.getElementById('mapoCloseCancel').onclick=()=>overlay.remove();
+  document.getElementById('mapoCloseNoSave').onclick=()=>{clearMapoDirty();overlay.remove();window.close();};
+  document.getElementById('mapoCloseSave').onclick=async()=>{
+    const b=document.getElementById('mapoCloseSave');b.disabled=true;b.textContent='Guardando...';
+    try{await saveBeforeClose();clearMapoDirty();overlay.remove();window.close();}
+    catch(e){b.disabled=false;b.textContent='Guardar y cerrar';if(e?.name!=='AbortError')alert('No se pudo guardar el estudio: '+e.message);}
+  };
+}
+if(closeButton)closeButton.onclick=showMapoCloseDialog;
+document.addEventListener('input',markMapoDirty,true);
+document.addEventListener('change',markMapoDirty,true);
+window.addEventListener('beforeunload',e=>{if(!mapoHasUnsavedChanges)return;e.preventDefault();e.returnValue='Hay datos sin guardar. Guarde el estudio antes de cerrar.';});
+window.MAPOCloseGuard={markDirty:markMapoDirty,clearDirty:clearMapoDirty,show:showMapoCloseDialog};
+})();
