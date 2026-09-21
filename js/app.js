@@ -37,32 +37,10 @@ window.openMapoSimulationScreen=openSimulationScreen;
 (function(){
 'use strict';
 let mapoHasUnsavedChanges=false;
-const closeButton=document.getElementById('closeProgram');
 function markMapoDirty(){mapoHasUnsavedChanges=true;}
 function clearMapoDirty(){mapoHasUnsavedChanges=false;}
-async function saveBeforeClose(){
-  if(typeof window.MAPOStudyIO?.saveJson!=='function'||typeof window.MAPOStudyIO?.captureCurrentStep!=='function')throw new Error('El módulo de guardado no está disponible.');
-  window.MAPOStudyIO.captureCurrentStep();
-  await window.MAPOStudyIO.saveJson({format:'MAPO Analyzer Study',savedAt:new Date().toISOString(),study:selectedStudy,currentStep,formData:JSON.parse(JSON.stringify(formData||{})),lastResult:lastResult?JSON.parse(JSON.stringify(lastResult)):null});
-}
-function showMapoCloseDialog(){
-  if(document.getElementById('mapoCloseDialog'))return;
-  const overlay=document.createElement('div');
-  overlay.id='mapoCloseDialog';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-  overlay.innerHTML='<div class="card" style="max-width:520px;width:100%;margin:0;text-align:center"><h2>Antes de cerrar</h2><p>¿Desea guardar los datos del estudio antes de cerrar el programa?</p><div class="actions" style="justify-content:center"><button type="button" id="mapoCloseSave">Guardar y cerrar</button><button type="button" id="mapoCloseNoSave" class="secondary">Cerrar sin guardar</button><button type="button" id="mapoCloseCancel" class="secondary">Cancelar</button></div></div>';
-  document.body.appendChild(overlay);
-  document.getElementById('mapoCloseCancel').onclick=()=>overlay.remove();
-  document.getElementById('mapoCloseNoSave').onclick=()=>{clearMapoDirty();overlay.remove();window.close();};
-  document.getElementById('mapoCloseSave').onclick=async()=>{
-    const b=document.getElementById('mapoCloseSave');b.disabled=true;b.textContent='Guardando...';
-    try{await saveBeforeClose();clearMapoDirty();overlay.remove();window.close();}
-    catch(e){b.disabled=false;b.textContent='Guardar y cerrar';if(e?.name!=='AbortError')alert('No se pudo guardar el estudio: '+e.message);}
-  };
-}
-if(closeButton)closeButton.onclick=showMapoCloseDialog;
 document.addEventListener('input',markMapoDirty,true);
 document.addEventListener('change',markMapoDirty,true);
-window.addEventListener('beforeunload',e=>{if(!mapoHasUnsavedChanges)return;e.preventDefault();e.returnValue='Hay datos sin guardar. Guarde el estudio antes de cerrar.';});
-window.MAPOCloseGuard={markDirty:markMapoDirty,clearDirty:clearMapoDirty,show:showMapoCloseDialog};
+window.addEventListener('beforeunload',e=>{if(!mapoHasUnsavedChanges)return;e.preventDefault();e.returnValue='';});
+window.MAPOCloseGuard={markDirty:markMapoDirty,clearDirty:clearMapoDirty};
 })();
