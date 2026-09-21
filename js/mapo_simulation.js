@@ -37,12 +37,12 @@ function taskRows(d,k){
   const shifts=['Mañana','Tarde','Noche'],groups=[],stats=mobilizationGroupStats(d),ratios=d?.simulationMobilizationGroups||{};
   shifts.forEach((shift,i)=>{
     const s=stats[i],total=n(s.totalManual)+n(s.totalAided),partial=n(s.partialManual)+n(s.partialAided);
-    const add=(kind,label)=>{
-      const pct=groupRatio(stats,i,kind,ratios);
-      groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
+    const add=(kind,label,role)=>{
+      const aidedPct=groupRatio(stats,i,kind,ratios),pct=role==='aided'?aidedPct:100-aidedPct;
+      groups.push('<div class="sim-task-row"><div><strong>'+esc(shift)+' — '+esc(label)+'</strong><label class="sim-number"><input type="number" min="0" max="100" step="0.1" value="'+pct.toFixed(1)+'" data-sim-mob="'+i+'" data-sim-mob-kind="'+kind+'" data-sim-mob-role="'+role+'" aria-label="'+esc(shift+' '+label+' porcentaje')+'"> %</label></div></div>');
     };
-    if(k==='fs' && total) { add('total','Levantamiento total con ayuda'); add('total','Levantamiento total sin ayuda'); }
-    if(k==='fa' && partial) { add('partial','Levantamiento parcial con ayuda'); add('partial','Levantamiento parcial sin ayuda'); }
+    if(k==='fs' && total) { add('total','Levantamiento total con ayuda','aided'); add('total','Levantamiento total sin ayuda','manual'); }
+    if(k==='fa' && partial) { add('partial','Levantamiento parcial con ayuda','aided'); add('partial','Levantamiento parcial sin ayuda','manual'); }
   }); return groups.join('');
 }
 function buildTaskOverrides(d){
@@ -65,15 +65,21 @@ if(k==='famb')h+='<h4>Baños para higiene</h4>'+registry(d.bathTypes,'bath')+'<h
 if(k==='ff')h+='<h4>Formación</h4>'+check('ff_curso','Existe curso teórico-práctico adecuado de al menos 6 horas',yn(d.ff_curso))+`<label class="sim-option sim-number"><span>Porcentaje de plantilla cubierta</span><input type="number" min="0" max="100" data-sim-key="ff_cobertura" value="${n(d.ff_cobertura)}"> %</label>`+check('ff_antiguedad','La formación tiene menos de 2 años',yn(d.ff_antiguedad))+check('ff_eficacia','Si tiene más de 2 años, se ha verificado su eficacia',yn(d.ff_eficacia))+check('ff_informacion','Existe información/adiestramiento al 90% y eficacia verificada',yn(d.ff_informacion));
 return h+'</section>';}
 function collect(){document.querySelectorAll('#mapoSimulation [data-sim-key]').forEach(i=>{const p=i.dataset.simKey.split('|');if(p.length===3){const k=p[0],idx=Number(p[1]),f=p[2],key=k==='chair'?'wheelchairTypes':k==='bath'?'bathTypes':k==='wc'?'wcTypes':'roomTypes';simulationData[key]??=[];simulationData[key][idx]??={};if(k==='chair')simulationData[key][idx][f]=!i.checked;else simulationData[key][idx][f]=i.checked;}else simulationData[i.dataset.simKey]=i.type==='checkbox'?i.checked:Number(i.value||0);});simulationData.simulationMobilizationGroups??={};
-document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{simulationData.simulationMobilizationGroups[groupKey(Number(sel.dataset.simMob),sel.dataset.simMobKind)]=Math.max(0,Math.min(100,Number(sel.value||0)));});
+document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(sel=>{
+  const i=Number(sel.dataset.simMob),kind=sel.dataset.simMobKind,role=sel.dataset.simMobRole;
+  const value=Math.max(0,Math.min(100,Number(sel.value||0)));
+  if(role==='aided') simulationData.simulationMobilizationGroups[groupKey(i,kind)]=value;
+  else simulationData.simulationMobilizationGroups[groupKey(i,kind)]=100-value;
+});
 simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
 simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);}
 function flattenChanges(base,current,path='',out=[]){if(typeof base==='object'&&base!==null&&typeof current==='object'&&current!==null){if(Array.isArray(base)||Array.isArray(current)){const len=Math.max(base?.length||0,current?.length||0);for(let i=0;i<len;i++)flattenChanges(base?.[i],current?.[i],path?`${path}[${i}]`:`[${i}]`,out);}else{new Set([...Object.keys(base),...Object.keys(current)]).forEach(k=>{if(k!=='simulationMobilizationRatios'&&k!=='simulationMobilizationGroups')flattenChanges(base[k],current[k],path?`${path}.${k}`:k,out);});}return out;}if(String(base??'')!==String(current??''))out.push({path,from:base,to:current});return out;}
 function simulationChanges(base,current){
   const out=[],stats=mobilizationGroupStats(base),ratios=current?.simulationMobilizationGroups||{},shifts=['Mañana','Tarde','Noche'];
   shifts.forEach((shift,i)=>['total','partial'].forEach(kind=>{
-    const from=groupRatio(stats,i,kind,null),key=groupKey(i,kind),to=ratios[key]!==undefined?n(ratios[key]):from;
-    if(Math.abs(to-from)>.001)out.push({path:'mobilizations.'+key,from,to,percent:true,label:shift+' — '+(kind==='total'?'Levantamiento total':'Levantamiento parcial')});
+    const fromA=groupRatio(stats,i,kind,null),key=groupKey(i,kind),toA=ratios[key]!==undefined?n(ratios[key]):fromA,fromM=100-fromA,toM=100-toA;
+    if(Math.abs(toA-fromA)>.001)out.push({path:'mobilizations.'+key+'.aided',from:fromA,to:toA,percent:true,label:shift+' — '+(kind==='total'?'Levantamiento total con ayuda':'Levantamiento parcial con ayuda')});
+    if(Math.abs(toM-fromM)>.001)out.push({path:'mobilizations.'+key+'.manual',from:fromM,to:toM,percent:true,label:shift+' — '+(kind==='total'?'Levantamiento total sin ayuda':'Levantamiento parcial sin ayuda')});
   })); return out;
 }
 function isPercentPath(path){return /(^|\.)(ff_cobertura|cobertura|coverage|percent|porcentaje)(\.|$)/i.test(path);}
@@ -84,7 +90,15 @@ function showScreen(){['accessScreen','roomSetup','studySelection','studyPanel',
 function restoreResults(){const host=$('mapoSimulation');host.hidden=true;const result=$('result');if(result)result.hidden=false;ensureStudyNavigation();result?.scrollIntoView({behavior:'smooth',block:'start'});}
 function ensureStudyNavigation(){const result=$('result');if(!result)return;let box=$('returnToStudyActions');if(!box){box=document.createElement('div');box.id='returnToStudyActions';box.className='actions';const heading=result.querySelector('.section-heading');(heading||result).appendChild(box);}box.innerHTML='<button type="button" id="returnToStudy">Volver al estudio</button>';const b=$('returnToStudy');if(b)b.onclick=returnToStudy;}
 function returnToStudy(){const result=$('result'),panel=$('studyPanel');if(result)result.hidden=true;if(panel)panel.hidden=false;if(typeof renderStep==='function')renderStep();if(typeof syncStepButtons==='function')syncStepButtons();panel?.scrollIntoView({behavior:'smooth',block:'start'});}
-function render(){const host=$('mapoSimulation');let current,original;try{original=calc(baseData,true);current=simulationChanged?calc(simulationData,false):original;}catch(err){host.innerHTML=`<div class="section-heading"><h2>Simulación de mejoras del índice MAPO</h2><button type="button" id="closeMapoSimulation" class="secondary">Volver a resultados</button></div><div class="error">${esc(err.message)}</div>`;host.hidden=false;showScreen();$('closeMapoSimulation').onclick=restoreResults;return;}let h=`<div class="section-heading"><div><h2>Simulación de mejoras del índice MAPO</h2><p>Modifique las condiciones concretas. El estudio original no se modifica.</p></div><button type="button" id="closeMapoSimulation" class="secondary">Volver a resultados</button></div><div class="simulation-summary"><div><span>MAPO actual</span><strong>${original.mapo.toFixed(2)}</strong></div><div>→</div><div><span>MAPO simulado</span><strong class="sim-score">${current.mapo.toFixed(2)}</strong></div></div>${summaryChanges()}`;h+=['fs','fa','fc','famb','ff'].map(k=>factor(k,current.f,simulationData)).join('');h+='<div class="actions"><button type="button" id="recalcMapoSimulation">Recalcular simulación</button><button type="button" id="resetMapoSimulation" class="secondary">Restablecer valores originales</button></div>';host.innerHTML=h;showScreen();$('closeMapoSimulation').onclick=restoreResults;$('recalcMapoSimulation').onclick=()=>{collect();render();};$('resetMapoSimulation').onclick=()=>{simulationData=clone(baseData);simulationChanged=false;render();};}
+function render(){const host=$('mapoSimulation');let current,original;try{original=calc(baseData,true);current=simulationChanged?calc(simulationData,false):original;}catch(err){host.innerHTML=`<div class="section-heading"><h2>Simulación de mejoras del índice MAPO</h2><button type="button" id="closeMapoSimulation" class="secondary">Volver a resultados</button></div><div class="error">${esc(err.message)}</div>`;host.hidden=false;showScreen();$('closeMapoSimulation').onclick=restoreResults;return;}let h=`<div class="section-heading"><div><h2>Simulación de mejoras del índice MAPO</h2><p>Modifique las condiciones concretas. El estudio original no se modifica.</p></div><button type="button" id="closeMapoSimulation" class="secondary">Volver a resultados</button></div><div class="simulation-summary"><div><span>MAPO actual</span><strong>${original.mapo.toFixed(2)}</strong></div><div>→</div><div><span>MAPO simulado</span><strong class="sim-score">${current.mapo.toFixed(2)}</strong></div></div>${summaryChanges()}`;h+=['fs','fa','fc','famb','ff'].map(k=>factor(k,current.f,simulationData)).join('');h+='<div class="actions"><button type="button" id="recalcMapoSimulation">Recalcular simulación</button><button type="button" id="resetMapoSimulation" class="secondary">Restablecer valores originales</button></div>';host.innerHTML=h;showScreen();
+document.querySelectorAll('#mapoSimulation [data-sim-mob]').forEach(input=>{
+  input.addEventListener('input',()=>{
+    const i=input.dataset.simMob,kind=input.dataset.simMobKind,role=input.dataset.simMobRole;
+    const other=document.querySelector('#mapoSimulation [data-sim-mob="'+i+'"][data-sim-mob-kind="'+kind+'"][data-sim-mob-role="'+(role==='aided'?'manual':'aided')+'"]');
+    if(other){const v=Math.max(0,Math.min(100,Number(input.value||0)));other.value=(100-v).toFixed(1);}
+  });
+});
+$('closeMapoSimulation').onclick=restoreResults;$('recalcMapoSimulation').onclick=()=>{collect();render();};$('resetMapoSimulation').onclick=()=>{simulationData=clone(baseData);simulationChanged=false;render();};}
 function open(){if(typeof formData==='undefined'||!formData)throw new Error('No hay un estudio calculado para simular.');baseData=clone(formData);baseResult=typeof lastResult!=='undefined'&&lastResult?clone(lastResult):null;simulationData=clone(formData);simulationChanged=false;render();}
 function bind(){const b=$('openMapoSimulation');if(b)b.onclick=()=>{try{open();}catch(err){alert('No se pudo abrir la simulación: '+err.message);}};}
 window.MAPOSimulation={open,close:restoreResults};
