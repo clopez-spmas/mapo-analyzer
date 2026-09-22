@@ -14,10 +14,12 @@
       $('studyTitle').textContent=MAPO_STUDIES[selectedStudy].title;
       $('studyDescription').textContent=`${MAPO_STUDIES[selectedStudy].description} · Paso ${currentStep+1} de ${MAPO_STUDIES[selectedStudy].steps.length}: ${step.title}`;
       if(typeof window.renderMobilizations==='function') window.renderMobilizations();
-      $('previousStep').hidden=true;
-      $('nextStep').hidden=true;
       $('calculate').hidden=true;
       $('progressBar').style.width=`${(currentStep+1)/MAPO_STUDIES[selectedStudy].steps.length*100}%`;
+      /* La pantalla de movilizaciones sigue formando parte de la navegación normal.
+         No ocultamos Anterior/Siguiente: si el usuario vuelve atrás debe poder
+         avanzar de nuevo hasta este módulo. */
+      window.MAPONavigation?.bindStandard?.();
       return;
     }
     originalRenderStep();
