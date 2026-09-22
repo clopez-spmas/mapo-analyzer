@@ -316,3 +316,56 @@
     width: 76px;
   }
 }
+
+
+/* MOVILIZACIONES: el formulario completo debe ocupar una sola fila.
+   El problema no estaba en el ancho de las columnas de la tabla, sino en
+   que sus elementos hermanos podían quedar distribuidos lateralmente. */
+#formContainer.mobilization-host {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+#formContainer.mobilization-host .mobilization-screen {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+#formContainer.mobilization-host .step-title-row,
+#formContainer.mobilization-host .mob-table-wrap,
+#formContainer.mobilization-host .mob-table-wrap + .actions,
+#formContainer.mobilization-host #mobSummary {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+
+#formContainer.mobilization-host .mob-table-wrap + .actions {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  clear: both !important;
+  float: none !important;
+  margin-top: 14px !important;
+}
+
+#formContainer.mobilization-host #mobSummary {
+  display: block !important;
+  clear: both !important;
+  float: none !important;
+  margin-top: 14px !important;
+}
+
+#formContainer.mobilization-host .mob-table {
+  display: table !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
