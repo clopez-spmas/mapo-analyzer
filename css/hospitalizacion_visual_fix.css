@@ -271,3 +271,29 @@
     min-width: 760px;
   }
 }
+
+
+/* Movilizaciones: estructura explícita de filas para evitar cualquier compresión por estilos globales. */
+.mob-table tbody tr:not(.mob-section) {
+  height: 64px !important;
+}
+.mob-table tbody tr:not(.mob-section) td {
+  padding: 14px 18px !important;
+  line-height: 1.5 !important;
+  white-space: normal !important;
+}
+.mob-table .mob-task-name {
+  display: block !important;
+  font-weight: 700;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+}
+.mob-table .mob-source {
+  display: block !important;
+  margin-top: 7px !important;
+  line-height: 1.4 !important;
+}
+.mob-table .mob-count {
+  display: block !important;
+  margin: 0 auto !important;
+}
