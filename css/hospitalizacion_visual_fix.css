@@ -136,15 +136,17 @@
 
 
 /* Movilizaciones: conservar el formato de tabla y evitar que las tareas queden amontonadas. */
+/* Cada tarea debe ocupar una fila clara y con separación vertical. */
 .mob-table-wrap {
   width: 100%;
   overflow-x: auto;
-  margin-top: 15px;
+  margin-top: 18px;
+  padding-bottom: 4px;
 }
 
 .mob-table {
   width: 100%;
-  min-width: 780px;
+  min-width: 900px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -156,10 +158,10 @@
 
 .mob-table th,
 .mob-table td {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .mob-table th {
@@ -169,59 +171,62 @@
   text-align: center;
 }
 
-.mob-table th:first-child {
-  width: 78%;
-  text-align: left;
-}
-
-.mob-table th:nth-child(2) {
-  width: 22%;
-}
-
+.mob-table th:first-child,
 .mob-table td:first-child {
+  width: 76%;
   text-align: left;
-  overflow-wrap: anywhere;
 }
 
-.mob-table td:last-child {
+.mob-table th:nth-child(2),
+.mob-table td:nth-child(2) {
+  width: 24%;
   text-align: center;
 }
 
-.mob-table tbody tr:last-child td {
-  border-bottom: 0;
+.mob-table td:first-child {
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
-.mob-table td strong {
+.mob-table td:first-child strong {
   display: block;
-  line-height: 1.45;
+  margin: 0 0 6px;
+  line-height: 1.5;
 }
 
 .mob-table .mob-source {
   display: block;
-  margin-top: 5px;
+  margin: 6px 0 0;
   color: #718096;
   font-size: .82rem;
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .mob-table .mob-count {
-  width: 100%;
+  display: block;
+  width: min(120px, 100%);
   min-width: 90px;
+  margin: 0 auto;
   padding: 9px 10px;
   text-align: center;
 }
 
+.mob-table tbody tr:not(.mob-section) td {
+  min-height: 58px;
+}
+
 .mob-table .mob-section td {
-  padding: 10px 14px;
+  padding: 11px 16px;
   background: #f7fafc;
   color: #005a9c;
   font-weight: 700;
   text-align: left;
+  border-bottom: 1px solid #d8e0e8;
 }
 
-.mob-table .mob-section td {
-  border-bottom: 1px solid #d8e0e8;
+.mob-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .mobilization-navigation {
@@ -263,6 +268,6 @@
   }
 
   .mob-table {
-    min-width: 700px;
+    min-width: 760px;
   }
 }
