@@ -134,22 +134,26 @@
   }
 }
 
-
-/* Movilizaciones: conservar el formato de tabla y evitar que las tareas queden amontonadas. */
-/* Cada tarea debe ocupar una fila clara y con separación vertical. */
+/* MOVILIZACIONES
+   La tabla ocupa siempre todo el ancho disponible del formulario.
+   No se fuerza un ancho mínimo y no se crea scroll horizontal para leer las tareas. */
 .mob-table-wrap {
+  display: block;
   width: 100%;
-  overflow-x: auto;
+  max-width: 100%;
+  overflow: visible;
   margin-top: 18px;
   padding-bottom: 4px;
 }
 
 .mob-table {
   width: 100%;
-  min-width: 900px;
+  max-width: 100%;
+  min-width: 0 !important;
+  margin: 0;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto !important;
   background: #fff;
   border: 1px solid #d8e0e8;
   border-radius: 10px;
@@ -162,6 +166,9 @@
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
   line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .mob-table th {
@@ -173,47 +180,49 @@
 
 .mob-table th:first-child,
 .mob-table td:first-child {
-  width: 76%;
+  width: 80%;
   text-align: left;
 }
 
 .mob-table th:nth-child(2),
 .mob-table td:nth-child(2) {
-  width: 24%;
+  width: 20%;
+  min-width: 105px;
   text-align: center;
 }
 
-.mob-table td:first-child {
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-.mob-table td:first-child strong {
+.mob-table .mob-task-name {
   display: block;
-  margin: 0 0 6px;
+  font-weight: 700;
   line-height: 1.5;
+  margin: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .mob-table .mob-source {
   display: block;
-  margin: 6px 0 0;
+  margin: 7px 0 0;
   color: #718096;
   font-size: .82rem;
   font-weight: 400;
   line-height: 1.4;
+  white-space: normal;
 }
 
 .mob-table .mob-count {
   display: block;
-  width: min(120px, 100%);
-  min-width: 90px;
+  box-sizing: border-box;
+  width: 82px;
+  max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
-  padding: 9px 10px;
+  padding: 9px 8px;
   text-align: center;
 }
 
-.mob-table tbody tr:not(.mob-section) td {
-  min-height: 58px;
+.mob-table tbody tr:not(.mob-section) {
+  min-height: 64px;
 }
 
 .mob-table .mob-section td {
@@ -229,8 +238,28 @@
   border-bottom: 0;
 }
 
+/* El bloque de botones queda siempre debajo de la tabla, nunca al lado. */
+.mob-table-wrap + .actions {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  clear: both;
+}
+
+.mob-table-wrap + .actions button {
+  flex: 0 0 auto;
+  white-space: normal;
+}
+
 .mobilization-navigation {
   width: 100%;
+  max-width: 100%;
 }
 
 .mobilization-turn-buttons,
@@ -267,33 +296,23 @@
     grid-template-columns: 1fr;
   }
 
-  .mob-table {
-    min-width: 760px;
+  .mob-table th,
+  .mob-table td {
+    padding: 12px 10px;
   }
-}
 
+  .mob-table th:first-child,
+  .mob-table td:first-child {
+    width: auto;
+  }
 
-/* Movilizaciones: estructura explícita de filas para evitar cualquier compresión por estilos globales. */
-.mob-table tbody tr:not(.mob-section) {
-  height: 64px !important;
-}
-.mob-table tbody tr:not(.mob-section) td {
-  padding: 14px 18px !important;
-  line-height: 1.5 !important;
-  white-space: normal !important;
-}
-.mob-table .mob-task-name {
-  display: block !important;
-  font-weight: 700;
-  line-height: 1.5 !important;
-  margin: 0 !important;
-}
-.mob-table .mob-source {
-  display: block !important;
-  margin-top: 7px !important;
-  line-height: 1.4 !important;
-}
-.mob-table .mob-count {
-  display: block !important;
-  margin: 0 auto !important;
+  .mob-table th:nth-child(2),
+  .mob-table td:nth-child(2) {
+    width: 105px;
+    min-width: 105px;
+  }
+
+  .mob-table .mob-count {
+    width: 76px;
+  }
 }
