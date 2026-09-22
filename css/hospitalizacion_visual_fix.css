@@ -133,3 +133,136 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Movilizaciones: conservar el formato de tabla y evitar que las tareas queden amontonadas. */
+.mob-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 15px;
+}
+
+.mob-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: #fff;
+  border: 1px solid #d8e0e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mob-table th,
+.mob-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  line-height: 1.45;
+}
+
+.mob-table th {
+  background: #edf2f7;
+  color: #2d3748;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mob-table th:first-child {
+  width: 78%;
+  text-align: left;
+}
+
+.mob-table th:nth-child(2) {
+  width: 22%;
+}
+
+.mob-table td:first-child {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.mob-table td:last-child {
+  text-align: center;
+}
+
+.mob-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.mob-table td strong {
+  display: block;
+  line-height: 1.45;
+}
+
+.mob-table .mob-source {
+  display: block;
+  margin-top: 5px;
+  color: #718096;
+  font-size: .82rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.mob-table .mob-count {
+  width: 100%;
+  min-width: 90px;
+  padding: 9px 10px;
+  text-align: center;
+}
+
+.mob-table .mob-section td {
+  padding: 10px 14px;
+  background: #f7fafc;
+  color: #005a9c;
+  font-weight: 700;
+  text-align: left;
+}
+
+.mob-table .mob-section td {
+  border-bottom: 1px solid #d8e0e8;
+}
+
+.mobilization-navigation {
+  width: 100%;
+}
+
+.mobilization-turn-buttons,
+.mobilization-option-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mobilization-option-grid {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.mobilization-option-grid .module-hub-item {
+  min-height: 95px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mobilization-option-grid .module-hub-item small {
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .mobilization-turn-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .mobilization-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mob-table {
+    min-width: 700px;
+  }
+}
