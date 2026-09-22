@@ -3,11 +3,15 @@
 'use strict';
 const $=id=>document.getElementById(id),n=v=>Number(v||0),pct=v=>Number(v||0).toFixed(1)+'%';
 function getState(){
+  const mr=window.MAPOMultiRoom,rooms=mr?.state?.rooms,active=mr?.state?.active;
+  if(Array.isArray(rooms)&&rooms.length>1){
+    const room=rooms[active];
+    return room?{form:room.formData||{},result:room.lastResult||{}}:null;
+  }
   if(typeof window.MAPOReportState==='function'){
     const s=window.MAPOReportState();
     if(s&&(Object.keys(s.result||{}).length||Object.keys(s.form||{}).length))return s;
   }
-  const mr=window.MAPOMultiRoom,rooms=mr?.state?.rooms,active=mr?.state?.active;
   const room=Array.isArray(rooms)?rooms[active]:null;
   return room?{form:room.formData||{},result:room.lastResult||{}}:null;
 }
