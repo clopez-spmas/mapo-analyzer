@@ -91,10 +91,10 @@
   function calculateHospitalizacionFactors(data){
     const d=data||{},tt=taskTotalsFrom(d);
     const fsS=yn(d.fs_elevadores)||yn(d.fs_camillas)||yn(d.fs_camas3);
-    const fsA=tt.st>0&&tt.lta/tt.st>=.9;
+    const fsA=tt.st>0&&tt.lta/tt.st>=.9-1e-9;
     const fs=!fsS&&!fsA?4:fsS&&fsA?.5:2;
     const faS=(yn(d.fa_sabana)&&yn(d.fa_dos))||(yn(d.fa_sabana)&&yn(d.fa_camas3));
-    const faA=tt.sp>0&&tt.lpa/tt.sp>=.9;
+    const faA=tt.sp>0&&tt.lpa/tt.sp>=.9-1e-9;
     const fa=faS&&faA?.5:1;
 
     const wc=wheelchairData(d);
