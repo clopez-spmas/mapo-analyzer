@@ -18,7 +18,7 @@ function read(){
 function renderDescription(step){
  const d=ensure();
  $('formContainer').innerHTML='<div class="step-title-row"><h3>'+esc(step.reportLabel)+'</h3></div>'+note+
- '<label for="mapoReportDescription"><strong>Descripción para el informe</strong></label>'+
+ '<label for="mapoReportDescription"><strong>'+esc(step.reportLabel)+'</strong></label>'+
  '<textarea id="mapoReportDescription" rows="12" style="width:100%;min-height:240px;resize:vertical" placeholder="Escriba aquí la descripción que aparecerá en el informe Word...">'+esc(d[step.reportKey]||'')+'</textarea>';
  $('mapoReportDescription').addEventListener('input',read);
 }
