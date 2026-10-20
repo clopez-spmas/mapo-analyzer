@@ -3,7 +3,7 @@
 'use strict';
 const prevRender=window.renderStep, prevSave=window.saveStep;
 const $=id=>document.getElementById(id);
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const note='<p class="schedule-preview"><strong>Destino:</strong> el texto introducido en esta pantalla se volcará en el informe Word cuando se incorpore la función de generación del informe. Puede dejarse en blanco.</p>';
 function ensure(){formData.informeDescriptivo=formData.informeDescriptivo||{};return formData.informeDescriptivo;}
 function getStep(){return MAPO_STUDIES[selectedStudy]?.steps?.[currentStep];}
@@ -60,5 +60,5 @@ window.saveStep=function(){
  if(step?.custom==='reportDescription'||step?.custom==='reportEquipment'){read();return;}
  return prevSave();
 };
-window.MAPOReportDescriptions={capture:read};
+window.MAPOReportDescriptions={capture:read,render:step=>{if(step?.custom==='reportDescription'){renderDescription(step);return true;}if(step?.custom==='reportEquipment'){renderEquipment();return true;}return false;}};
 })();
