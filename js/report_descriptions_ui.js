@@ -5,6 +5,15 @@ const prevRender=window.renderStep, prevSave=window.saveStep;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const note='<p class="schedule-preview"><strong>Destino:</strong> el texto introducido en esta pantalla se volcará en el informe Word cuando se incorpore la función de generación del informe. Puede dejarse en blanco.</p>';
+const reportHelp={
+ organizacion:['Nº de camas','Nº de personas trabajadoras que realizan MMC. Diferenciando entre turnos.','Nº de personas trabajadoras a tiempo parcial. Número de ellos por turno y horario.','Tipología de pacientes: nº medio diario de pacientes no colaboradores y parcialmente colaboradores.'],
+ frecuencia:['Rutinas diarias en cada uno de los turnos.'],
+ formacion:['¿Existe formación? Sí o No. (Hace cuánto)','Duración de la formación y nº de personas trabajadoras formados.','¿Existe entrenamiento en el uso de equipos? Sí o No.','¿Existe información? Sí o No.','¿Verificación de la formación?'],
+ equipos:['Indicar presencia o no de equipos de ayuda y ayudas menores (dar número, marca y modelo). Incluir imágenes en tablas como la siguiente.','Para los equipos de ayuda se describirá su mantenimiento, adaptabilidad al medio, al ambiente y presencia de requisitos preliminares.','Describir tipos de sillas de ruedas existentes y número de sillas por cada tipo. Si se dispone de imágenes igualmente incluirlas en tablas.','Mencionar las características ergonómicas más relevantes.'],
+ instalaciones:['Describir los baños para la higiene, baños con WC y habitaciones.','Tipos diferentes y número de cada uno de ellos.','Mencionar las características ergonómicas más relevantes.','Describir el tipo y número de camas regulables en altura existentes.','Si se dispone de imágenes incluirlas en tablas.']
+};
+function helpMarkup(key){return '<button type="button" class="help-trigger" data-report-help="'+key+'" aria-expanded="false" aria-controls="reportHelpBox">?</button><div class="help-popover" id="reportHelpBox" hidden><strong>Indicaciones del modelo Word</strong><ul>'+reportHelp[key].map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul></div>';}
+function bindHelp(){const b=document.querySelector('[data-report-help]');if(!b)return;b.addEventListener('click',()=>{const p=$('reportHelpBox');p.hidden=!p.hidden;b.setAttribute('aria-expanded',String(!p.hidden));});}
 function ensure(){formData.informeDescriptivo=formData.informeDescriptivo||{};return formData.informeDescriptivo;}
 function getStep(){return MAPO_STUDIES[selectedStudy]?.steps?.[currentStep];}
 function read(){
@@ -17,14 +26,14 @@ function read(){
 }
 function renderDescription(step){
  const d=ensure();
- $('formContainer').innerHTML='<div class="step-title-row"><h3>'+esc(step.reportLabel)+'</h3></div>'+note+
+ $('formContainer').innerHTML='<div class="step-title-row"><h3>'+esc(step.reportLabel)+'</h3>'+helpMarkup(step.reportKey)+'</div>'+note+
  '<label for="mapoReportDescription"><strong>'+esc(step.reportLabel)+'</strong></label>'+
  '<textarea id="mapoReportDescription" rows="12" style="width:100%;min-height:240px;resize:vertical" placeholder="Escriba aquí la descripción que aparecerá en el informe Word...">'+esc(d[step.reportKey]||'')+'</textarea>';
- $('mapoReportDescription').addEventListener('input',read);
+ $('mapoReportDescription').addEventListener('input',read);bindHelp();
 }
 function renderEquipment(){
  const d=ensure();d.equipos=d.equipos||[];
- $('formContainer').innerHTML='<div class="step-title-row"><h3>Equipos de ayuda disponibles</h3></div>'+note+
+ $('formContainer').innerHTML='<div class="step-title-row"><h3>Equipos de ayuda disponibles</h3>'+helpMarkup('equipos')+'</div>'+note+
  '<p>Registre cada equipo en la tabla de dos columnas. La imagen y la marca/modelo se incorporarán a la sección de equipos del futuro informe Word. No modifica los factores FS ni FA.</p>'+
  '<div style="overflow-x:auto"><table style="width:100%;table-layout:fixed;border-collapse:collapse"><thead><tr><th style="width:48%">Imagen</th><th>Marca / modelo</th></tr></thead><tbody>'+
  d.equipos.map((eq,i)=>'<tr><td style="vertical-align:top;padding:8px;border:1px solid #ccc">'+(eq.imagen?'<img src="'+esc(eq.imagen)+'" alt="Equipo de ayuda" style="max-height:150px;max-width:100%;display:block;margin-bottom:8px">':'<span>Sin imagen</span>')+
@@ -33,7 +42,7 @@ function renderEquipment(){
  '</td><td style="vertical-align:top;padding:8px;border:1px solid #ccc"><label>Marca / modelo<input type="text" style="width:100%" data-equipo-modelo="'+i+'" value="'+esc(eq.modelo||'')+'" placeholder="Marca y modelo"></label>'+
  '<button type="button" class="secondary" data-quitar-equipo="'+i+'">Eliminar fila</button></td></tr>').join('')+
  '</tbody></table></div><button type="button" class="secondary" id="anadirEquipoInforme">+ Añadir equipo</button><p id="equipoImageMessage" role="status"></p>';
- $('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
+ bindHelp();$('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
  document.querySelectorAll('[data-equipo-modelo]').forEach(e=>e.addEventListener('input',read));
  document.querySelectorAll('[data-quitar-equipo]').forEach(b=>b.onclick=()=>{read();d.equipos.splice(Number(b.dataset.quitarEquipo),1);renderEquipment();});
  document.querySelectorAll('[data-quitar-imagen]').forEach(b=>b.onclick=()=>{read();d.equipos[Number(b.dataset.quitarImagen)].imagen='';renderEquipment();});
