@@ -43,6 +43,24 @@ function readMinorAids(d){
   d.ayudasMenores[id]=entry;
  });
 }
+const helpEquipmentTypes=['Elevador/Grúa tipo 1','Elevador/Grúa tipo 2','Elevador/Grúa tipo 3','Camilla tipo 1','Camilla tipo 2'];
+const helpDeficiencies=[['requisitos','Carencia de requisitos preliminares'],['paciente','Carencia de adaptabilidad al paciente'],['ambiente','Carencia de adaptabilidad al ambiente'],['mantenimiento','Carencia de mantenimiento']];
+function helpChoice(id,i,value,label){
+ return '<select data-help-def="'+i+'" data-help-key="'+id+'" aria-label="'+esc(label)+'"><option value="" '+(value==null?'selected':'')+'>Sin indicar</option><option value="si" '+(value===true?'selected':'')+'>Sí</option><option value="no" '+(value===false?'selected':'')+'>No</option></select>';
+}
+function renderHelpEquipment(d){
+ const entries=d.equiposAyudaDetalle||helpEquipmentTypes.map(tipo=>({tipo}));
+ return '<section class="registry-card" style="margin-top:24px"><h3>Equipos de ayuda — ficha de inspección</h3><p>Datos para el informe Word. No modifican FS ni FA.</p><div style="overflow-x:auto"><table style="min-width:850px;width:100%;border-collapse:collapse"><thead><tr><th>Descripción del equipo</th><th>Nº de equipos</th>'+helpDeficiencies.map(x=>'<th>'+esc(x[1])+'</th>').join('')+'<th></th></tr></thead><tbody>'+entries.map((e,i)=>'<tr><td><input type="text" data-help-type="'+i+'" value="'+esc(e.tipo||'')+'" aria-label="Descripción del equipo"></td><td><input style="width:85px" type="number" min="0" step="1" data-help-count="'+i+'" value="'+esc(e.numero??'')+'" aria-label="Número de equipos"></td>'+helpDeficiencies.map(([key,label])=>'<td>'+helpChoice(key,i,e[key],label)+'</td>').join('')+'<td><button type="button" class="secondary" data-help-remove="'+i+'">Eliminar</button></td></tr>').join('')+'</tbody></table></div><button type="button" class="secondary" id="addHelpEquipment">+ Añadir equipo</button><div style="margin-top:12px"><label>¿Existe un lugar para almacenar el equipamiento? '+helpChoice('almacen',-1,d.almacenEquipos,'Almacenamiento de equipos')+'</label></div><div><label>¿Hay espacio suficiente para almacenar equipos de nueva adquisición? '+helpChoice('espacio',-1,d.espacioNuevosEquipos,'Espacio para nuevos equipos')+'</label></div></section>';
+}
+function readHelpEquipment(d){
+ const elements=document.querySelectorAll('[data-help-type]');
+ if(elements.length){
+  d.equiposAyudaDetalle=[...elements].map(el=>{const i=Number(el.dataset.helpType),num=document.querySelector('[data-help-count="'+i+'"]'),row={tipo:el.value,numero:num?.value===''?'':Number(num?.value||0)};helpDeficiencies.forEach(([key])=>{const v=document.querySelector('[data-help-def="'+i+'"][data-help-key="'+key+'"]')?.value;row[key]=v==='si'?true:v==='no'?false:null;});return row;});
+ }
+ const a=document.querySelector('[data-help-def="-1"][data-help-key="almacen"]'),b=document.querySelector('[data-help-def="-1"][data-help-key="espacio"]');
+ if(a)d.almacenEquipos=a.value==='si'?true:a.value==='no'?false:null;
+ if(b)d.espacioNuevosEquipos=b.value==='si'?true:b.value==='no'?false:null;
+}
 function read(){
  const step=getStep(),d=ensure();
  if(step?.custom==='reportDescription'){const e=$('mapoReportDescription');if(e)d[step.reportKey]=e.value;}
@@ -50,6 +68,7 @@ function read(){
   d.equipos=d.equipos||[];
   document.querySelectorAll('[data-equipo-modelo]').forEach(e=>{const i=Number(e.dataset.equipoModelo);if(d.equipos[i])d.equipos[i].modelo=e.value;});
   readMinorAids(d);
+  readHelpEquipment(d);
  }
 }
 function renderDescription(step){
@@ -69,8 +88,8 @@ function renderEquipment(){
  (eq.imagen?'<button type="button" class="secondary" data-quitar-imagen="'+i+'">Quitar imagen</button>':'')+
  '</td><td style="vertical-align:top;padding:8px;border:1px solid #ccc"><label>Marca / modelo<input type="text" style="width:100%" data-equipo-modelo="'+i+'" value="'+esc(eq.modelo||'')+'" placeholder="Marca y modelo"></label>'+
  '<button type="button" class="secondary" data-quitar-equipo="'+i+'">Eliminar fila</button></td></tr>').join('')+
- '</tbody></table></div><button type="button" class="secondary" id="anadirEquipoInforme">+ Añadir equipo</button><p id="equipoImageMessage" role="status"></p>'+renderMinorAids(d);
- bindHelp();document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-other]').forEach(e=>e.addEventListener('input',read));$('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
+ '</tbody></table></div><button type="button" class="secondary" id="anadirEquipoInforme">+ Añadir equipo</button><p id="equipoImageMessage" role="status"></p>'+renderHelpEquipment(d)+renderMinorAids(d);
+ bindHelp();document.querySelectorAll('[data-help-type],[data-help-count],[data-help-def]').forEach(e=>e.addEventListener('input',read));$('addHelpEquipment').onclick=()=>{read();d.equiposAyudaDetalle=d.equiposAyudaDetalle||helpEquipmentTypes.map(tipo=>({tipo}));d.equiposAyudaDetalle.push({tipo:''});renderEquipment();};document.querySelectorAll('[data-help-remove]').forEach(b=>b.onclick=()=>{read();d.equiposAyudaDetalle.splice(Number(b.dataset.helpRemove),1);renderEquipment();});document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-other]').forEach(e=>e.addEventListener('input',read));$('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
  document.querySelectorAll('[data-equipo-modelo]').forEach(e=>e.addEventListener('input',read));
  document.querySelectorAll('[data-quitar-equipo]').forEach(b=>b.onclick=()=>{read();d.equipos.splice(Number(b.dataset.quitarEquipo),1);renderEquipment();});
  document.querySelectorAll('[data-quitar-imagen]').forEach(b=>b.onclick=()=>{read();d.equipos[Number(b.dataset.quitarImagen)].imagen='';renderEquipment();});
