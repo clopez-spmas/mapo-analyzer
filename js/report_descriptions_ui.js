@@ -21,14 +21,17 @@ const minorAidTypes=[
  ['tabla','Tabla deslizante'],
  ['cinturon','Cinturón ergonómico'],
  ['rollbord','ROLLBORD u otro similar'],
- ['gruaActiva','Grúa activa o de bipedestación, elevador de banda torácica'],
- ['otro','Otro']
+ ['gruaActiva','Grúa activa o de bipedestación, elevador de banda torácica']
 ];
+function minorRow(id,label,entry,extra=false){
+ return '<tr><td style="padding:8px;border:1px solid #ccc">'+(extra?'<input type="text" data-minor-custom-name="'+id+'" value="'+esc(entry.descripcion||'')+'" placeholder="Nombre de la ayuda" aria-label="Nombre de otra ayuda">':esc(label))+'</td><td style="padding:8px;border:1px solid #ccc"><select data-minor-presence="'+id+'" aria-label="Presencia: '+esc(label)+'"><option value="" '+(entry.presencia==null?'selected':'')+'>Sin indicar</option><option value="si" '+(entry.presencia===true?'selected':'')+'>Sí</option><option value="no" '+(entry.presencia===false?'selected':'')+'>No</option></select></td><td style="padding:8px;border:1px solid #ccc"><input type="number" min="0" step="1" style="max-width:110px" data-minor-count="'+id+'" value="'+esc(entry.numero??'')+'" aria-label="Número: '+esc(label)+'">'+(extra?' <button type="button" class="secondary" data-minor-remove="'+id+'">Eliminar</button>':'')+'</td></tr>';
+}
 function renderMinorAids(d){
- const aids=d.ayudasMenores||{};
+ const aids=d.ayudasMenores||{},extras=d.ayudasMenoresAdicionales||[];
  return '<section class="registry-card" style="margin-top:24px"><h3>Ayudas menores</h3><p>Registre la presencia y el número de unidades. Esta tabla se incorporará al futuro informe Word y no altera el cálculo MAPO.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Ayuda</th><th>Presencia</th><th>Número</th></tr></thead><tbody>'+
- minorAidTypes.map(([id,label])=>{const entry=aids[id]||{};return '<tr><td style="padding:8px;border:1px solid #ccc">'+esc(label)+(id==='otro'?'<input type="text" data-minor-other value="'+esc(entry.descripcion||'')+'" placeholder="Especificar ayuda">':'')+'</td><td style="padding:8px;border:1px solid #ccc"><select data-minor-presence="'+id+'" aria-label="Presencia: '+esc(label)+'"><option value="" '+(entry.presencia==null?'selected':'')+'>Sin indicar</option><option value="si" '+(entry.presencia===true?'selected':'')+'>Sí</option><option value="no" '+(entry.presencia===false?'selected':'')+'>No</option></select></td><td style="padding:8px;border:1px solid #ccc"><input type="number" min="0" step="1" style="max-width:110px" data-minor-count="'+id+'" value="'+esc(entry.numero??'')+'" aria-label="Número: '+esc(label)+'"></td></tr>';}).join('')+
- '</tbody></table></div></section>';
+ minorAidTypes.map(([id,label])=>minorRow(id,label,aids[id]||{})).join('')+
+ extras.map((entry,i)=>minorRow('extra_'+i,entry.descripcion||'Otra ayuda',entry,true)).join('')+
+ '</tbody></table></div><button type="button" class="secondary" id="addMinorAid">+ Añadir otra ayuda</button></section>';
 }
 function readMinorAids(d){
  d.ayudasMenores=d.ayudasMenores||{};
@@ -39,9 +42,17 @@ function readMinorAids(d){
   const entry=d.ayudasMenores[id]||{};
   entry.presencia=p.value==='si'?true:p.value==='no'?false:null;
   entry.numero=n.value===''?'':Number(n.value);
-  if(id==='otro')entry.descripcion=document.querySelector('[data-minor-other]')?.value||'';
   d.ayudasMenores[id]=entry;
  });
+ d.ayudasMenoresAdicionales=[...document.querySelectorAll('[data-minor-custom-name]')].map(el=>{
+  const id=el.dataset.minorCustomName,p=document.querySelector('[data-minor-presence="'+id+'"]'),n=document.querySelector('[data-minor-count="'+id+'"]');
+  return {descripcion:el.value,presencia:p?.value==='si'?true:p?.value==='no'?false:null,numero:n?.value===''?'':Number(n?.value||0)};
+ });
+}
+function bindMinorAids(){
+ document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-custom-name]').forEach(e=>e.addEventListener('input',read));
+ $('addMinorAid')?.addEventListener('click',()=>{const d=ensure();readMinorAids(d);d.ayudasMenoresAdicionales=d.ayudasMenoresAdicionales||[];if(d.ayudasMenoresAdicionales.length>=50)return;d.ayudasMenoresAdicionales.push({descripcion:'',presencia:null,numero:''});renderMinorAidsScreen();});
+ document.querySelectorAll('[data-minor-remove]').forEach(b=>b.addEventListener('click',()=>{const d=ensure();readMinorAids(d);d.ayudasMenoresAdicionales.splice(Number(b.dataset.minorRemove.replace('extra_','')),1);renderMinorAidsScreen();}));
 }
 const helpEquipmentTypes=['Elevador/Grúa tipo 1','Elevador/Grúa tipo 2','Elevador/Grúa tipo 3','Camilla tipo 1','Camilla tipo 2'];
 const helpDeficiencies=[['requisitos','Carencia de requisitos preliminares'],['paciente','Carencia de adaptabilidad al paciente'],['ambiente','Carencia de adaptabilidad al ambiente'],['mantenimiento','Carencia de mantenimiento']];
@@ -108,7 +119,7 @@ function renderEquipment(){
 function renderMinorAidsScreen(){
  const d=ensure();
  $('formContainer').innerHTML='<div class="step-title-row"><h3>Ayudas menores disponibles</h3></div>'+note+renderMinorAids(d);
- document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-other]').forEach(e=>e.addEventListener('input',read));
+ bindMinorAids();
 }
 window.renderStep=function(){
  const step=getStep();
