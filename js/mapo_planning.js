@@ -3,7 +3,7 @@
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const priorities=['','Inmediata','Alta','Media','Baja'];
-const columns=[['prioridad','Prioridad','select'],['medida','Medida propuesta','textarea']];
+const columns=[['medida','Medida propuesta','textarea']];
 function state(){formData.planificacionPreventiva=formData.planificacionPreventiva||{medidas:[],alternativas:'',aprobadoPor:'',fechaAprobacion:''};return formData.planificacionPreventiva;}
 function screen(){return document.getElementById('planningPanel');}
 function input(k,i,v,type){
