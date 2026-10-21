@@ -114,6 +114,7 @@
     document.getElementById('progressBar').style.width=`${(currentStep+1)/MAPO_STUDIES[selectedStudy].steps.length*100}%`;
   }
 
+  window.MAPOBathrooms={selectKind:kind=>{bathSubStep=kind==='wc'?1:0;if(isBathModule())renderBathScreen(bathSubStep===0?'bath':'wc');}};
   window.renderStep=function(){
     if(isBathModule()){
       document.getElementById('studyTitle').textContent=MAPO_STUDIES[selectedStudy].title;
