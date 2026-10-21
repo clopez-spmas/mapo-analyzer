@@ -22,7 +22,15 @@
     'Factor formación (FF)':'Evaluación del factor FF.'
   };
   function groupsForStudy(){
-    return (MAPO_STUDIES?.[selectedStudy]?.steps||[]).map((s,i)=>({i,t:s.title,d:descriptions[s.title]||'Datos de evaluación MAPO.'}));
+    const steps=MAPO_STUDIES?.[selectedStudy]?.steps||[];
+    const out=[];
+    steps.forEach((step,i)=>{
+      if(step.title==='Factor ambiente — baños'){
+        out.push({i,t:'Baños para higiene (PMB)',d:'Registro de baños para higiene y ayudas para la higiene.',bathKind:'bath'});
+        out.push({i,t:'Baños con WC (PMWC)',d:'Registro de baños con WC y sus condiciones ergonómicas.',bathKind:'wc'});
+      }else out.push({i,t:step.title,d:descriptions[step.title]||'Datos de evaluación MAPO.'});
+    });
+    return out;
   }
   function status(i){
     const step=MAPO_STUDIES?.[selectedStudy]?.steps?.[i];if(!step)return 'Pendiente';
@@ -50,7 +58,7 @@
     const groups=groupsForStudy();
     const host=document.getElementById('formContainer');
     if(!host)return;
-    host.innerHTML=`<div class="dashboard-intro"><h3>Resumen de la evaluación</h3><p>Esta pantalla permite acceder directamente a cada bloque. No es necesario completar los bloques en el orden mostrado; el programa conservará los datos introducidos.</p></div><div class="actions"><button type="button" id="startHospitalizacionIdentification">Comenzar por identificación de la unidad</button></div><div class="dashboard-grid">${groups.map(g=>`<button type="button" class="dashboard-card" data-dashboard-step="${g.i}"><span class="dashboard-number">${g.i+1}</span><span><strong>${g.t}</strong><small>${g.d}</small><em>${status(g.i)}</em></span></button>`).join('')}<button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="result"><span class="dashboard-number">✓</span><span><strong>Resultados MAPO</strong><small>Consultar el resultado de la evaluación y los factores MAPO.</small><em>Resultado</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="tables"><span class="dashboard-number">▤</span><span><strong>Tablas para informe Word</strong><small>Seleccionar y preparar las tablas para copiar al informe.</small><em>Informe</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="simulation"><span class="dashboard-number">↗</span><span><strong>Simulación MAPO</strong><small>Simular mejoras y comprobar su efecto sobre el índice MAPO.</small><em>Simulación</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="planning"><span class="dashboard-number">☑</span><span><strong>Planificación preventiva</strong><small>Registrar medidas y trasladar propuestas de simulación.</small><em>Planificación</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="word"><span class="dashboard-number">▣</span><span><strong>Generar informe Word</strong><small>Preparar el documento DOCX con los datos del estudio.</small><em>Informe Word</em></span></button></div>`;
+    host.innerHTML=`<div class="dashboard-intro"><h3>Resumen de la evaluación</h3><p>Esta pantalla permite acceder directamente a cada bloque. No es necesario completar los bloques en el orden mostrado; el programa conservará los datos introducidos.</p></div><div class="actions"><button type="button" id="startHospitalizacionIdentification">Comenzar por identificación de la unidad</button></div><div class="dashboard-grid">${groups.map(g=>`<button type="button" class="dashboard-card" data-dashboard-step="${g.i}" ${g.bathKind?`data-dashboard-bath="${g.bathKind}"`:``}><span class="dashboard-number">${g.i+1}</span><span><strong>${g.t}</strong><small>${g.d}</small><em>${status(g.i)}</em></span></button>`).join('')}<button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="result"><span class="dashboard-number">✓</span><span><strong>Resultados MAPO</strong><small>Consultar el resultado de la evaluación y los factores MAPO.</small><em>Resultado</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="tables"><span class="dashboard-number">▤</span><span><strong>Tablas para informe Word</strong><small>Seleccionar y preparar las tablas para copiar al informe.</small><em>Informe</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="simulation"><span class="dashboard-number">↗</span><span><strong>Simulación MAPO</strong><small>Simular mejoras y comprobar su efecto sobre el índice MAPO.</small><em>Simulación</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="planning"><span class="dashboard-number">☑</span><span><strong>Planificación preventiva</strong><small>Registrar medidas y trasladar propuestas de simulación.</small><em>Planificación</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="word"><span class="dashboard-number">▣</span><span><strong>Generar informe Word</strong><small>Preparar el documento DOCX con los datos del estudio.</small><em>Informe Word</em></span></button></div>`;
     document.getElementById('previousStep').hidden=true;
     document.getElementById('nextStep').hidden=true;
     document.getElementById('calculate').hidden=true;
@@ -64,7 +72,10 @@
     };
     host.querySelector('#startHospitalizacionIdentification')?.addEventListener('click',()=>openStep(0));
     host.querySelectorAll('[data-dashboard-step]').forEach(b=>b.onclick=()=>{
+      const kind=b.dataset.dashboardBath;
+      if(kind)window.MAPOBathrooms?.selectKind?.(kind);
       openStep(Number(b.dataset.dashboardStep));
+      if(kind)window.MAPOBathrooms?.selectKind?.(kind);
     });
     host.querySelectorAll('[data-result-screen]').forEach(b=>b.onclick=e=>{
       e.preventDefault();
