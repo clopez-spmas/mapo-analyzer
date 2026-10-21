@@ -3,7 +3,7 @@
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const priorities=['','Inmediata','Alta','Media','Baja'];
-const columns=[['deficiencia','Riesgo / aspecto deficiente','textarea'],['prioridad','Prioridad','select'],['medida','Medida propuesta','textarea'],['fechaPrevista','Fecha prevista de aplicación','date'],['presupuesto','Presupuesto','text'],['fechaRealizacion','Fecha de realización','date'],['responsable','Responsable','text']];
+const columns=[['deficiencia','Riesgo / aspecto deficiente','textarea'],['prioridad','Prioridad','select'],['medida','Medida propuesta','textarea'],['responsable','Responsable','text']];
 function state(){formData.planificacionPreventiva=formData.planificacionPreventiva||{medidas:[],alternativas:'',aprobadoPor:'',fechaAprobacion:''};return formData.planificacionPreventiva;}
 function screen(){return document.getElementById('planningPanel');}
 function input(k,i,v,type){
@@ -24,11 +24,11 @@ function draw(selectSimulation=false){
  html+='<div class="actions"><button type="button" class="secondary" id="returnPlanResults">← Volver a resultados</button><button type="button" id="planAdd">+ Añadir medida</button></div>';
  if(changes.length)html+='<div class="registry-card"><h3>Seleccionar mejoras de la simulación</h3><p>Las modificaciones simuladas son propuestas, no medidas implantadas. Seleccione cuáles desea añadir; después podrá concretar el texto de la medida.</p>'+changes.map((c,i)=>'<label style="display:block"><input type="checkbox" data-plan-sim="'+i+'"> '+esc(c.description)+'</label>').join('')+'<button type="button" id="planImport">Incorporar seleccionadas</button></div>';
  html+='<p>Empresa: '+esc(formData.empresa||'—')+' · Centro: '+esc(formData.centroTrabajo||'—')+' · Unidad: '+esc(formData.unidad||'—')+' · Fecha de evaluación: '+esc(formData.fecha||'—')+'</p>';
- html+='<div style="overflow-x:auto"><table class="mapo-report-table" style="min-width:1150px;width:100%"><thead><tr>'+columns.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Acción</th></tr></thead><tbody>';
+ html+='<div style="overflow-x:auto"><table class="mapo-report-table" style="min-width:760px;width:100%"><thead><tr>'+columns.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Acción</th></tr></thead><tbody>';
  html+=p.medidas.map((m,i)=>'<tr>'+columns.map(([k,,t])=>'<td>'+input(k,i,m[k],t)+'</td>').join('')+'<td><button type="button" class="secondary" data-plan-remove="'+i+'">Eliminar</button></td></tr>').join('');
  html+='</tbody></table></div>';
- html+='<div class="registry-card"><label>Alternativas a las medidas propuestas<textarea data-plan-meta="alternativas" rows="3">'+esc(p.alternativas)+'</textarea></label><div class="grid"><label>Aprobado por<input type="text" data-plan-meta="aprobadoPor" value="'+esc(p.aprobadoPor)+'"></label><label>Fecha de aprobación<input type="date" data-plan-meta="fechaAprobacion" value="'+esc(p.fechaAprobacion)+'"></label></div></div>';
- html+='<p class="schedule-preview">Los datos se incluirán en el futuro informe Word. Para conservarlos en el archivo, utilice Guardar estudio.</p><div class="actions"><button type="button" class="secondary" id="planSaveJson">Guardar estudio JSON</button><button type="button" class="secondary" id="planReturnBottom">Volver a resultados</button></div>';
+
+ html+='<p class="schedule-preview">La fecha prevista de aplicación, el presupuesto, la fecha de realización, las alternativas y la aprobación quedarán en blanco en el informe Word para cumplimentarlos posteriormente. Para conservar las medidas, utilice Guardar estudio.</p><div class="actions"><button type="button" class="secondary" id="planSaveJson">Guardar estudio JSON</button><button type="button" class="secondary" id="planReturnBottom">Volver a resultados</button></div>';
  host.innerHTML=html;
  host.querySelectorAll('[data-plan-field],[data-plan-meta]').forEach(e=>e.addEventListener('input',capture));
  const redraw=()=>{capture();draw(false);};
