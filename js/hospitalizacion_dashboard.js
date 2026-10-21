@@ -9,7 +9,8 @@
     'Descripción — Factores organizativos':'Texto descriptivo para el informe.',
     'Descripción — Frecuencia':'Rutinas por turno para el informe.',
     'Descripción — Formación':'Información descriptiva de formación.',
-    'Descripción — Equipos de ayuda disponibles':'Fotografías, equipos de ayuda y ayudas menores.',
+    'Descripción — Equipos de ayuda disponibles':'Fotografías y datos de equipos de elevación.',
+    'Descripción — Ayudas menores disponibles':'Registro de ayudas menores, presencia y unidades.',
     'Descripción — Instalaciones':'Descripción de baños, habitaciones e instalaciones.',
     'Personas trabajadoras que realizan MMP':'Turnos, horarios y cálculo de Op.',
     'Pacientes':'Pacientes NC, PC y NA.',
@@ -35,6 +36,7 @@
   function status(i){
     const step=MAPO_STUDIES?.[selectedStudy]?.steps?.[i];if(!step)return 'Pendiente';
     if(step.custom==='reportDescription')return formData.informeDescriptivo?.[step.reportKey]?'Completado':'Pendiente';
+    if(step.custom==='reportMinorAids')return Object.keys(formData.informeDescriptivo?.ayudasMenores||{}).length?'En curso':'Pendiente';
     if(step.custom==='reportEquipment')return (formData.informeDescriptivo?.equipos||[]).length?'En curso':'Pendiente';
     if(step.custom==='pmh')return (formData.roomTypes||[]).length?'En curso':'Pendiente';
     if(step.custom==='wheelchairs')return (formData.wheelchairTypes||[]).length?'En curso':'Pendiente';
