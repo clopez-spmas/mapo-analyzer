@@ -10,6 +10,7 @@ const MAPO_STUDIES={hospitalizacion:{title:'Salas de hospitalización',descripti
 {title:'Tareas de movilización',custom:'mobilizations'},
 {title:'Descripción — Equipos de ayuda disponibles',custom:'reportEquipment'},
 {title:'Factor de elevación (FS)',helpKey:'fs',questionGroup:'fs'},
+{title:'Descripción — Ayudas menores disponibles',custom:'reportMinorAids'},
 {title:'Factor de ayudas menores (FA)',helpKey:'fa',questionGroup:'fa'},
 {title:'Factor de sillas de ruedas (FC)',helpKey:'fc',custom:'wheelchairs'},
 {title:'Factor ambiente — baños',helpKey:'famb',fields:[['famb_pmb','Puntuación media de baños para higiene (PMB)','number'],['famb_pmwc','Puntuación media de baños con WC (PMWC)','number']]},
