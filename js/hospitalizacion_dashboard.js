@@ -48,19 +48,21 @@
     const groups=groupsForStudy();
     const host=document.getElementById('formContainer');
     if(!host)return;
-    host.innerHTML=`<div class="dashboard-intro"><h3>Resumen de la evaluación</h3><p>Esta pantalla permite acceder directamente a cada bloque. No es necesario completar los bloques en el orden mostrado; el programa conservará los datos introducidos.</p></div><div class="dashboard-grid">${groups.map(g=>`<button type="button" class="dashboard-card" data-dashboard-step="${g.i}"><span class="dashboard-number">${g.i+1}</span><span><strong>${g.t}</strong><small>${g.d}</small><em>${status(g.i)}</em></span></button>`).join('')}<button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="result"><span class="dashboard-number">✓</span><span><strong>Resultados MAPO</strong><small>Consultar el resultado de la evaluación y los factores MAPO.</small><em>Resultado</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="tables"><span class="dashboard-number">▤</span><span><strong>Tablas para informe Word</strong><small>Seleccionar y preparar las tablas para copiar al informe.</small><em>Informe</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="simulation"><span class="dashboard-number">↗</span><span><strong>Simulación MAPO</strong><small>Simular mejoras y comprobar su efecto sobre el índice MAPO.</small><em>Simulación</em></span></button></div>`;
+    host.innerHTML=`<div class="dashboard-intro"><h3>Resumen de la evaluación</h3><p>Esta pantalla permite acceder directamente a cada bloque. No es necesario completar los bloques en el orden mostrado; el programa conservará los datos introducidos.</p></div><div class="actions"><button type="button" id="startHospitalizacionIdentification">Comenzar por identificación de la unidad</button></div><div class="dashboard-grid">${groups.map(g=>`<button type="button" class="dashboard-card" data-dashboard-step="${g.i}"><span class="dashboard-number">${g.i+1}</span><span><strong>${g.t}</strong><small>${g.d}</small><em>${status(g.i)}</em></span></button>`).join('')}<button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="result"><span class="dashboard-number">✓</span><span><strong>Resultados MAPO</strong><small>Consultar el resultado de la evaluación y los factores MAPO.</small><em>Resultado</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="tables"><span class="dashboard-number">▤</span><span><strong>Tablas para informe Word</strong><small>Seleccionar y preparar las tablas para copiar al informe.</small><em>Informe</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="simulation"><span class="dashboard-number">↗</span><span><strong>Simulación MAPO</strong><small>Simular mejoras y comprobar su efecto sobre el índice MAPO.</small><em>Simulación</em></span></button></div>`;
     document.getElementById('previousStep').hidden=true;
     document.getElementById('nextStep').hidden=true;
     document.getElementById('calculate').hidden=true;
     document.getElementById('progressBar').style.width='0%';
-    host.querySelectorAll('[data-dashboard-step]').forEach(b=>b.onclick=()=>{
-      const i=Number(b.dataset.dashboardStep);
-      if(window.MAPOMultiRoom?.state?.rooms?.length){
-        window.MAPOMultiRoom.state.rooms[window.MAPOMultiRoom.state.active].currentStep=i;
-      }
+    const openStep=i=>{
+      const m=window.MAPOMultiRoom?.state;
+      if(m?.rooms?.length&&m.rooms[m.active])m.rooms[m.active].currentStep=i;
       currentStep=i;
       window.renderStep();
       window.MAPONavigation?.bindStandard?.();
+    };
+    host.querySelector('#startHospitalizacionIdentification')?.addEventListener('click',()=>openStep(0));
+    host.querySelectorAll('[data-dashboard-step]').forEach(b=>b.onclick=()=>{
+      openStep(Number(b.dataset.dashboardStep));
     });
     host.querySelectorAll('[data-result-screen]').forEach(b=>b.onclick=e=>{
       e.preventDefault();
