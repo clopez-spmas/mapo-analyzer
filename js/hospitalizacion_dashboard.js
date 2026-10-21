@@ -53,7 +53,7 @@
     if(kind==='tables')return api?.showTables?.();
     if(kind==='simulation')return api?.showSimulation?.();
     if(kind==='planning')return window.MAPOPlanning?.open?.(false);
-    if(kind==='word'){const ok=api?.showTables?.();if(ok){window.MAPOWordGenerator?.open?.();}return ok;}
+    if(kind==='word')return api?.showWord?.();
     return false;
   }
   function renderDashboard(){
