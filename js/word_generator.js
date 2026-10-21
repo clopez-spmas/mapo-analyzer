@@ -76,20 +76,14 @@ async function generate(template){
  const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download='MAPO_'+(f.unidad||'estudio').replace(/[^\w-]+/g,'_')+'.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 function createControls(){
- const host=document.getElementById('reportTablesPanel')||document.getElementById('result');if(!host||document.getElementById('mapoGenerateWord'))return;
+ const host=document.getElementById('wordReportPanel');if(!host||document.getElementById('mapoGenerateWord'))return;
  const wrap=document.createElement('div');wrap.className='registry-card';wrap.id='mapoGenerateWord';wrap.innerHTML='<h3>Generar informe Word</h3><p>Utilice la plantilla DOCX con marcadores compatibles. La plantilla maestra no se modifica.</p><label>Plantilla Word (.docx) para pruebas<input type="file" accept=".docx" id="mapoWordTemplate"></label><div class="actions"><button type="button" id="mapoDownloadWord">Generar informe Word</button><button type="button" class="secondary" id="mapoWordMarkers">Ver marcadores disponibles</button></div><p id="mapoWordFeedback" role="status"></p><div id="mapoWordMarkerList" hidden></div>';
  host.appendChild(wrap);
  wrap.querySelector('#mapoWordMarkers').onclick=()=>{const box=wrap.querySelector('#mapoWordMarkerList');box.hidden=!box.hidden;box.textContent=allKeys.map(k=>'{'+k+'}').join(' · ');};
  wrap.querySelector('#mapoDownloadWord').onclick=async()=>{const output=wrap.querySelector('#mapoWordFeedback');output.textContent='Preparando documento...';try{const selected=wrap.querySelector('#mapoWordTemplate').files?.[0];let raw;if(selected)raw=await selected.arrayBuffer();else{const response=await fetch('plantillas/MAPO_Hospitalizacion.docx',{cache:'no-store'});if(!response.ok)throw Error('No hay plantilla publicada. Seleccione un DOCX con marcadores para probar.');raw=await response.arrayBuffer();}await generate(raw);output.textContent='Documento generado. Revise el informe en Word.';}catch(e){output.textContent='No se pudo generar: '+e.message;}};
 }
-function init(){createControls();const result=document.getElementById('result');if(result){const btn=document.createElement('button');btn.type='button';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>{window.MAPOResultScreens?.showTables?.();createControls();document.getElementById('mapoGenerateWord')?.scrollIntoView({block:'start'});};result.querySelector('.section-heading .actions')?.appendChild(btn);}}
-function openGenerator(){
- const tables=document.getElementById('reportTablesPanel');
- const widget=document.getElementById('mapoGenerateWord');
- if(tables&&widget&&widget.parentElement!==tables)tables.appendChild(widget);
- else if(!widget)createControls();
- document.getElementById('mapoGenerateWord')?.scrollIntoView({block:'start'});
-}
+function init(){createControls();const result=document.getElementById('result');if(result&&!result.querySelector('#openGeneratorFromResult')){const btn=document.createElement('button');btn.type='button';btn.id='openGeneratorFromResult';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>window.MAPOResultScreens?.showWord?.();result.querySelector('.section-heading .actions')?.appendChild(btn);}}
+function openGenerator(){return window.MAPOResultScreens?.showWord?.();}
 window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
