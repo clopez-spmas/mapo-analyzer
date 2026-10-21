@@ -3,32 +3,39 @@
    El controlador único de navegación es navigation_controller.js.
 */
 (function(){
-  const labels=['Identificación de la unidad','Personas trabajadoras / turnos','Tipología de pacientes','Tareas de movilización','Factor de elevación (FS)','Factor de ayudas menores (FA)','Factor de sillas de ruedas (FC)','Factor ambiente — baños','Habitaciones / PMH','Factor formación (FF)'];
-  const groups=[
-    {i:0,t:'Datos generales',d:'Hospital, unidad, fecha, código y camas.'},
-    {i:1,t:'Personas trabajadoras',d:'Turnos, horarios y personas que realizan MMP. El programa calcula OP.'},
-    {i:2,t:'Pacientes',d:'Autónomos, colaboradores, no colaboradores y encamados. NC, PC y NA se calculan automáticamente.'},
-    {i:3,t:'Movilizaciones',d:'Tareas oficiales MAPO, tareas adicionales y movilizaciones personalizadas.'},
-    {i:4,t:'FS — Elevación',d:'Equipamiento de elevación y adecuación mediante %LTA.'},
-    {i:5,t:'FA — Ayudas menores',d:'Ayudas menores y adecuación mediante %LPA.'},
-    {i:6,t:'FC — Sillas de ruedas',d:'Tipos de silla, características, PMSR y suficiencia respecto a NA.'},
-    {i:7,t:'Famb — Baños',d:'Baños de higiene y baños con WC; PMB y PMWC.'},
-    {i:8,t:'Famb — Habitaciones',d:'Tipos de habitación y cálculo automático de PMH.'},
-    {i:9,t:'FF — Formación',d:'Características, cobertura, antigüedad y eficacia de la formación.'}
-  ];
+  /* Los accesos se obtienen de la definición vigente de pasos, sin índices antiguos. */
+  const descriptions={
+    'Identificación de la unidad':'Datos de empresa, centro, unidad y visita.',
+    'Descripción — Factores organizativos':'Texto descriptivo para el informe.',
+    'Descripción — Frecuencia':'Rutinas por turno para el informe.',
+    'Descripción — Formación':'Información descriptiva de formación.',
+    'Descripción — Equipos de ayuda disponibles':'Fotografías, equipos de ayuda y ayudas menores.',
+    'Descripción — Instalaciones':'Descripción de baños, habitaciones e instalaciones.',
+    'Personas trabajadoras que realizan MMP':'Turnos, horarios y cálculo de Op.',
+    'Pacientes':'Pacientes NC, PC y NA.',
+    'Tareas de movilización':'Movilizaciones por turno y tareas personalizadas.',
+    'Factor de elevación (FS)':'Evaluación del factor FS.',
+    'Factor de ayudas menores (FA)':'Evaluación del factor FA.',
+    'Factor de sillas de ruedas (FC)':'Sillas de ruedas, PMSR y suficiencia.',
+    'Factor ambiente — baños':'Baños para higiene y baños con WC, PMB y PMWC.',
+    'Habitaciones — cálculo de PMH':'Habitaciones, PMH y camas regulables.',
+    'Factor formación (FF)':'Evaluación del factor FF.'
+  };
+  function groupsForStudy(){
+    return (MAPO_STUDIES?.[selectedStudy]?.steps||[]).map((s,i)=>({i,t:s.title,d:descriptions[s.title]||'Datos de evaluación MAPO.'}));
+  }
   function status(i){
-    try{
-      const s=MAPO_STUDIES[selectedStudy].steps[i];
-      if(i===2)return formData.patientTypes?'Completado':'Pendiente';
-      if(i===1)return formData.op>0?'Completado':'Pendiente';
-      if(i===3)return formData.tasks?'Completado':'Pendiente';
-      if(i===6)return (formData.wheelchairTypes||[]).length?'Completado':'Pendiente';
-      if(i===7)return (formData.bathTypes||[]).length||(formData.wcTypes||[]).length?'En curso':'Pendiente';
-      if(i===8)return (formData.roomTypes||[]).length?'Completado':'Pendiente';
-      if(s.questionGroup)return 'En curso';
-      if(s.fields)return s.fields.every(f=>String(formData[f[0]]??'').trim()!=='')?'Completado':'Pendiente';
-      return 'Pendiente';
-    }catch(e){return 'Pendiente';}
+    const step=MAPO_STUDIES?.[selectedStudy]?.steps?.[i];if(!step)return 'Pendiente';
+    if(step.custom==='reportDescription')return formData.informeDescriptivo?.[step.reportKey]?'Completado':'Pendiente';
+    if(step.custom==='reportEquipment')return (formData.informeDescriptivo?.equipos||[]).length?'En curso':'Pendiente';
+    if(step.custom==='pmh')return (formData.roomTypes||[]).length?'En curso':'Pendiente';
+    if(step.custom==='wheelchairs')return (formData.wheelchairTypes||[]).length?'En curso':'Pendiente';
+    if(step.custom==='mobilizations')return Object.keys(formData.mobilizations?.entries||{}).length?'En curso':'Pendiente';
+    if(step.shiftSchedule)return formData.workerSchedule?'En curso':'Pendiente';
+    if(step.title==='Factor ambiente — baños')return (formData.bathTypes||[]).length||(formData.wcTypes||[]).length?'En curso':'Pendiente';
+    if(step.questionGroup)return 'En curso';
+    if(step.fields)return step.fields.some(([key])=>formData[key]!==undefined&&formData[key]!=='')?'En curso':'Pendiente';
+    return 'Pendiente';
   }
   function openResultScreen(kind){
     const api=window.MAPOResultScreens;
@@ -38,6 +45,7 @@
     return false;
   }
   function renderDashboard(){
+    const groups=groupsForStudy();
     const host=document.getElementById('formContainer');
     if(!host)return;
     host.innerHTML=`<div class="dashboard-intro"><h3>Resumen de la evaluación</h3><p>Esta pantalla permite acceder directamente a cada bloque. No es necesario completar los bloques en el orden mostrado; el programa conservará los datos introducidos.</p></div><div class="dashboard-grid">${groups.map(g=>`<button type="button" class="dashboard-card" data-dashboard-step="${g.i}"><span class="dashboard-number">${g.i+1}</span><span><strong>${g.t}</strong><small>${g.d}</small><em>${status(g.i)}</em></span></button>`).join('')}<button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="result"><span class="dashboard-number">✓</span><span><strong>Resultados MAPO</strong><small>Consultar el resultado de la evaluación y los factores MAPO.</small><em>Resultado</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="tables"><span class="dashboard-number">▤</span><span><strong>Tablas para informe Word</strong><small>Seleccionar y preparar las tablas para copiar al informe.</small><em>Informe</em></span></button><button type="button" class="dashboard-card dashboard-result-shortcut" data-result-screen="simulation"><span class="dashboard-number">↗</span><span><strong>Simulación MAPO</strong><small>Simular mejoras y comprobar su efecto sobre el índice MAPO.</small><em>Simulación</em></span></button></div>`;
