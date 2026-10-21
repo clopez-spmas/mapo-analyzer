@@ -64,11 +64,11 @@ function readHelpEquipment(d){
 function read(){
  const step=getStep(),d=ensure();
  if(step?.custom==='reportDescription'){const e=$('mapoReportDescription');if(e)d[step.reportKey]=e.value;}
- if(step?.custom==='reportEquipment'){
+ if(step?.custom==='reportEquipment'||step?.custom==='reportMinorAids'){
   d.equipos=d.equipos||[];
   document.querySelectorAll('[data-equipo-modelo]').forEach(e=>{const i=Number(e.dataset.equipoModelo);if(d.equipos[i])d.equipos[i].modelo=e.value;});
-  readMinorAids(d);
-  readHelpEquipment(d);
+  if(step?.custom==='reportMinorAids')readMinorAids(d);
+  else readHelpEquipment(d);
  }
 }
 function renderDescription(step){
@@ -88,8 +88,8 @@ function renderEquipment(){
  (eq.imagen?'<button type="button" class="secondary" data-quitar-imagen="'+i+'">Quitar imagen</button>':'')+
  '</td><td style="vertical-align:top;padding:8px;border:1px solid #ccc"><label>Marca / modelo<input type="text" style="width:100%" data-equipo-modelo="'+i+'" value="'+esc(eq.modelo||'')+'" placeholder="Marca y modelo"></label>'+
  '<button type="button" class="secondary" data-quitar-equipo="'+i+'">Eliminar fila</button></td></tr>').join('')+
- '</tbody></table></div><button type="button" class="secondary" id="anadirEquipoInforme">+ Añadir equipo</button><p id="equipoImageMessage" role="status"></p>'+renderHelpEquipment(d)+renderMinorAids(d);
- bindHelp();document.querySelectorAll('[data-help-type],[data-help-count],[data-help-def]').forEach(e=>e.addEventListener('input',read));$('addHelpEquipment').onclick=()=>{read();d.equiposAyudaDetalle=d.equiposAyudaDetalle||helpEquipmentTypes.map(tipo=>({tipo}));d.equiposAyudaDetalle.push({tipo:''});renderEquipment();};document.querySelectorAll('[data-help-remove]').forEach(b=>b.onclick=()=>{read();d.equiposAyudaDetalle.splice(Number(b.dataset.helpRemove),1);renderEquipment();});document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-other]').forEach(e=>e.addEventListener('input',read));$('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
+ '</tbody></table></div><button type="button" class="secondary" id="anadirEquipoInforme">+ Añadir equipo</button><p id="equipoImageMessage" role="status"></p>'+renderHelpEquipment(d);
+ bindHelp();document.querySelectorAll('[data-help-type],[data-help-count],[data-help-def]').forEach(e=>e.addEventListener('input',read));$('addHelpEquipment').onclick=()=>{read();d.equiposAyudaDetalle=d.equiposAyudaDetalle||helpEquipmentTypes.map(tipo=>({tipo}));d.equiposAyudaDetalle.push({tipo:''});renderEquipment();};document.querySelectorAll('[data-help-remove]').forEach(b=>b.onclick=()=>{read();d.equiposAyudaDetalle.splice(Number(b.dataset.helpRemove),1);renderEquipment();});$('anadirEquipoInforme').onclick=()=>{read();d.equipos.push({modelo:'',imagen:''});renderEquipment();};
  document.querySelectorAll('[data-equipo-modelo]').forEach(e=>e.addEventListener('input',read));
  document.querySelectorAll('[data-quitar-equipo]').forEach(b=>b.onclick=()=>{read();d.equipos.splice(Number(b.dataset.quitarEquipo),1);renderEquipment();});
  document.querySelectorAll('[data-quitar-imagen]').forEach(b=>b.onclick=()=>{read();d.equipos[Number(b.dataset.quitarImagen)].imagen='';renderEquipment();});
@@ -105,16 +105,22 @@ function renderEquipment(){
   reader.readAsDataURL(file);
  }));
 }
+function renderMinorAidsScreen(){
+ const d=ensure();
+ $('formContainer').innerHTML='<div class="step-title-row"><h3>Ayudas menores disponibles</h3></div>'+note+renderMinorAids(d);
+ document.querySelectorAll('[data-minor-presence],[data-minor-count],[data-minor-other]').forEach(e=>e.addEventListener('input',read));
+}
 window.renderStep=function(){
  const step=getStep();
  if(step?.custom==='reportDescription'){renderDescription(step);return;}
  if(step?.custom==='reportEquipment'){renderEquipment();return;}
+ if(step?.custom==='reportMinorAids'){renderMinorAidsScreen();return;}
  return prevRender();
 };
 window.saveStep=function(){
  const step=getStep();
- if(step?.custom==='reportDescription'||step?.custom==='reportEquipment'){read();return;}
+ if(step?.custom==='reportDescription'||step?.custom==='reportEquipment'||step?.custom==='reportMinorAids'){read();return;}
  return prevSave();
 };
-window.MAPOReportDescriptions={capture:read,render:step=>{if(step?.custom==='reportDescription'){renderDescription(step);return true;}if(step?.custom==='reportEquipment'){renderEquipment();return true;}return false;}};
+window.MAPOReportDescriptions={capture:read,render:step=>{if(step?.custom==='reportDescription'){renderDescription(step);return true;}if(step?.custom==='reportEquipment'){renderEquipment();return true;}if(step?.custom==='reportMinorAids'){renderMinorAidsScreen();return true;}return false;}};
 })();
