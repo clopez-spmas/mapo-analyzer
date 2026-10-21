@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const SCREEN_IDS=['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','mapoSimulation','planningPanel','reportTablesPanel','templateAdmin'];
+const SCREEN_IDS=['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','mapoSimulation','planningPanel','wordReportPanel','reportTablesPanel','templateAdmin'];
 function hideAll(){SCREEN_IDS.forEach(id=>{const el=$(id);if(el){el.hidden=true;el.setAttribute('aria-hidden','true');el.style.removeProperty('display');}});}
 function reveal(el){let p=el;while(p&&p!==document.body){p.hidden=false;p.removeAttribute('aria-hidden');p.style.removeProperty('display');p=p.parentElement;}el.hidden=false;el.removeAttribute('aria-hidden');}
 function addBackButton(el){if(!el||el.querySelector(':scope > .result-screen-navigation'))return;const bar=document.createElement('div');bar.className='result-screen-navigation actions';const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='← Volver a accesos directos';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();backToAccess();});bar.appendChild(b);el.insertBefore(bar,el.firstChild);}
@@ -59,6 +59,9 @@ function showResult(){return openScreen('result',()=>{window.MAPOResultsUI?.rend
 function ensureTables(){if(document.getElementById('reportTablesPanel'))return document.getElementById('reportTablesPanel');if(typeof window.MAPOReportTables?.ensurePanel==='function')return window.MAPOReportTables.ensurePanel();return null;}
 function showTables(){const panel=ensureTables();if(!panel)return false;const opened=openScreen('reportTablesPanel');if(opened){window.MAPOReportTables?.render?.();addRoomSwitcher(panel,showTables);ensureSequenceNavigation(panel,showResult,showSimulation);if(!panel.dataset.defaultSelectionInitialized){panel.querySelectorAll('input[type="checkbox"]').forEach(cb=>{cb.checked=false;});panel.dataset.defaultSelectionInitialized='1';}}return opened;}
 function showSimulation(){return openScreen('mapoSimulation',()=>{window.MAPOSimulation?.open?.();addRoomSwitcher($('mapoSimulation'),showSimulation);ensureSequenceNavigation($('mapoSimulation'),showTables,()=>window.MAPOPlanning?.open?.(false));});}
+function showWord(){const panel=$('wordReportPanel');if(!panel)return false;const shown=openScreen('wordReportPanel',()=>{window.MAPOWordGenerator?.prepare?.();addRoomSwitcher(panel,showWord);ensureSequenceNavigation(panel,()=>window.MAPOPlanning?.open?.(false),null);});return shown;}
+function showPlanning(){return window.MAPOPlanning?.open?.(false);}
+
 function backToAccess(){const mr=window.MAPOMultiRoom;if(mr&&typeof mr.openHospitalDashboard==='function'){mr.openHospitalDashboard();window.scrollTo(0,0);return true;}if(typeof window.showHospitalizacionDashboard==='function'){$('studyPanel')?.removeAttribute('hidden');window.showHospitalizacionDashboard();window.scrollTo(0,0);return true;}const panel=$('studyPanel');if(!panel)return false;hideAll();panel.hidden=false;window.renderStep?.();window.scrollTo(0,0);return true;}
-window.MAPOResultScreens=Object.freeze({showResult,showTables,showSimulation,showMultiRoomHub,openRoomResult,openRoomSimulation,openRoomTables,backToAccess});
+window.MAPOResultScreens=Object.freeze({showResult,showTables,showSimulation,showWord,showPlanning,showMultiRoomHub,openRoomResult,openRoomSimulation,openRoomTables,backToAccess});
 })();
