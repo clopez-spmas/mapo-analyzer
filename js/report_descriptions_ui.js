@@ -4,7 +4,7 @@
 const prevRender=window.renderStep, prevSave=window.saveStep;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const note='<p class="schedule-preview"><strong>Destino:</strong> el texto introducido en esta pantalla se volcará en el informe Word cuando se incorpore la función de generación del informe. Puede dejarse en blanco.</p>';
+const note='';
 const reportHelp={
  organizacion:['Nº de camas','Nº de personas trabajadoras que realizan MMC. Diferenciando entre turnos.','Nº de personas trabajadoras a tiempo parcial. Número de ellos por turno y horario.','Tipología de pacientes: nº medio diario de pacientes no colaboradores y parcialmente colaboradores.'],
  frecuencia:['Rutinas diarias en cada uno de los turnos.'],
