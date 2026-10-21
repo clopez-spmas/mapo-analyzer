@@ -16,19 +16,25 @@
     ['camillaDucha','Camilla para la ducha'],
     ['baneraErgonomica','Bañera ergonómica (baño asistido) adecuada'],
     ['duchaErgonomica','Ducha ergonómica (ducha asistida) adecuada'],
-    ['elevadorBanera','Elevador para bañera fija'],
-    ['otros','Otros']
+    ['elevadorBanera','Elevador para bañera fija']
   ];
   function hygieneAidsData(){formData.ayudasHigiene=formData.ayudasHigiene||{};return formData.ayudasHigiene;}
-  function renderHygieneAids(){
-    const d=hygieneAidsData();
-    return '<section class="registry-card"><h3>Ayudas para la higiene del paciente</h3><p>Información complementaria para el informe Word. No modifica PMB ni Famb.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Ayuda</th><th>Presencia</th><th>Número</th></tr></thead><tbody>'+
-      hygieneAidKinds.map(([key,label])=>{const v=d[key]||{};return '<tr><td>'+label+(key==='otros'?'<input type="text" data-hygiene-other value="'+escapeHtml(v.descripcion||'')+'" placeholder="Especificar ayuda">':'')+'</td><td><select data-hygiene-presence="'+key+'"><option value="" '+(v.presencia==null?'selected':'')+'>Sin indicar</option><option value="si" '+(v.presencia===true?'selected':'')+'>Sí</option><option value="no" '+(v.presencia===false?'selected':'')+'>No</option></select></td><td><input type="number" min="0" step="1" data-hygiene-count="'+key+'" value="'+escapeHtml(v.numero??'')+'" style="max-width:100px"></td></tr>';}).join('')+'</tbody></table></div></section>';
-  }
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function hygieneRow(key,label,v,extra){
+    return '<tr><td>'+(extra?'<input type="text" data-hygiene-custom="'+key+'" value="'+escapeHtml(v.descripcion||'')+'" placeholder="Especificar ayuda" aria-label="Nombre de la ayuda adicional">':escapeHtml(label))+'</td><td><select data-hygiene-presence="'+key+'"><option value="" '+(v.presencia==null?'selected':'')+'>Sin indicar</option><option value="si" '+(v.presencia===true?'selected':'')+'>Sí</option><option value="no" '+(v.presencia===false?'selected':'')+'>No</option></select></td><td><input type="number" min="0" step="1" data-hygiene-count="'+key+'" value="'+escapeHtml(v.numero??'')+'" style="max-width:100px">'+(extra?' <button type="button" class="secondary" data-hygiene-remove="'+key+'">Eliminar</button>':'')+'</td></tr>';
+  }
+  function renderHygieneAids(){
+    const d=hygieneAidsData(),extras=formData.ayudasHigieneAdicionales||[];
+    return '<section class="registry-card"><h3>Ayudas para la higiene del paciente</h3><p>Información complementaria para el informe Word. No modifica PMB ni Famb.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Ayuda</th><th>Presencia</th><th>Número</th></tr></thead><tbody>'+
+      hygieneAidKinds.map(([key,label])=>hygieneRow(key,label,d[key]||{},false)).join('')+
+      extras.map((v,i)=>hygieneRow('extra_'+i,v.descripcion||'Ayuda adicional',v,true)).join('')+
+      '</tbody></table></div><button type="button" class="secondary" id="addHygieneAid">+ Añadir otra ayuda</button></section>';
+  }
   function readHygieneAids(){
     const d=hygieneAidsData();
-    hygieneAidKinds.forEach(([key])=>{const p=document.querySelector('[data-hygiene-presence="'+key+'"]'),n=document.querySelector('[data-hygiene-count="'+key+'"]');if(!p||!n)return;const v=d[key]||{};v.presencia=p.value==='si'?true:p.value==='no'?false:null;v.numero=n.value===''?'':Number(n.value);if(key==='otros')v.descripcion=document.querySelector('[data-hygiene-other]')?.value||'';d[key]=v;});
+    hygieneAidKinds.forEach(([key])=>{const p=document.querySelector('[data-hygiene-presence="'+key+'"]'),n=document.querySelector('[data-hygiene-count="'+key+'"]');if(!p||!n)return;const v=d[key]||{};v.presencia=p.value==='si'?true:p.value==='no'?false:null;v.numero=n.value===''?'':Number(n.value);d[key]=v;});
+    const inputs=document.querySelectorAll('[data-hygiene-custom]');
+    if(inputs.length)formData.ayudasHigieneAdicionales=[...inputs].map(el=>{const key=el.dataset.hygieneCustom,p=document.querySelector('[data-hygiene-presence="'+key+'"]'),n=document.querySelector('[data-hygiene-count="'+key+'"]');return {descripcion:el.value,presencia:p?.value==='si'?true:p?.value==='no'?false:null,numero:n?.value===''?'':Number(n?.value||0)};});
   }
   function isBathModule(){return selectedStudy==='hospitalizacion'&&MAPO_STUDIES[selectedStudy]?.steps?.[currentStep]?.title==='Factor ambiente — baños';}
   function read(k){
@@ -103,7 +109,11 @@
       read(kind);formData[key].push({});renderBathScreen(kind);
       setTimeout(()=>document.querySelector(`[data-brk="${kind}"][data-bri="${formData[key].length-1}"]`)?.closest('.registry-card')?.scrollIntoView({behavior:'smooth',block:'center'}),0);
     });
-    if(kind==='bath')document.querySelectorAll('[data-hygiene-presence],[data-hygiene-count],[data-hygiene-other]').forEach(el=>el.addEventListener('input',readHygieneAids));
+    if(kind==='bath'){
+      document.querySelectorAll('[data-hygiene-presence],[data-hygiene-count],[data-hygiene-custom]').forEach(el=>el.addEventListener('input',readHygieneAids));
+      document.getElementById('addHygieneAid')?.addEventListener('click',()=>{read('bath');const extras=formData.ayudasHigieneAdicionales=formData.ayudasHigieneAdicionales||[];if(extras.length>=50)return;extras.push({descripcion:'',presencia:null,numero:''});renderBathScreen('bath');});
+      document.querySelectorAll('[data-hygiene-remove]').forEach(btn=>btn.addEventListener('click',()=>{read('bath');formData.ayudasHigieneAdicionales.splice(Number(btn.dataset.hygieneRemove.slice(6)),1);renderBathScreen('bath');}));
+    }
     read(kind);
 
     if(kind==='wc')document.getElementById('bathPartialFamb').onclick=calculatePartialFamb;
