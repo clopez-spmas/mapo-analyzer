@@ -20,10 +20,10 @@ function capture(){
 function draw(selectSimulation=false){
  const p=state(),host=screen();if(!host)return;
  const changes=selectSimulation&&window.MAPOSimulation?.getProposedChanges?.()||[];
- let html='<div class="section-heading"><div><h2>Planificación de la prevención</h2><p>Registro documental de propuestas y medidas preventivas. No modifica el estudio ni el índice MAPO original.</p></div></div>';
+ let html='<div class="section-heading"><div><h2>Planificación de la prevención</h2></div></div>';
  html+='<div class="actions"><button type="button" class="secondary" id="returnPlanResults">← Volver a resultados</button><button type="button" id="planAdd">+ Añadir medida</button></div>';
  if(changes.length)html+='<div class="registry-card"><h3>Seleccionar mejoras de la simulación</h3><p>Las modificaciones simuladas son propuestas, no medidas implantadas. Seleccione cuáles desea añadir; después podrá concretar el texto de la medida.</p>'+changes.map((c,i)=>'<label style="display:block"><input type="checkbox" data-plan-sim="'+i+'"> '+esc(c.description)+'</label>').join('')+'<button type="button" id="planImport">Incorporar seleccionadas</button></div>';
- html+='<p>Empresa: '+esc(formData.empresa||'—')+' · Centro: '+esc(formData.centroTrabajo||'—')+' · Unidad: '+esc(formData.unidad||'—')+' · Fecha de evaluación: '+esc(formData.fecha||'—')+'</p>';
+
  html+='<div style="overflow-x:auto"><table class="mapo-report-table" style="min-width:760px;width:100%"><thead><tr>'+columns.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Acción</th></tr></thead><tbody>';
  html+=p.medidas.map((m,i)=>'<tr>'+columns.map(([k,,t])=>'<td>'+input(k,i,m[k],t)+'</td>').join('')+'<td><button type="button" class="secondary" data-plan-remove="'+i+'">Eliminar</button></td></tr>').join('');
  html+='</tbody></table></div>';
