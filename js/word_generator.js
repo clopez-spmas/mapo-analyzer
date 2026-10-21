@@ -84,6 +84,6 @@ function createControls(){
 }
 function init(){createControls();const result=document.getElementById('result');if(result&&!result.querySelector('#openGeneratorFromResult')){const btn=document.createElement('button');btn.type='button';btn.id='openGeneratorFromResult';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>window.MAPOResultScreens?.showWord?.();result.querySelector('.section-heading .actions')?.appendChild(btn);}}
 function openGenerator(){return window.MAPOResultScreens?.showWord?.();}
-window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator};
+window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator,prepare:createControls};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
