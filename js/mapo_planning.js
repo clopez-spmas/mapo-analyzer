@@ -29,6 +29,7 @@ function draw(selectSimulation=false){
  html+='</tbody></table></div>';
 
  html+='<div class="actions"><button type="button" class="secondary" id="planSaveJson">Guardar estudio JSON</button><button type="button" class="secondary" id="planReturnBottom">Volver a resultados</button></div>';
+ html+='<div class="actions mapo-sequence-navigation"><button type="button" class="secondary" id="planPrevious">Anterior</button><button type="button" class="secondary" id="planNext">Siguiente</button></div>';
  host.innerHTML=html;
  host.querySelectorAll('[data-plan-field],[data-plan-meta]').forEach(e=>e.addEventListener('input',capture));
  const redraw=()=>{capture();draw(false);};
@@ -36,13 +37,14 @@ function draw(selectSimulation=false){
  host.querySelectorAll('[data-plan-remove]').forEach(e=>e.onclick=()=>{capture();p.medidas.splice(Number(e.dataset.planRemove),1);draw(false);});
  if(changes.length)host.querySelector('#planImport').onclick=()=>{capture();host.querySelectorAll('[data-plan-sim]:checked').forEach(e=>{const c=changes[Number(e.dataset.planSim)];if(c)p.medidas.push({medida:c.description,origen:'Simulación MAPO'});});draw(false);};
  const back=()=>{capture();window.MAPOResultScreens?.showResult?.();};
+ host.querySelector('#planPrevious').onclick=()=>{capture();window.MAPOResultScreens?.showSimulation?.();};host.querySelector('#planNext').onclick=()=>{capture();window.MAPOResultScreens?.showWord?.();};
  host.querySelector('#returnPlanResults').onclick=back;host.querySelector('#planReturnBottom').onclick=back;
  host.querySelector('#planSaveJson').onclick=()=>{capture();const b=document.getElementById('saveStudy');if(b)b.click();};
 }
 function open(withSimulation=false){
  if(typeof formData==='undefined'||!formData)return;
  const host=screen();if(!host)return;
- ['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','mapoSimulation','reportTablesPanel','templateAdmin'].forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=true;});
+ ['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','mapoSimulation','reportTablesPanel','wordReportPanel','templateAdmin'].forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=true;});
  host.hidden=false;draw(withSimulation);host.scrollIntoView({block:'start'});
 }
 function init(){
