@@ -3,7 +3,7 @@
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const priorities=['','Inmediata','Alta','Media','Baja'];
-const columns=[['deficiencia','Riesgo / aspecto deficiente','textarea'],['prioridad','Prioridad','select'],['medida','Medida propuesta','textarea']];
+const columns=[['prioridad','Prioridad','select'],['medida','Medida propuesta','textarea']];
 function state(){formData.planificacionPreventiva=formData.planificacionPreventiva||{medidas:[],alternativas:'',aprobadoPor:'',fechaAprobacion:''};return formData.planificacionPreventiva;}
 function screen(){return document.getElementById('planningPanel');}
 function input(k,i,v,type){
@@ -32,9 +32,9 @@ function draw(selectSimulation=false){
  host.innerHTML=html;
  host.querySelectorAll('[data-plan-field],[data-plan-meta]').forEach(e=>e.addEventListener('input',capture));
  const redraw=()=>{capture();draw(false);};
- host.querySelector('#planAdd').onclick=()=>{capture();p.medidas.push({deficiencia:'Trastornos musculoesqueléticos — movilización manual de pacientes'});draw(false);};
+ host.querySelector('#planAdd').onclick=()=>{capture();p.medidas.push({});draw(false);};
  host.querySelectorAll('[data-plan-remove]').forEach(e=>e.onclick=()=>{capture();p.medidas.splice(Number(e.dataset.planRemove),1);draw(false);});
- if(changes.length)host.querySelector('#planImport').onclick=()=>{capture();host.querySelectorAll('[data-plan-sim]:checked').forEach(e=>{const c=changes[Number(e.dataset.planSim)];if(c)p.medidas.push({deficiencia:'Trastornos musculoesqueléticos — movilización manual de pacientes',medida:c.description,origen:'Simulación MAPO'});});draw(false);};
+ if(changes.length)host.querySelector('#planImport').onclick=()=>{capture();host.querySelectorAll('[data-plan-sim]:checked').forEach(e=>{const c=changes[Number(e.dataset.planSim)];if(c)p.medidas.push({medida:c.description,origen:'Simulación MAPO'});});draw(false);};
  const back=()=>{capture();window.MAPOResultScreens?.showResult?.();};
  host.querySelector('#returnPlanResults').onclick=back;host.querySelector('#planReturnBottom').onclick=back;
  host.querySelector('#planSaveJson').onclick=()=>{capture();const b=document.getElementById('saveStudy');if(b)b.click();};
