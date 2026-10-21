@@ -28,7 +28,7 @@ function draw(selectSimulation=false){
  html+=p.medidas.map((m,i)=>'<tr>'+columns.map(([k,,t])=>'<td>'+input(k,i,m[k],t)+'</td>').join('')+'<td><button type="button" class="secondary" data-plan-remove="'+i+'">Eliminar</button></td></tr>').join('');
  html+='</tbody></table></div>';
 
- html+='<p class="schedule-preview">La fecha prevista de aplicación, el presupuesto, la fecha de realización, las alternativas y la aprobación quedarán en blanco en el informe Word para cumplimentarlos posteriormente. Para conservar las medidas, utilice Guardar estudio.</p><div class="actions"><button type="button" class="secondary" id="planSaveJson">Guardar estudio JSON</button><button type="button" class="secondary" id="planReturnBottom">Volver a resultados</button></div>';
+ html+='<div class="actions"><button type="button" class="secondary" id="planSaveJson">Guardar estudio JSON</button><button type="button" class="secondary" id="planReturnBottom">Volver a resultados</button></div>';
  host.innerHTML=html;
  host.querySelectorAll('[data-plan-field],[data-plan-meta]').forEach(e=>e.addEventListener('input',capture));
  const redraw=()=>{capture();draw(false);};
