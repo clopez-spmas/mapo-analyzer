@@ -83,6 +83,13 @@ function createControls(){
  wrap.querySelector('#mapoDownloadWord').onclick=async()=>{const output=wrap.querySelector('#mapoWordFeedback');output.textContent='Preparando documento...';try{const selected=wrap.querySelector('#mapoWordTemplate').files?.[0];let raw;if(selected)raw=await selected.arrayBuffer();else{const response=await fetch('plantillas/MAPO_Hospitalizacion.docx',{cache:'no-store'});if(!response.ok)throw Error('No hay plantilla publicada. Seleccione un DOCX con marcadores para probar.');raw=await response.arrayBuffer();}await generate(raw);output.textContent='Documento generado. Revise el informe en Word.';}catch(e){output.textContent='No se pudo generar: '+e.message;}};
 }
 function init(){createControls();const result=document.getElementById('result');if(result){const btn=document.createElement('button');btn.type='button';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>{window.MAPOResultScreens?.showTables?.();createControls();document.getElementById('mapoGenerateWord')?.scrollIntoView({block:'start'});};result.querySelector('.section-heading .actions')?.appendChild(btn);}}
-window.MAPOWordGenerator={generate,markers:allKeys};
+function openGenerator(){
+ const tables=document.getElementById('reportTablesPanel');
+ const widget=document.getElementById('mapoGenerateWord');
+ if(tables&&widget&&widget.parentElement!==tables)tables.appendChild(widget);
+ else if(!widget)createControls();
+ document.getElementById('mapoGenerateWord')?.scrollIntoView({block:'start'});
+}
+window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
