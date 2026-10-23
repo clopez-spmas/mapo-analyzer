@@ -458,6 +458,24 @@ function selectRiskConclusion(xml,r){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replaceSimulatedConclusion(xml){
+ const sim=window.MAPOSimulation?.getReportResult?.();
+ if(!sim||!Number.isFinite(Number(sim.mapo)))return xml;
+ const value=Number(sim.mapo);
+ const formatted=value.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const level=value===0?'AUSENTE':value<=1.5?'ACEPTABLE':value<=5?'MEDIO':'ALTO';
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  const text=nodes.map(n=>n.textContent||'').join('');
+  if(!/Aplicando esta\/s medida\/s/i.test(text)&&!/Aplicando esta\s*\/\s*s medida\s*\/\s*s/i.test(text))continue;
+  const updated=text.replace(/(\bes\s+)XX\b/i,(_,prefix)=>prefix+formatted).replace(/(nivel de riesgo\s+)(?:ACEPTABLE|AUSENTE|MEDIO|ALTO)\b/i,(_,prefix)=>prefix+level);
+  if(updated!==text&&nodes.length){nodes[0].textContent=updated;nodes[0].setAttribute('xml:space','preserve');for(const n of nodes.slice(1))n.textContent='';}
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -474,6 +492,7 @@ async function generate(template){
  xml=replaceScalarMarkers(xml,f,r);
  xml=replaceConclusionsSummary(xml,r);
  xml=selectRiskConclusion(xml,r);
+ xml=replaceSimulatedConclusion(xml);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
