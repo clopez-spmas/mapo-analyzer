@@ -12,7 +12,7 @@ const fields={
 };
 const tables=['tabla_movilizaciones','tabla_equipos','tabla_ayudas_menores','tabla_camas','tabla_higiene','tabla_habitaciones','tabla_planificacion','tabla_resultados'];
 const moreTables=['tabla_personal','tabla_formacion','tabla_movilizaciones_manuales','tabla_movilizaciones_asistidas','tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado'];
-const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones','descripcion_equipos','medidas_planificacion','prioridad_planificacion','pmwc','pmb','pmh','pmamb',...tables,...moreTables];
+const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones','descripcion_equipos','tabla_fotos_equipos','medidas_planificacion','prioridad_planificacion','pmwc','pmb','pmh','pmamb',...tables,...moreTables];
 const path=(o,p)=>p.split('.').reduce((v,k)=>v?.[k],o);
 function reportData(){
  const mr=window.MAPOMultiRoom,s=mr?.state,room=s?.rooms?.[s.active];
@@ -77,6 +77,47 @@ function normalize(xml){
   return p;
  });
 }
+
+async function insertEquipmentPhotos(zip,xml,f){
+ const entries=(f.informeDescriptivo?.equipos||[]).filter(e=>e&&(e.modelo||e.nombre||e.descripcion||e.imagen));
+ const token=xml.includes('{tabla_fotos_equipos}')?'{tabla_fotos_equipos}':'{descripcion_equipos}';
+ if(!xml.includes(token)||!entries.some(e=>e.imagen?.startsWith('data:image/')))return {xml,inserted:false};
+ const para=/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
+ const candidates=[...xml.matchAll(para)].filter(m=>m[0].includes(token));
+ const target=candidates.find(m=>m[0].replace(/<[^>]+>/g,'').trim()===token);
+ if(!target)throw Error('El marcador '+token+' debe estar en un párrafo independiente para insertar fotografías.');
+ const relsPath='word/_rels/document.xml.rels';
+ const relsFile=zip.file(relsPath);
+ if(!relsFile)throw Error('Falta el archivo de relaciones DOCX.');
+ let rels=await relsFile.async('string');
+ let ct=await zip.file('[Content_Types].xml').async('string');
+ if(!/Extension="jpe?g"/i.test(ct))ct=ct.replace('</Types>','<Default Extension="jpeg" ContentType="image/jpeg"/></Types>');
+ let rid=1;while(rels.includes('Id="rId'+rid+'"'))rid++;
+ let pid=1000;while(xml.includes('id="'+pid+'"'))pid++;
+ const drawing=(relationship,id)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2400000" cy="1750000"/><wp:docPr id="'+id+'" name="Fotografía equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+relationship+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2400000" cy="1750000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
+ const photoCell=(body)=>'<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr><w:p><w:r>'+body+'</w:r></w:p></w:tc>';
+ let rows='<w:tr>'+cell('Equipo / modelo')+cell('Fotografía')+'</w:tr>';
+ for(let i=0;i<entries.length;i++){
+  const e=entries[i];
+  const label=[e.nombre,e.descripcion,e.marca,e.modelo].filter(Boolean).join(' · ')||'Equipo '+(i+1);
+  let photo=cell('Sin fotografía');
+  const m=/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$/.exec(e.imagen||'');
+  if(m){
+   const ext=m[1]==='jpg'?'jpeg':m[1];
+   const contentType=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
+   if(!new RegExp('Extension="'+ext+'"','i').test(ct))ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+contentType+'"/></Types>');
+   const name='mapo_equipo_'+i+'.'+ext,rel='rId'+rid++;
+   zip.file('word/media/'+name,m[2].replace(/\s/g,''),{base64:true});
+   rels=rels.replace('</Relationships>','<Relationship Id="'+rel+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/></Relationships>');
+   photo=photoCell(drawing(rel,pid++));
+  }
+  rows+='<w:tr>'+cell(label)+photo+'</w:tr>';
+ }
+ const table='<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>'<w:'+k+' w:val="single" w:sz="4" w:color="D0D0D0"/>').join('')+'</w:tblBorders></w:tblPr>'+rows+'</w:tbl>';
+ xml=xml.replace(target[0],table);
+ zip.file(relsPath,rels);zip.file('[Content_Types].xml',ct);
+ return {xml,inserted:true};
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -86,7 +127,9 @@ async function generate(template){
  const found=[...xml.matchAll(/\{([a-z_]+)\}/g)].map(m=>m[1]);const unknown=[...new Set(found.filter(k=>!allKeys.includes(k)))];
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
+ const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  for(const key of allKeys){
+  if(key==='tabla_fotos_equipos'||(key==='descripcion_equipos'&&photos.inserted))continue;
   if(key.startsWith('tabla_')){
    const rr=rowsFor(key,f,r);if(!rr)continue;
    const token='{'+key+'}';
