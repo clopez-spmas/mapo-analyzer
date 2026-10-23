@@ -12,7 +12,7 @@ const fields={
 };
 const tables=['tabla_movilizaciones','tabla_equipos','tabla_ayudas_menores','tabla_camas','tabla_higiene','tabla_habitaciones','tabla_planificacion','tabla_resultados'];
 const moreTables=['tabla_personal','tabla_formacion','tabla_movilizaciones_manuales','tabla_movilizaciones_asistidas','tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado'];
-const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones','descripcion_equipos','pmwc','pmb','pmh','pmamb',...tables,...moreTables];
+const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones','descripcion_equipos','medidas_planificacion','prioridad_planificacion','pmwc','pmb','pmh','pmamb',...tables,...moreTables];
 const path=(o,p)=>p.split('.').reduce((v,k)=>v?.[k],o);
 function reportData(){
  const mr=window.MAPOMultiRoom,s=mr?.state,room=s?.rooms?.[s.active];
@@ -25,6 +25,8 @@ function scalar(key,f,r){
  if(key==='descripcion_equipos')return (f.informeDescriptivo?.equipos||[]).map(x=>typeof x==='string'?x:[x.nombre,x.descripcion,x.marca,x.modelo].filter(Boolean).join(' · ')).join('; ');
  if(['pmwc','pmb','pmh','pmamb'].includes(key)){const k={pmwc:'pmWC',pmb:'pmB',pmh:'pmH',pmamb:'pmamb'}[key];const v=r.details?.[k];return Number.isFinite(v)?v.toFixed(2).replace('.',','):'';}
  if(key==='conclusiones')return f.conclusionesInforme||'';
+ if(key==='medidas_planificacion')return (f.planificacionPreventiva?.medidas||[]).map(x=>x.medida).filter(Boolean).join('; ');
+ if(key==='prioridad_planificacion'){const x=Number(r.mapo);return r.mapo==null||!Number.isFinite(x)?'':x<=1.5?'---':x<=5?'3':'2';}
  const name=fields[key];if(!name)return '';
  const v=name==='mapo'?r.mapo:((['fs','fa','fc','famb','ff'].includes(name))?r[name]:path(f,name));
  return typeof v==='number'?Number(v.toFixed(2)).toLocaleString('es-ES',{maximumFractionDigits:2}):v??'';
@@ -80,6 +82,7 @@ async function generate(template){
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
  if(!doc)throw Error('El documento seleccionado no es una plantilla DOCX compatible.');
  let xml=normalize(await doc.async('string')),d=reportData(),f=d.form||{},r=d.result||{};
+ if(!Number.isFinite(Number(r.mapo)))throw Error('No hay resultados MAPO calculados para esta unidad. Calcule el índice antes de generar el informe.');
  const found=[...xml.matchAll(/\{([a-z_]+)\}/g)].map(m=>m[1]);const unknown=[...new Set(found.filter(k=>!allKeys.includes(k)))];
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
