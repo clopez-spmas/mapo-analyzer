@@ -319,7 +319,7 @@ function fillOriginalTables(xml,f,r){
  const set=(table,row,cell,value)=>{const rr=rows(table)[row];if(rr)fill(cells(rr)[cell],value);};
  const clearMarker=p=>p.parentNode.removeChild(p);
 
- const styleCorporate=(table,sectionRows=[])=>{
+ const styleCorporate=(table,sectionRows=[],riskSection=false)=>{
   let pr=elements(table,'tblPr')[0];
   if(!pr){pr=doc.createElementNS(ns,'w:tblPr');table.insertBefore(pr,table.firstChild);}
   const borders=doc.createElementNS(ns,'w:tblBorders');
@@ -352,11 +352,12 @@ function fillOriginalTables(xml,f,r){
      if(!spacing.parentNode)paragraphProperties.appendChild(spacing);
     }
     if(head){let tcPr=elements(tc,'tcPr')[0];if(!tcPr){tcPr=doc.createElementNS(ns,'w:tcPr');tc.insertBefore(tcPr,tc.firstChild);}
-     const shd=doc.createElementNS(ns,'w:shd');shd.setAttributeNS(ns,'w:fill',banner?'194986':'D9E8F1');tcPr.appendChild(shd);
+     for(const prior of elements(tcPr,'shd'))tcPr.removeChild(prior);
+     const shd=doc.createElementNS(ns,'w:shd');shd.setAttributeNS(ns,'w:val','clear');shd.setAttributeNS(ns,'w:fill',riskSection?'194986':banner?'194986':'D9E8F1');tcPr.appendChild(shd);
     }
     for(const run of Array.from(tc.getElementsByTagNameNS(ns,'r'))){
      let rp=elements(run,'rPr')[0];if(!rp){rp=doc.createElementNS(ns,'w:rPr');run.insertBefore(rp,run.firstChild);}
-     if(head){rp.appendChild(doc.createElementNS(ns,'w:b'));if(banner){const color=doc.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','FFFFFF');rp.appendChild(color);}}
+     if(head){rp.appendChild(doc.createElementNS(ns,'w:b'));if(banner||riskSection){for(const prior of elements(rp,'color'))rp.removeChild(prior);const color=doc.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','FFFFFF');rp.appendChild(color);}}
     }
    });
   });
@@ -546,7 +547,7 @@ function fillOriginalTables(xml,f,r){
   const data=rowsFor(key,f,r);
   if(!data)continue;
   const newTable=createCorporateTable(x.table,data,key);
-  styleCorporate(newTable);
+  styleCorporate(newTable,[],/^tabla_(?:fs_|fa_|fc_|famb_|ff_|resultados)/.test(key));
   x.table.parentNode.replaceChild(newTable,x.table);
   if(!/^tabla_(?:fs_|fa_|fc_|famb_|ff_)/.test(key))addCorporateTitle(newTable,titlesCorporate[key]);
   if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
