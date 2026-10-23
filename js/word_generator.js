@@ -48,7 +48,8 @@ function rowsFor(key,f,r){
  if(key==='tabla_formacion')return [['Datos de formación','Valor'],['Curso teórico-práctico',yes(f.ff_curso)],['Formación reciente',yes(f.ff_antiguedad)],['Eficacia verificada',yes(f.ff_eficacia)],['Información/adiestramiento',yes(f.ff_informacion)],['Cobertura (%)',f.ff_cobertura??'']];
  if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
   const manual=key.endsWith('_manuales'),entries=f.mobilizations?.entries||{},custom=f.mobilizations?.custom||[];
-  const names=Object.fromEntries(custom.map(x=>[x.id,x.name]));
+  const builtinNames={wheelchair_bed:'De silla de ruedas a cama',bed_wheelchair:'De cama a silla de ruedas',wheelchair_toilet:'De silla de ruedas a inodoro',toilet_wheelchair:'De inodoro a silla de ruedas',bed_turning:'Giro o cambio postural en cama',bed_shower:'De cama a ducha',wheelchair_armchair:'De silla de ruedas a sillón',armchair_wheelchair:'De sillón a silla de ruedas',bed_stretcher:'De cama a camilla',stretcher_bed:'De camilla a cama',sit_to_stand:'Incorporación a bipedestación'};
+  const names={...builtinNames,...Object.fromEntries(custom.map(x=>[x.id,x.name]))};
   const types=manual?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];
   return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],
    ...Object.entries(entries).filter(([id,x])=>types.some(k=>(x[k]||[]).some(n=>Number(n)>0)))
