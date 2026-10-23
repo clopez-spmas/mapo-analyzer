@@ -418,6 +418,25 @@ function replaceScalarMarkers(xml,f,r){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replaceConclusionsSummary(xml,r){
+ const n=Number(r.mapo);
+ if(!Number.isFinite(n)||n<0)return xml;
+ const formatted=n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const level=String(r.nivel||r.classification||r.riskLevel||r.level|| (n===0?'Ausente':n<=1.5?'Aceptable':n<=5?'Medio':'Alto')).trim().toUpperCase();
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const paragraphs=Array.from(doc.getElementsByTagNameNS(ns,'p'));
+ for(const p of paragraphs){
+  const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  const joined=nodes.map(x=>x.textContent||'').join('');
+  if(!/El índice de riesgo MAPO calculado para la unidad/i.test(joined))continue;
+  const updated=joined.replace(/(ha sido igual a\s*)X\b/i,(_,prefix)=>prefix+formatted)
+    .replace(/(nivel de exposición\s*)AUSENTE\s*\/\s*ACEPTABLE\s*\/\s*MEDIO\s*\/\s*ALTO/i,(_,prefix)=>prefix+level);
+  if(updated!==joined){nodes[0].textContent=updated;for(const node of nodes.slice(1))node.textContent='';nodes[0].setAttribute('xml:space','preserve');}
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -432,6 +451,7 @@ async function generate(template){
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  xml=fillOriginalTables(xml,f,r);
  xml=replaceScalarMarkers(xml,f,r);
+ xml=replaceConclusionsSummary(xml,r);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
