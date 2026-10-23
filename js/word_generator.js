@@ -332,6 +332,48 @@ function fillOriginalTables(xml,f,r){
   });
   return table;
  };
+
+ const titlesCorporate={
+  tabla_formacion:'FORMACIÓN DEL PERSONAL',
+  tabla_movilizaciones:'MOVILIZACIONES DE PACIENTES',
+  tabla_movilizaciones_manuales:'MOVILIZACIONES MANUALES DE PACIENTES',
+  tabla_movilizaciones_asistidas:'MOVILIZACIONES CON EQUIPOS DE AYUDA',
+  tabla_equipos:'EQUIPOS DE AYUDA DISPONIBLES',
+  tabla_ayudas_menores:'AYUDAS MENORES',
+  tabla_camas:'CAMAS REGULABLES',
+  tabla_higiene:'EQUIPOS DE AYUDA PARA HIGIENE',
+  tabla_sillas:'SILLAS DE RUEDAS',
+  tabla_banos_higiene:'BAÑOS PARA HIGIENE',
+  tabla_banos_wc:'BAÑOS CON INODORO',
+  tabla_habitaciones:'HABITACIONES',
+  tabla_fs_criterios:'FACTOR ELEVACIÓN (FS) — CRITERIOS',
+  tabla_fs_adecuacion:'FACTOR ELEVACIÓN (FS) — ADECUACIÓN',
+  tabla_fs_resultado:'FACTOR ELEVACIÓN (FS) — RESULTADO',
+  tabla_fa_criterios:'FACTOR AYUDAS MENORES (FA) — CRITERIOS',
+  tabla_fa_adecuacion:'FACTOR AYUDAS MENORES (FA) — ADECUACIÓN',
+  tabla_fa_resultado:'FACTOR AYUDAS MENORES (FA) — RESULTADO',
+  tabla_fc_suficiencia:'FACTOR SILLAS DE RUEDAS (FC) — SUFICIENCIA',
+  tabla_fc_resultado:'FACTOR SILLAS DE RUEDAS (FC) — RESULTADO',
+  tabla_famb_resultado:'FACTOR AMBIENTE (FAMB) — RESULTADO',
+  tabla_ff_resultado:'FACTOR FORMACIÓN (FF) — RESULTADO',
+  tabla_planificacion:'PLANIFICACIÓN PREVENTIVA',
+  tabla_resultados:'RESUMEN DE RESULTADOS MAPO'
+ };
+ const addCorporateTitle=(table,title)=>{
+  if(!title)return;
+  const p=doc.createElementNS(ns,'w:p'),pPr=doc.createElementNS(ns,'w:pPr');
+  const spacing=doc.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:before','240');spacing.setAttributeNS(ns,'w:after','90');pPr.appendChild(spacing);
+  const keep=doc.createElementNS(ns,'w:keepNext');pPr.appendChild(keep);
+  const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','194986');pPr.appendChild(shade);p.appendChild(pPr);
+  const run=doc.createElementNS(ns,'w:r'),rp=doc.createElementNS(ns,'w:rPr');
+  rp.appendChild(doc.createElementNS(ns,'w:b'));
+  const color=doc.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','FFFFFF');rp.appendChild(color);
+  const size=doc.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','20');rp.appendChild(size);
+  const font=doc.createElementNS(ns,'w:rFonts');font.setAttributeNS(ns,'w:ascii','Arial');font.setAttributeNS(ns,'w:hAnsi','Arial');rp.appendChild(font);
+  run.appendChild(rp);
+  const t=doc.createElementNS(ns,'w:t');t.textContent=title;run.appendChild(t);p.appendChild(run);
+  table.parentNode.insertBefore(p,table);
+ };
  const allTables=[...new Set([...tables,...moreTables])].filter(k=>k!=='tabla_personal'&&k!=='tabla_fotos_equipos');
  for(const key of allTables){
   const x=locate(key);if(!x)continue;
@@ -340,6 +382,7 @@ function fillOriginalTables(xml,f,r){
   const newTable=createCorporateTable(x.table,data);
   styleCorporate(newTable);
   x.table.parentNode.replaceChild(newTable,x.table);
+  addCorporateTitle(newTable,titlesCorporate[key]);
   separateCorporateTable(newTable);
   clearMarker(x.p);
  }
