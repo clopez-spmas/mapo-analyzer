@@ -170,6 +170,97 @@ function positionDescriptions(xml){
  for(const [token,pattern] of items)xml=positionDescriptionAfterHeading(xml,token,pattern);
  return xml;
 }
+
+function fillOriginalTables(xml,f,r){
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ if(doc.querySelector('parsererror'))throw Error('No se ha podido interpretar la plantilla Word.');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const elements=(node,tag)=>Array.from(node?.childNodes||[]).filter(n=>n.nodeType===1&&n.localName===tag&&n.namespaceURI===ns);
+ const text=node=>Array.from(node?.getElementsByTagNameNS(ns,'t')||[]).map(n=>n.textContent).join('');
+ const rows=table=>elements(table,'tr'),cells=row=>elements(row,'tc');
+ const locate=key=>{
+  const p=Array.from(doc.getElementsByTagNameNS(ns,'p')).find(n=>text(n).trim()==='{'+key+'}');
+  if(!p)return null;
+  let next=p.nextSibling;while(next&&next.nodeType!==1)next=next.nextSibling;
+  if(!next||next.localName!=='tbl')return null;
+  return {p,table:next};
+ };
+ const fill=(tc,value)=>{
+  if(!tc)return;
+  let p=elements(tc,'p')[0];if(!p){p=doc.createElementNS(ns,'w:p');tc.appendChild(p);}
+  let t=p.getElementsByTagNameNS(ns,'t')[0];if(!t){
+   let run=elements(p,'r')[0];if(!run){run=doc.createElementNS(ns,'w:r');p.appendChild(run);}
+   t=doc.createElementNS(ns,'w:t');run.appendChild(t);
+  }
+  for(const n of Array.from(tc.getElementsByTagNameNS(ns,'t')))n.textContent='';
+  t.textContent=String(value??'');
+  t.setAttribute('xml:space','preserve');
+ };
+ const set=(table,row,cell,value)=>{const rr=rows(table)[row];if(rr)fill(cells(rr)[cell],value);};
+ const clearMarker=p=>p.parentNode.removeChild(p);
+ const direct={
+  tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const t=x.table,w=f.workerSchedule||{};
+   // Mantener la ficha corporativa y su estructura combinada.
+   set(t,3,0,f.unidad||'');set(t,3,1,f.codigo||'');set(t,3,2,f.camas||'');
+   set(t,20,1,Number(f.op||0).toLocaleString('es-ES',{maximumFractionDigits:4}));
+   // La tabla distribuye turnos en columnas: mañana, tarde y noche.
+   const sh=w.shifts||{};const shifts=['morning','afternoon','night'];
+   shifts.forEach((k,i)=>{const v=sh[k];if(v)set(t,11,i+1,[v.start,v.end].filter(Boolean).join(' - '));});
+   set(t,33,1,f.nc??'');set(t,33,2,f.pc??'');set(t,34,1,f.na??'');
+   clearMarker(x.p);
+  },
+  tabla_formacion:()=>{const x=locate('tabla_formacion');if(!x)return;const t=x.table;
+   set(t,2,1,f.ff_curso?'SÍ':'NO');set(t,4,3,f.ff_informacion?'SÍ':'NO');
+   set(t,5,1,f.ff_cobertura??'');set(t,6,1,f.ff_eficacia?'SÍ':'NO');clearMarker(x.p);
+  }
+ };
+ Object.values(direct).forEach(fn=>fn());
+ const bindings=[
+  ['tabla_movilizaciones_manuales','mobilizations',4],
+  ['tabla_movilizaciones_asistidas','mobilizations',3],
+  ['tabla_equipos','equips',3],
+  ['tabla_ayudas_menores','minor',2],
+  ['tabla_camas','beds',2]
+ ];
+ for(const [key,type,first] of bindings){
+  const x=locate(key);if(!x)continue;const t=x.table;
+  if(type==='mobilizations'){
+   const fields=key.endsWith('manuales')?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];
+   const ids=['head_bed','bed_wheelchair','wheelchair_bed','bed_stretcher','stretcher_bed','wheelchair_toilet','toilet_wheelchair','bed_turning','sit_to_stand'];
+   const entries=f.mobilizations?.entries||{};
+   for(let i=0;i<ids.length;i++){const e=entries[ids[i]]||{};if(!rows(t)[first+i])break;
+    const values=fields.flatMap(k=>(e[k]||[0,0,0]).slice(0,3));
+    const cc=cells(rows(t)[first+i]);
+    // Evitar sobrescribir textos de tareas (primera celda).
+    for(let j=0;j<Math.min(6,cc.length-1);j++)fill(cc[j+1],values[j]||'');
+   }
+  }else if(type==='equips'){
+   const entries=f.informeDescriptivo?.equiposAyudaDetalle||[];
+   entries.slice(0,5).forEach((e,i)=>{
+    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr);
+    fill(cc[0],e.tipo||'');if(cc[1])fill(cc[1],e.numero??'');
+   });
+  }else if(type==='minor'){
+   const aids=f.informeDescriptivo?.ayudasMenores||{};
+   ['sabana','tabla','cinturon','rollbord','gruaActiva'].forEach((k,i)=>{
+    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr),v=aids[k]||{};
+    if(cc[1])fill(cc[1],v.presencia==null?'':v.presencia?'SÍ':'NO');
+    if(cc[2])fill(cc[2],v.numero??'');
+   });
+  }else if(type==='beds'){
+   (f.camasRegulablesInforme||[]).slice(0,4).forEach((e,i)=>{
+    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr);
+    [e.descripcion,e.numero,e.electrica?'SÍ':'NO',e.pedal?'SÍ':'NO',e.nodos,e.manual?'SÍ':'NO'].forEach((v,j)=>{if(cc[j])fill(cc[j],v??'');});
+   });
+  }
+  clearMarker(x.p);
+ }
+ // Otros bloques conservan la tabla de la plantilla, y se elimina solamente
+ // el marcador anterior. No crear una tabla genérica duplicada.
+ const rest=['tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_habitaciones','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado','tabla_planificacion','tabla_resultados','tabla_higiene','tabla_movilizaciones'];
+ for(const key of rest){const x=locate(key);if(x)clearMarker(x.p);}
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -182,8 +273,9 @@ async function generate(template){
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
+ xml=fillOriginalTables(xml,f,r);
  for(const key of allKeys){
-  if(key==='tabla_fotos_equipos'||(key==='descripcion_equipos'&&photos.inserted))continue;
+  if(key.startsWith('tabla_')|| (key==='descripcion_equipos'&&photos.inserted))continue;
   if(key.startsWith('tabla_')){
    const rr=rowsFor(key,f,r);if(!rr)continue;
    const token='{'+key+'}';
