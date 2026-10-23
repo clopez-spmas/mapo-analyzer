@@ -206,6 +206,44 @@ function fillOriginalTables(xml,f,r){
  };
  const set=(table,row,cell,value)=>{const rr=rows(table)[row];if(rr)fill(cells(rr)[cell],value);};
  const clearMarker=p=>p.parentNode.removeChild(p);
+
+ const styleCorporate=(table,sectionRows=[])=>{
+  let pr=elements(table,'tblPr')[0];
+  if(!pr){pr=doc.createElementNS(ns,'w:tblPr');table.insertBefore(pr,table.firstChild);}
+  const borders=doc.createElementNS(ns,'w:tblBorders');
+  for(const side of ['bottom','insideH']){
+   const v=doc.createElementNS(ns,'w:'+side);v.setAttributeNS(ns,'w:val','single');v.setAttributeNS(ns,'w:sz','4');v.setAttributeNS(ns,'w:color','B4C8D7');borders.appendChild(v);
+  }
+  for(const side of ['top','left','right','insideV']){
+   const v=doc.createElementNS(ns,'w:'+side);v.setAttributeNS(ns,'w:val','nil');borders.appendChild(v);
+  }
+  pr.appendChild(borders);
+  const margins=doc.createElementNS(ns,'w:tblCellMar');
+  for(const side of ['top','bottom','left','right']){
+   const e=doc.createElementNS(ns,'w:'+side);e.setAttributeNS(ns,'w:w',side==='left'||side==='right'?'105':'75');e.setAttributeNS(ns,'w:type','dxa');margins.appendChild(e);
+  }
+  pr.appendChild(margins);
+  rows(table).forEach((row,i)=>{
+   const banner=sectionRows.includes(i),head=i===0||banner;
+   if(head){const trPr=elements(row,'trPr')[0]||doc.createElementNS(ns,'w:trPr');if(!trPr.parentNode)row.insertBefore(trPr,row.firstChild);
+    const repeat=doc.createElementNS(ns,'w:tblHeader');trPr.appendChild(repeat);
+   }
+   cells(row).forEach(tc=>{
+    if(head){let tcPr=elements(tc,'tcPr')[0];if(!tcPr){tcPr=doc.createElementNS(ns,'w:tcPr');tc.insertBefore(tcPr,tc.firstChild);}
+     const shd=doc.createElementNS(ns,'w:shd');shd.setAttributeNS(ns,'w:fill',banner?'194986':'D9E8F1');tcPr.appendChild(shd);
+    }
+    for(const run of Array.from(tc.getElementsByTagNameNS(ns,'r'))){
+     let rp=elements(run,'rPr')[0];if(!rp){rp=doc.createElementNS(ns,'w:rPr');run.insertBefore(rp,run.firstChild);}
+     if(head){rp.appendChild(doc.createElementNS(ns,'w:b'));if(banner){const color=doc.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','FFFFFF');rp.appendChild(color);}}
+    }
+   });
+  });
+ };
+ const separateCorporateTable=(table)=>{
+  const p=doc.createElementNS(ns,'w:p'),pr=doc.createElementNS(ns,'w:pPr'),spacing=doc.createElementNS(ns,'w:spacing');
+  spacing.setAttributeNS(ns,'w:after','170');pr.appendChild(spacing);p.appendChild(pr);
+  table.parentNode.insertBefore(p,table.nextSibling);
+ };
  const direct={
   tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const original=x.table,w=f.workerSchedule||{};
    const make=(tag)=>doc.createElementNS(ns,'w:'+tag);
@@ -243,7 +281,9 @@ function fillOriginalTables(xml,f,r){
    rowsData.push([['Pacientes parcialmente colaboradores (PC)',f.pc??'','','']]);
    rowsData.push([['Pacientes no autónomos (NA)',f.na??Number(f.nc||0)+Number(f.pc||0),'','']]);
    rowsData.forEach(([v,h])=>table.appendChild(tr(v,h)));
+   styleCorporate(table,[0,5,6,12]);
    original.parentNode.replaceChild(table,original);
+   separateCorporateTable(table);
    clearMarker(x.p);
   },
   tabla_formacion:()=>{const x=locate('tabla_formacion');if(!x)return;const t=x.table;
@@ -286,7 +326,9 @@ function fillOriginalTables(xml,f,r){
   const data=rowsFor(key,f,r);
   if(!data)continue;
   const newTable=createCorporateTable(x.table,data);
+  styleCorporate(newTable);
   x.table.parentNode.replaceChild(newTable,x.table);
+  separateCorporateTable(newTable);
   clearMarker(x.p);
  }
  return new XMLSerializer().serializeToString(doc);
