@@ -77,7 +77,7 @@ function normalize(xml){
   const hits=[...p.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)];
   if(hits.length<2)return p;
   const joined=hits.map(m=>m[1]).join('');
-  if(!/\{(?:tabla_\w+|empresa|centro_trabajo|indice_mapo)/.test(joined))return p;
+  if(!/\{[a-z_]+\}/.test(joined))return p;
   const matches=[...joined.matchAll(/\{([a-z_]+)\}/g)].filter(m=>allKeys.includes(m[1]));
   if(!matches.length)return p;
   // Solo reconstruye el párrafo cuando está formado por un marcador autónomo.
@@ -333,6 +333,34 @@ function fillOriginalTables(xml,f,r){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replaceScalarMarkers(xml,f,r){
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ if(doc.getElementsByTagName('parsererror').length)throw Error('La plantilla contiene XML no válido.');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const paragraph of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  const nodes=Array.from(paragraph.getElementsByTagNameNS(ns,'t'));
+  if(!nodes.length)continue;
+  const values=nodes.map(n=>n.textContent||'');
+  const joined=values.join('');
+  const matches=[...joined.matchAll(/\{([a-z_]+)\}/g)].filter(m=>allKeys.includes(m[1])&&!m[1].startsWith('tabla_'));
+  if(!matches.length)continue;
+  for(const match of matches.reverse()){
+   const replacement=String(scalar(match[1],f,r)??'');
+   let start=match.index,end=start+match[0].length;
+   let a=0,first=-1,last=-1,left=0,right=0;
+   values.forEach((value,i)=>{const b=a+value.length;if(first<0&&start>=a&&start<b){first=i;left=start-a;}if(last<0&&end>a&&end<=b){last=i;right=end-a;}a=b;});
+   if(first<0||last<0)continue;
+   if(first===last)values[first]=values[first].slice(0,left)+replacement+values[first].slice(right);
+   else{values[first]=values[first].slice(0,left)+replacement;
+    for(let j=first+1;j<last;j++)values[j]='';
+    values[last]=values[last].slice(right);
+   }
+  }
+  nodes.forEach((n,i)=>{n.textContent=values[i];n.setAttribute('xml:space','preserve');});
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -346,16 +374,9 @@ async function generate(template){
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  xml=fillOriginalTables(xml,f,r);
- for(const key of allKeys){
-  if(key.startsWith('tabla_')|| (key==='descripcion_equipos'&&photos.inserted))continue;
-  if(key.startsWith('tabla_')){
-   const rr=rowsFor(key,f,r);if(!rr)continue;
-   const token='{'+key+'}';
-   if(!xml.includes(token))continue;
-   const re=/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
-   xml=xml.replace(re,p=>p.includes(token)&&p.replace(/<[^>]+>/g,'').trim()===token?tbl(rr):p);
-  }else{xml=xml.split('{'+key+'}').join(xesc(scalar(key,f,r)));}
- }
+ xml=replaceScalarMarkers(xml,f,r);
+ const leftovers=[...new Set([...xml.matchAll(/\\{([a-z_]+)\\}/g)].map(x=>x[1]))];
+ if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'});
  const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download='MAPO_'+(f.unidad||'estudio').replace(/[^\w-]+/g,'_')+'.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
