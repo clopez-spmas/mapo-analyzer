@@ -493,6 +493,24 @@ function replaceAcknowledgement(xml,f){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replacePlanningIntroduction(xml,f){
+ const company=String(f.empresa||'').trim(),person=String(f.solicitanteEstudio||'').trim();
+ const title=/^(?:D\.?\s*\/\s*D(?:ña|ª)\.?|D\.|Dña\.?|Sr\.|Sra\.)\s*/i;
+ const displayPerson=person?(title.test(person)?person:'D./Dña. '+person):'';
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  const original=nodes.map(n=>n.textContent||'').join('');
+  if(!/Se recomienda que Empresa a través de la persona designada/i.test(original))continue;
+  let updated=original;
+  if(company)updated=updated.replace(/\bEmpresa(?=\s+a través)/,company);
+  if(displayPerson)updated=updated.replace(/D\.\s*\/\s*Dña\.(?=\s+planifique)/i,displayPerson);
+  if(updated!==original&&nodes.length){nodes[0].textContent=updated;nodes[0].setAttribute('xml:space','preserve');for(const node of nodes.slice(1))node.textContent='';}
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -511,6 +529,7 @@ async function generate(template){
  xml=selectRiskConclusion(xml,r);
  xml=replaceSimulatedConclusion(xml);
  xml=replaceAcknowledgement(xml,f);
+ xml=replacePlanningIntroduction(xml,f);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
