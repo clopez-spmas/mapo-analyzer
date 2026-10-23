@@ -45,7 +45,14 @@ function rowsFor(key,f,r){
  const yes=v=>v===true?'Sí':v===false?'No':v??'';
  const standard=(title,cols,items)=>[[title,...cols],...(items||[]).map(x=>[x.description||x.descripcion||x.tipo||'',x.units??x.numero??'',...cols.slice(1).map(k=>yes(x[k]))])];
  if(key==='tabla_personal'){const w=f.workerSchedule||{};return [['Personal','Horario inicio','Horario fin','Número'],...(w.full||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada completa',x.start,x.end,x.people]),...(w.partial||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada parcial',x.start,x.end,x.people]),['OP total','','',f.op??'']];}
- if(key==='tabla_formacion')return [['Datos de formación','Valor'],['Curso teórico-práctico',yes(f.ff_curso)],['Formación reciente',yes(f.ff_antiguedad)],['Eficacia verificada',yes(f.ff_eficacia)],['Información/adiestramiento',yes(f.ff_informacion)],['Cobertura (%)',f.ff_cobertura??'']];
+ if(key==='tabla_formacion')return [
+ ['FORMACIÓN DEL PERSONAL — DATOS RECOGIDOS','Respuesta'],
+ ['¿Se ha impartido formación teórico-práctica específica sobre movilización manual de pacientes?',yes(f.ff_curso)],
+ ['¿La formación recibida se considera reciente según el criterio del método MAPO?',yes(f.ff_antiguedad)],
+ ['¿Se ha proporcionado información o adiestramiento sobre movilización de pacientes y uso de equipos?',yes(f.ff_informacion)],
+ ['¿Se ha verificado la eficacia de la formación o información impartida?',yes(f.ff_eficacia)],
+ ['¿Qué porcentaje de personas trabajadoras ha recibido formación?',f.ff_cobertura==null?'':String(f.ff_cobertura)+' %']
+ ];
  if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
   const manual=key.endsWith('_manuales'),entries=f.mobilizations?.entries||{},custom=f.mobilizations?.custom||[];
   const builtinNames={wheelchair_bed:'De silla de ruedas a cama',bed_wheelchair:'De cama a silla de ruedas',wheelchair_toilet:'De silla de ruedas a inodoro',toilet_wheelchair:'De inodoro a silla de ruedas',bed_turning:'Giro o cambio postural en cama',bed_shower:'De cama a ducha',wheelchair_armchair:'De silla de ruedas a sillón',armchair_wheelchair:'De sillón a silla de ruedas',bed_stretcher:'De cama a camilla',stretcher_bed:'De camilla a cama',sit_to_stand:'Incorporación a bipedestación'};
