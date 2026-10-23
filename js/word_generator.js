@@ -71,10 +71,7 @@ function rowsFor(key,f,r){
   return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],
    ...Object.entries(entries).filter(([id,x])=>types.some(k=>(x[k]||[]).some(n=>Number(n)>0)))
    .map(([id,x])=>[names[id]||id,...[...types].flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))]),
-   ['TOTAL POR TURNO (mañana / tarde / noche)',...types.flatMap(k=>summary.shift[['manualTotal','manualPartial','aidedTotal','aidedPartial'].indexOf(k)])],
-   [manual?'LTM — Movilizaciones totales manuales':'LTA — Movilizaciones totales asistidas',manual?summary.mt:summary.at],
-   [manual?'LPM — Movilizaciones parciales manuales':'LPA — Movilizaciones parciales asistidas',manual?summary.mp:summary.ap],
-   ...(!manual?[['%LTA — Porcentaje de movilizaciones totales con equipo de ayuda',summary.pctTotal],['%LPA — Porcentaje de movilizaciones parciales con equipo de ayuda',summary.pctPartial]]:[])
+   ['TOTAL POR TURNO',...types.flatMap(k=>summary.shift[['manualTotal','manualPartial','aidedTotal','aidedPartial'].indexOf(k)])]
   ];
  }
  if(key==='tabla_sillas'){
@@ -452,7 +449,24 @@ function fillOriginalTables(xml,f,r){
   styleCorporate(newTable);
   x.table.parentNode.replaceChild(newTable,x.table);
   addCorporateTitle(newTable,titlesCorporate[key]);
-  separateCorporateTable(newTable);
+  if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
+   const totals=mobilizationSummary(f,r),manual=key.endsWith('_manuales');
+   const details=manual?[
+    ['Indicador de movilizaciones manuales','Total'],
+    ['LTM — Levantamientos y movilizaciones totales manuales',totals.mt],
+    ['LPM — Levantamientos y movilizaciones parciales manuales',totals.mp]
+   ]:[
+    ['Indicador de movilizaciones asistidas','Total'],
+    ['LTA — Levantamientos totales realizados con equipos de ayuda',totals.at],
+    ['LPA — Levantamientos parciales realizados con equipos de ayuda',totals.ap],
+    ['%LTA — Porcentaje de levantamientos totales con equipos de ayuda',totals.pctTotal],
+    ['%LPA — Porcentaje de levantamientos parciales con equipos de ayuda',totals.pctPartial]
+   ];
+   const summaryTable=createCorporateTable(x.table,details,'tabla_resumen_movilizaciones');
+   styleCorporate(summaryTable);
+   newTable.parentNode.insertBefore(summaryTable,newTable.nextSibling);
+   separateCorporateTable(summaryTable);
+  }else separateCorporateTable(newTable);
   clearMarker(x.p);
  }
  return new XMLSerializer().serializeToString(doc);
