@@ -709,13 +709,28 @@ function replacePlanningCompanyMentions(xml,f){
  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
   const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
-  const original=nodes.map(n=>n.textContent||'').join('');
+  const values=nodes.map(n=>n.textContent||'');
+  const original=values.join('');
   if(!/ofrece a Empresa asesoramiento/i.test(original)||!/para que Empresa opte/i.test(original))continue;
-  const updated=original.replace(/\bEmpresa\b/g,company);
-  if(updated!==original&&nodes.length){
-   nodes[0].textContent=updated;nodes[0].setAttribute('xml:space','preserve');
-   for(const node of nodes.slice(1))node.textContent='';
+  const matches=[...original.matchAll(/\bEmpresa\b/g)];
+  for(const match of matches.reverse()){
+   const start=match.index,end=start+match[0].length;
+   let position=0,first=-1,last=-1,startOffset=0,endOffset=0;
+   values.forEach((v,i)=>{
+    const next=position+v.length;
+    if(first<0&&start>=position&&start<next){first=i;startOffset=start-position;}
+    if(last<0&&end>position&&end<=next){last=i;endOffset=end-position;}
+    position=next;
+   });
+   if(first<0||last<0)continue;
+   if(first===last)values[first]=values[first].slice(0,startOffset)+company+values[first].slice(endOffset);
+   else{
+    values[first]=values[first].slice(0,startOffset)+company;
+    for(let j=first+1;j<last;j++)values[j]='';
+    values[last]=values[last].slice(endOffset);
+   }
   }
+  nodes.forEach((node,i)=>{node.textContent=values[i];node.setAttribute('xml:space','preserve');});
  }
  return new XMLSerializer().serializeToString(doc);
 }
