@@ -11,7 +11,8 @@ const fields={
  factores_organizativos:'informeDescriptivo.organizacion',descripcion_frecuencia:'informeDescriptivo.frecuencia',descripcion_formacion:'informeDescriptivo.formacion',descripcion_instalaciones:'informeDescriptivo.instalaciones'
 };
 const tables=['tabla_movilizaciones','tabla_equipos','tabla_ayudas_menores','tabla_camas','tabla_higiene','tabla_habitaciones','tabla_planificacion','tabla_resultados'];
-const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones',...tables];
+const moreTables=['tabla_personal','tabla_formacion','tabla_movilizaciones_manuales','tabla_movilizaciones_asistidas','tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado'];
+const allKeys=[...Object.keys(fields),'nivel_riesgo','conclusiones','descripcion_equipos','pmwc','pmb','pmh','pmamb',...tables,...moreTables];
 const path=(o,p)=>p.split('.').reduce((v,k)=>v?.[k],o);
 function reportData(){
  const mr=window.MAPOMultiRoom,s=mr?.state,room=s?.rooms?.[s.active];
@@ -20,7 +21,9 @@ function reportData(){
 }
 function scalar(key,f,r){
  if(key==='na')return Number(f.nc||0)+Number(f.pc||0);
- if(key==='nivel_riesgo')return String(r.classification||r.riskLevel||r.level||'');
+ if(key==='nivel_riesgo')return String(r.nivel||r.classification||r.riskLevel||r.level||'');
+ if(key==='descripcion_equipos')return (f.informeDescriptivo?.equipos||[]).map(x=>typeof x==='string'?x:[x.nombre,x.descripcion,x.marca,x.modelo].filter(Boolean).join(' · ')).join('; ');
+ if(['pmwc','pmb','pmh','pmamb'].includes(key)){const k={pmwc:'pmWC',pmb:'pmB',pmh:'pmH',pmamb:'pmamb'}[key];const v=r.details?.[k];return Number.isFinite(v)?v.toFixed(2).replace('.',','):'';}
  if(key==='conclusiones')return f.conclusionesInforme||'';
  const name=fields[key];if(!name)return '';
  const v=name==='mapo'?r.mapo:((['fs','fa','fc','famb','ff'].includes(name))?r[name]:path(f,name));
@@ -35,6 +38,24 @@ function rowsFor(key,f,r){
  if(key==='tabla_higiene'){const labels={camillaDucha:'Camilla para ducha',baneraErgonomica:'Bañera ergonómica',duchaErgonomica:'Ducha ergonómica',elevadorBanera:'Elevador para bañera fija'};const row=(name,e)=>[name,e.presencia==null?'':e.presencia?'Sí':'No',e.numero??''];const extras=(f.ayudasHigieneAdicionales||[]).filter(e=>e.descripcion?.trim()).map(e=>row(e.descripcion,e));const legacy=f.ayudasHigiene?.otros;return [['Ayuda','Presencia','Unidades'],...Object.entries(labels).map(([k,l])=>row(l,f.ayudasHigiene?.[k]||{})),...extras,...(legacy?.descripcion?.trim()?[row(legacy.descripcion,legacy)]:[])];}
  if(key==='tabla_camas')return [['Tipo de cama','Nº','Eléctrica','Pedal','Nodos','Elevación manual'],...(f.camasRegulablesInforme||[]).map(e=>[e.descripcion,e.numero,e.electrica==null?'':e.electrica?'Sí':'No',e.pedal==null?'':e.pedal?'Sí':'No',e.nodos,e.manual==null?'':e.manual?'Sí':'No'])];
  if(key==='tabla_planificacion'){const p=f.planificacionPreventiva||{};const indice=Number(r.mapo);const prioridad=r.mapo===null||r.mapo===undefined||r.mapo===''||!Number.isFinite(indice)||indice<0?'':indice<=1.5?'---':indice<=5?'3':'2';const rows=[['Aspecto deficiente','Prioridad','Medida propuesta','Fecha prevista de aplicación','Presupuesto','Fecha de realización','Responsable'],...(p.medidas||[]).map(e=>['Trastornos musculoesqueléticos — movilización manual de pacientes',prioridad,e.medida||'','','','',''])];rows.push(['Alternativas a las medidas propuestas','','','','','','']);rows.push(['Aprobado por','','','','','','']);rows.push(['Fecha de aprobación','','','','','','']);return rows;}
+ const yes=v=>v===true?'Sí':v===false?'No':v??'';
+ const standard=(title,cols,items)=>[[title,...cols],...(items||[]).map(x=>[x.description||x.descripcion||x.tipo||'',x.units??x.numero??'',...cols.slice(1).map(k=>yes(x[k]))])];
+ if(key==='tabla_personal'){const w=f.workerSchedule||{};return [['Personal','Horario inicio','Horario fin','Número'],...(w.full||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada completa',x.start,x.end,x.people]),...(w.partial||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada parcial',x.start,x.end,x.people]),['OP total','','',f.op??'']];}
+ if(key==='tabla_formacion')return [['Datos de formación','Valor'],['Curso teórico-práctico',yes(f.ff_curso)],['Formación reciente',yes(f.ff_antiguedad)],['Eficacia verificada',yes(f.ff_eficacia)],['Información/adiestramiento',yes(f.ff_informacion)],['Cobertura (%)',f.ff_cobertura??'']];
+ if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){const manual=key.endsWith('_manuales'),entries=f.mobilizations?.entries||{},custom=f.mobilizations?.custom||[];const names=Object.fromEntries(custom.map(x=>[x.id,x.name]));const fields=manual?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],...Object.entries(entries).filter(([id,x])=>fields.some(k=>(x[k]||[]).some(n=>Number(n)>0))).map(([id,x])=>[names[id]||id,...fields.flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))])];}
+ if(key==='tabla_sillas'){const entries=f.wheelchairs?.entries||{};return [['Tipo de silla','Unidades','Frenos adecuados','Reposabrazos adecuados','Respaldo adecuado','Anchura adecuada'],...Object.entries(entries).filter(([k,x])=>Number(x.count)>0).map(([k,x])=>[k,x.count,yes(x.brakes),yes(x.arms),yes(x.back),yes(x.width)])];}
+ if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['Espacio','Puerta','Obstáculos']:['Espacio','Altura WC','Barra de apoyo','Puerta','Espacio lateral'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [['Tipo de baño','Unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
+ if(key==='tabla_habitaciones')return [['Tipo de habitación','Unidades','Espacio camas','Espacio pies','Sección de cama','Espacio bajo cama','Sillón'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
+ if(key==='tabla_fs_criterios')return [['Criterio FS','Cumplimiento'],['Elevadores',yes(f.fs_elevadores)],['Camillas',yes(f.fs_camillas)],['Camas regulables 3 nodos',yes(f.fs_camas3)]];
+ if(key==='tabla_fs_adecuacion')return [['Adecuación FS','Resultado'],['Movilizaciones totales con ayuda (%)',r.taskTotals?.pLTA??''],['Adecuación',yes(r.details?.fsAdequate)],['Suficiencia',yes(r.details?.fsSufficient)]];
+ if(key==='tabla_fs_resultado')return [['Factor FS','Valor'],['FS',r.fs??'']];
+ if(key==='tabla_fa_criterios')return [['Criterio FA','Cumplimiento'],['Sábana o tabla deslizante',yes(f.fa_sabana)],['Otras ayudas',yes(f.fa_dos)],['Camas con tres nodos',yes(f.fa_camas3)]];
+ if(key==='tabla_fa_adecuacion')return [['Adecuación FA','Resultado'],['Movilizaciones parciales con ayuda (%)',r.taskTotals?.pLPA??''],['Adecuación',yes(r.details?.faAdequate)],['Suficiencia',yes(r.details?.faSufficient)]];
+ if(key==='tabla_fa_resultado')return [['Factor FA','Valor'],['FA',r.fa??'']];
+ if(key==='tabla_fc_suficiencia')return [['Criterio FC','Valor'],['Sillas totales',r.details?.tsr??''],['Pacientes no autónomos',f.na??(Number(f.nc||0)+Number(f.pc||0))],['Suficiencia',yes(r.details?.fcSufficient)],['PMSR',r.details?.pmsr??'']];
+ if(key==='tabla_fc_resultado')return [['Factor FC','Valor'],['FC',r.fc??'']];
+ if(key==='tabla_famb_resultado')return [['Factor ambiente','Valor'],['PMB',r.details?.pmB??''],['PMWC',r.details?.pmWC??''],['PMH',r.details?.pmH??''],['PMamb',r.details?.pmamb??''],['Famb',r.famb??'']];
+ if(key==='tabla_ff_resultado')return [['Factor FF','Valor'],['FF',r.ff??'']];
  if(key==='tabla_resultados')return [['Dato','Resultado'],...['nc','pc','na','op','fs','fa','fc','famb','ff','indice_mapo','nivel_riesgo'].map(k=>[k.toUpperCase(),scalar(k,f,r)])];
  return null;
 }
