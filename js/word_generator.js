@@ -49,7 +49,7 @@ function rowsFor(key,f,r){
  if(key==='tabla_ayudas_menores'){const labels={sabana:'Sábana deslizante',tabla:'Tabla deslizante',cinturon:'Cinturón ergonómico',rollbord:'ROLLBORD u otro similar',gruaActiva:'Grúa activa / bipedestación'};const row=(name,e)=>[name,e.presencia==null?'':e.presencia?'Sí':'No',e.numero??''];const extras=(desc.ayudasMenoresAdicionales||[]).filter(e=>e.descripcion?.trim()).map(e=>row(e.descripcion,e));const legacy=desc.ayudasMenores?.otro;return [['Tipo de ayuda menor disponible para la movilización de pacientes','¿Está disponible en la unidad?','Número de unidades'],...Object.entries(labels).map(([k,l])=>row(l,desc.ayudasMenores?.[k]||{})),...extras,...(legacy?.descripcion?.trim()?[row(legacy.descripcion,legacy)]:[])];}
  if(key==='tabla_equipos')return [['Descripción del equipo de ayuda','Número de equipos','¿Carece de requisitos preliminares?','¿Carece de adaptabilidad al paciente?','¿Carece de adaptabilidad al entorno?','¿Carece de mantenimiento adecuado?'],...(desc.equiposAyudaDetalle||[]).map(e=>[e.tipo,e.numero,...['requisitos','paciente','ambiente','mantenimiento'].map(k=>e[k]==null?'':e[k]?'Sí':'No')])];
  if(key==='tabla_higiene'){const labels={camillaDucha:'Camilla para ducha',baneraErgonomica:'Bañera ergonómica',duchaErgonomica:'Ducha ergonómica',elevadorBanera:'Elevador para bañera fija'};const row=(name,e)=>[name,e.presencia==null?'':e.presencia?'Sí':'No',e.numero??''];const extras=(f.ayudasHigieneAdicionales||[]).filter(e=>e.descripcion?.trim()).map(e=>row(e.descripcion,e));const legacy=f.ayudasHigiene?.otros;return [['Ayuda','Presencia','Unidades'],...Object.entries(labels).map(([k,l])=>row(l,f.ayudasHigiene?.[k]||{})),...extras,...(legacy?.descripcion?.trim()?[row(legacy.descripcion,legacy)]:[])];}
- if(key==='tabla_camas')return [['Tipo de cama','Nº','Eléctrica','Pedal','Nodos','Elevación manual'],...(f.camasRegulablesInforme||[]).map(e=>[e.descripcion,e.numero,e.electrica==null?'':e.electrica?'Sí':'No',e.pedal==null?'':e.pedal?'Sí':'No',e.nodos,e.manual==null?'':e.manual?'Sí':'No'])];
+ if(key==='tabla_camas')return [['Descripción del tipo de cama','N.º de camas','¿Regulación eléctrica de altura?','¿Regulación mediante pedal?','N.º de secciones o nodos','¿Elevación manual de cabecera o pies?'],...(f.camasRegulablesInforme||[]).map(e=>[e.descripcion,e.numero,e.electrica==null?'':e.electrica?'Sí':'No',e.pedal==null?'':e.pedal?'Sí':'No',e.nodos,e.manual==null?'':e.manual?'Sí':'No'])];
  if(key==='tabla_planificacion'){const p=f.planificacionPreventiva||{};const indice=Number(r.mapo);const prioridad=r.mapo===null||r.mapo===undefined||r.mapo===''||!Number.isFinite(indice)||indice<0?'':indice<=1.5?'---':indice<=5?'3':'2';const rows=[['Aspecto deficiente','Prioridad','Medida propuesta','Fecha prevista de aplicación','Presupuesto','Fecha de realización','Responsable'],...(p.medidas||[]).map(e=>['Trastornos musculoesqueléticos — movilización manual de pacientes',prioridad,e.medida||'','','','',''])];rows.push(['Alternativas a las medidas propuestas','','','','','','']);rows.push(['Aprobado por','','','','','','']);rows.push(['Fecha de aprobación','','','','','','']);return rows;}
  const yes=v=>v===true?'Sí':v===false?'No':v??'';
  const standard=(title,cols,items)=>[[title,...cols],...(items||[]).map(x=>[x.description||x.descripcion||x.tipo||'',x.units??x.numero??'',...cols.slice(1).map(k=>yes(x[k]))])];
@@ -342,8 +342,16 @@ function fillOriginalTables(xml,f,r){
   const table=doc.createElementNS(ns,'w:tbl');
   const pr=elements(existing,'tblPr')[0];
   if(pr)table.appendChild(pr.cloneNode(true));
+  if(key==='tabla_camas'){
+   let properties=elements(table,'tblPr')[0];
+   if(!properties){properties=doc.createElementNS(ns,'w:tblPr');table.insertBefore(properties,table.firstChild);}
+   for(const child of Array.from(properties.childNodes)){if(['tblW','tblInd','tblLayout'].includes(child.localName))properties.removeChild(child);}
+   const tw=doc.createElementNS(ns,'w:tblW');tw.setAttributeNS(ns,'w:w','8000');tw.setAttributeNS(ns,'w:type','dxa');properties.appendChild(tw);
+   const ind=doc.createElementNS(ns,'w:tblInd');ind.setAttributeNS(ns,'w:w','0');ind.setAttributeNS(ns,'w:type','dxa');properties.appendChild(ind);
+   const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
+  }
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
+  const widths=key==='tabla_camas'?[2060,760,1300,1230,1100,1550]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
