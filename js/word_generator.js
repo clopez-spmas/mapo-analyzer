@@ -46,7 +46,14 @@ function rowsFor(key,f,r){
  const standard=(title,cols,items)=>[[title,...cols],...(items||[]).map(x=>[x.description||x.descripcion||x.tipo||'',x.units??x.numero??'',...cols.slice(1).map(k=>yes(x[k]))])];
  if(key==='tabla_personal'){const w=f.workerSchedule||{};return [['Personal','Horario inicio','Horario fin','Número'],...(w.full||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada completa',x.start,x.end,x.people]),...(w.partial||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada parcial',x.start,x.end,x.people]),['OP total','','',f.op??'']];}
  if(key==='tabla_formacion')return [['Datos de formación','Valor'],['Curso teórico-práctico',yes(f.ff_curso)],['Formación reciente',yes(f.ff_antiguedad)],['Eficacia verificada',yes(f.ff_eficacia)],['Información/adiestramiento',yes(f.ff_informacion)],['Cobertura (%)',f.ff_cobertura??'']];
- if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){const manual=key.endsWith('_manuales'),entries=f.mobilizations?.entries||{},custom=f.mobilizations?.custom||[];const names=Object.fromEntries(custom.map(x=>[x.id,x.name]));const fields=manual?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],...Object.entries(entries).filter(([id,x])=>fields.some(k=>(x[k]||[]).some(n=>Number(n)>0))).map(([id,x])=>[names[id]||id,...fields.flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))])];}
+ if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
+  const manual=key.endsWith('_manuales'),entries=f.mobilizations?.entries||{},custom=f.mobilizations?.custom||[];
+  const names=Object.fromEntries(custom.map(x=>[x.id,x.name]));
+  const types=manual?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];
+  return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],
+   ...Object.entries(entries).filter(([id,x])=>types.some(k=>(x[k]||[]).some(n=>Number(n)>0)))
+   .map(([id,x])=>[names[id]||id,...[...types].flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))])];
+ }
  if(key==='tabla_sillas'){const entries=f.wheelchairs?.entries||{};return [['Tipo de silla','Unidades','Frenos adecuados','Reposabrazos adecuados','Respaldo adecuado','Anchura adecuada'],...Object.entries(entries).filter(([k,x])=>Number(x.count)>0).map(([k,x])=>[k,x.count,yes(x.brakes),yes(x.arms),yes(x.back),yes(x.width)])];}
  if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['Espacio','Puerta','Obstáculos']:['Espacio','Altura WC','Barra de apoyo','Puerta','Espacio lateral'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [['Tipo de baño','Unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
  if(key==='tabla_habitaciones')return [['Tipo de habitación','Unidades','Espacio camas','Espacio pies','Sección de cama','Espacio bajo cama','Sillón'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
@@ -267,7 +274,7 @@ function fillOriginalTables(xml,f,r){
     const p=doc.createElementNS(ns,'w:p');
     const run=doc.createElementNS(ns,'w:r');
     const props=doc.createElementNS(ns,'w:rPr');
-    if(index===0){props.appendChild(doc.createElementNS(ns,'w:b'));const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','E6EEF4');const tcPr=doc.createElementNS(ns,'w:tcPr');tcPr.appendChild(shade);tc.appendChild(tcPr);}
+    if(index===0){props.appendChild(doc.createElementNS(ns,'w:b'));const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','D8E5EF');const tcPr=doc.createElementNS(ns,'w:tcPr');tcPr.appendChild(shade);tc.appendChild(tcPr);}
     const size=doc.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','18');props.appendChild(size);
     run.appendChild(props);
     const t=doc.createElementNS(ns,'w:t');t.textContent=formatValue(value);t.setAttribute('xml:space','preserve');
