@@ -365,6 +365,9 @@ function fillOriginalTables(xml,f,r){
   if(!title)return;
   const p=doc.createElementNS(ns,'w:p'),pPr=doc.createElementNS(ns,'w:pPr');
   const spacing=doc.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:before','240');spacing.setAttributeNS(ns,'w:after','90');pPr.appendChild(spacing);
+  const normalStyle=doc.createElementNS(ns,'w:pStyle');normalStyle.setAttributeNS(ns,'w:val','Normal');pPr.insertBefore(normalStyle,pPr.firstChild);
+  const noNumber=doc.createElementNS(ns,'w:numPr'),numId=doc.createElementNS(ns,'w:numId');numId.setAttributeNS(ns,'w:val','0');noNumber.appendChild(numId);pPr.appendChild(noNumber);
+  const indent=doc.createElementNS(ns,'w:ind');indent.setAttributeNS(ns,'w:left','0');indent.setAttributeNS(ns,'w:firstLine','0');pPr.appendChild(indent);
   const keep=doc.createElementNS(ns,'w:keepNext');pPr.appendChild(keep);
   const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','194986');pPr.appendChild(shade);p.appendChild(pPr);
   const run=doc.createElementNS(ns,'w:r'),rp=doc.createElementNS(ns,'w:rPr');
