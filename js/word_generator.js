@@ -113,7 +113,7 @@ function rowsFor(key,f,r){
  if(key==='tabla_fa_criterios')return [
  ['FA — NIVEL DE SUFICIENCIA NUMÉRICA','Comprobación'],
  ['Para considerar suficientes las ayudas menores debe cumplirse al menos una de las siguientes condiciones:',''],
- ['¿Se dispone de sábana o tabla deslizante y, como mínimo, de otras dos ayudas menores (rollboard, disco giratorio u otras equivalentes)?',yes(f.fa_sabana)&&yes(f.fa_dos)?'Sí':f.fa_sabana==null||f.fa_dos==null?'':'No'],
+ ['¿Se dispone de sábana o tabla deslizante y, como mínimo, de otras dos ayudas menores (rollboard, disco giratorio u otras equivalentes)?',f.fa_sabana==null||f.fa_dos==null?'':yes(Boolean(f.fa_sabana)&&Boolean(f.fa_dos))],
  ['¿Se dispone de sábana o tabla deslizante y todas las camas son regulables en altura con tres nodos de articulación?',f.fa_sabana==null||f.fa_camas3==null?'':yes(Boolean(f.fa_sabana)&&Boolean(f.fa_camas3))],
  ['Suficiencia numérica de ayudas menores',yes(r.details?.faSufficient)]
  ];
