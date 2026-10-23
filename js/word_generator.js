@@ -201,9 +201,9 @@ function fillOriginalTables(xml,f,r){
  const direct={
   tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const t=x.table,w=f.workerSchedule||{};
    const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:5}):'';
-   const date=v=>{const m=/^(\\d{4})-(\\d{2})-(\\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
+   const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
    // Ficha corporativa: rellenar exclusivamente las celdas previstas, sin sustituir su diseño.
-   set(t,1,0,'EMPRESA: '+(f.empresa||'')+'\\nCENTRO: '+(f.centroTrabajo||''));
+   set(t,1,0,'EMPRESA: '+(f.empresa||'')+'\nCENTRO: '+(f.centroTrabajo||''));
    set(t,1,12,'FECHA: '+date(f.fecha||f.fechaVisita));
    set(t,3,0,f.unidad||'');set(t,3,2,f.codigo||'');set(t,3,6,f.camas??'');
    const schedule=w.shifts||{};
