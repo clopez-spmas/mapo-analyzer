@@ -511,6 +511,24 @@ function replacePlanningIntroduction(xml,f){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replacePlanningCompanyMentions(xml,f){
+ const company=String(f.empresa||'').trim();
+ if(!company)return xml;
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  const original=nodes.map(n=>n.textContent||'').join('');
+  if(!/ofrece a Empresa asesoramiento/i.test(original)||!/para que Empresa opte/i.test(original))continue;
+  const updated=original.replace(/\bEmpresa\b/g,company);
+  if(updated!==original&&nodes.length){
+   nodes[0].textContent=updated;nodes[0].setAttribute('xml:space','preserve');
+   for(const node of nodes.slice(1))node.textContent='';
+  }
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -530,6 +548,7 @@ async function generate(template){
  xml=replaceSimulatedConclusion(xml);
  xml=replaceAcknowledgement(xml,f);
  xml=replacePlanningIntroduction(xml,f);
+ xml=replacePlanningCompanyMentions(xml,f);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
