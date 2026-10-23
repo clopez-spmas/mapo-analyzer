@@ -476,6 +476,23 @@ function replaceSimulatedConclusion(xml){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function replaceAcknowledgement(xml,f){
+ const name=String(f.solicitanteEstudio||'').trim();
+ if(!name)return xml;
+ const hasTitle=/^(?:D\.?\s*\/\s*D(?:ña|ª)\.?|D\.|Dña\.?|Sr\.|Sra\.)\s*/i.test(name);
+ const replacement=hasTitle?name:'D./Dña. '+name;
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  const nodes=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  const plain=nodes.map(x=>x.textContent||'').join('');
+  if(!/agradecer a la empresa/i.test(plain)||!/XXX\b/.test(plain))continue;
+  const modified=plain.replace(/D\.\s*\/\s*D(?:ª|ña)\.?\s*XXX\b/i,replacement);
+  if(modified!==plain&&nodes.length){nodes[0].textContent=modified;nodes[0].setAttribute('xml:space','preserve');for(const n of nodes.slice(1))n.textContent='';}
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -493,6 +510,7 @@ async function generate(template){
  xml=replaceConclusionsSummary(xml,r);
  xml=selectRiskConclusion(xml,r);
  xml=replaceSimulatedConclusion(xml);
+ xml=replaceAcknowledgement(xml,f);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
