@@ -437,6 +437,27 @@ function replaceConclusionsSummary(xml,r){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function selectRiskConclusion(xml,r){
+ const n=Number(r.mapo);
+ if(!Number.isFinite(n)||n<0)return xml;
+ const level=n===0?'ausente':n<=1.5?'aceptable':n<=5?'medio':'alto';
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const paras=Array.from(doc.getElementsByTagNameNS(ns,'p'));
+ const patterns=[
+  ['aceptable',/^El riesgo es aceptable dado que/i],
+  ['medio',/^El riesgo es medio y requiere/i],
+  ['alto',/^El riesgo es alto con necesidad/i]
+ ];
+ for(const p of paras){
+  const content=Array.from(p.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent).join('').trim();
+  for(const [kind,pattern] of patterns){
+   if(pattern.test(content)&&kind!==level){p.parentNode.removeChild(p);break;}
+  }
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -452,6 +473,7 @@ async function generate(template){
  xml=fillOriginalTables(xml,f,r);
  xml=replaceScalarMarkers(xml,f,r);
  xml=replaceConclusionsSummary(xml,r);
+ xml=selectRiskConclusion(xml,r);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
