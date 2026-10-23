@@ -146,12 +146,28 @@ function replaceUnitX(xml,unit){
   });
  });
 }
+
+function positionOrganizationalDescription(xml){
+ const token='{factores_organizativos}';
+ const paragraphs=[...xml.matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g)];
+ const plain=p=>[...p.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)].map(x=>x[1]).join('').replace(/&nbsp;|&#160;/g,' ').trim();
+ const source=paragraphs.find(x=>plain(x[0])===token);
+ if(!source)return xml;
+ const heading=paragraphs.find(x=>x.index>source.index&&x.index-source.index<5000&&/^factores\s+organizativos\s*:/i.test(plain(x[0])));
+ if(!heading)return xml;
+ const between=xml.slice(source.index+source[0].length,heading.index);
+ if(/<w:tbl\b|<\/w:tc>|<w:sectPr\b/.test(between))return xml;
+ const start=source.index,end=start+source[0].length;
+ const destination=heading.index+heading[0].length;
+ return xml.slice(0,start)+xml.slice(end,destination)+source[0]+xml.slice(destination);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
  if(!doc)throw Error('El documento seleccionado no es una plantilla DOCX compatible.');
  let xml=normalize(await doc.async('string')),d=reportData(),f=d.form||{},r=d.result||{};
  xml=replaceUnitX(xml,f.unidad);
+ xml=positionOrganizationalDescription(xml);
  if(!Number.isFinite(Number(r.mapo)))throw Error('No hay resultados MAPO calculados para esta unidad. Calcule el índice antes de generar el informe.');
  const found=[...xml.matchAll(/\{([a-z_]+)\}/g)].map(m=>m[1]);const unknown=[...new Set(found.filter(k=>!allKeys.includes(k)))];
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
