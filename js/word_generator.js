@@ -596,6 +596,36 @@ function replacePlanningCompanyMentions(xml,f){
  }
  return new XMLSerializer().serializeToString(doc);
 }
+
+function colorMapoResultCell(xml,r){
+ const value=Number(r.mapo);
+ if(!Number.isFinite(value)||value<0)throw Error('El indice MAPO no es valido para colorear el resultado.');
+ const fill=value===0||value<=1.5?'C6E0B4':value<=5?'FFE699':'F4CCCC';
+ const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const direct=(node,tag)=>Array.from(node?.childNodes||[]).filter(n=>n.nodeType===1&&n.namespaceURI===ns&&n.localName===tag);
+ const content=node=>Array.from(node.getElementsByTagNameNS(ns,'t')).map(n=>n.textContent||'').join('').trim();
+ let target=null;
+ for(const row of Array.from(doc.getElementsByTagNameNS(ns,'tr'))){
+  const cells=direct(row,'tc');
+  if(cells.length<2)continue;
+  const first=content(cells[0]).replace(/\s+/g,' ').trim();
+  if(!/^(?:indice|índice)\s+(?:de\s+riesgo\s+)?MAPO\b/i.test(first))continue;
+  // La última celda contiene el valor, no la fórmula ni la etiqueta.
+  target=cells[cells.length-1];
+  break;
+ }
+ if(!target)throw Error('No se encuentra la celda del indice MAPO en la tabla del modelo.');
+ let properties=direct(target,'tcPr')[0];
+ if(!properties){properties=doc.createElementNS(ns,'w:tcPr');target.insertBefore(properties,target.firstChild);}
+ for(const prev of direct(properties,'shd'))properties.removeChild(prev);
+ const shading=doc.createElementNS(ns,'w:shd');
+ shading.setAttributeNS(ns,'w:val','clear');
+ shading.setAttributeNS(ns,'w:color','auto');
+ shading.setAttributeNS(ns,'w:fill',fill);
+ properties.appendChild(shading);
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -616,6 +646,7 @@ async function generate(template){
  xml=replaceAcknowledgement(xml,f);
  xml=replacePlanningIntroduction(xml,f);
  xml=replacePlanningCompanyMentions(xml,f);
+ xml=colorMapoResultCell(xml,r);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
