@@ -375,7 +375,7 @@ async function generate(template){
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  xml=fillOriginalTables(xml,f,r);
  xml=replaceScalarMarkers(xml,f,r);
- const leftovers=[...new Set([...xml.matchAll(/\\{([a-z_]+)\\}/g)].map(x=>x[1]))];
+ const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'});
