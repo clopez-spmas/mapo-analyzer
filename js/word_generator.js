@@ -255,7 +255,7 @@ function fillOriginalTables(xml,f,r){
    set(t,5,1,f.ff_cobertura??'');set(t,6,1,f.ff_eficacia?'SÍ':'NO');clearMarker(x.p);
   }
  };
- Object.values(direct).forEach(fn=>fn());
+ direct.tabla_personal();
 
  // Sustituir las tablas de cálculo y descripción por tablas corporativas completas.
  const formatValue=v=>typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:3}):String(v??'');
