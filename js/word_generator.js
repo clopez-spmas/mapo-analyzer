@@ -255,6 +255,25 @@ function fillOriginalTables(xml,f,r){
   }
   clearMarker(x.p);
  }
+ // Matrices corporativas de inadecuaciones, conservando sus títulos y ponderaciones.
+ const matrices=[
+  ['tabla_sillas',Object.entries(f.wheelchairs?.entries||{}).filter(([,v])=>Number(v.count)>0).map(([name,v])=>({description:name,units:v.count,brakes:!v.brakes,arms:!v.arms,back:!v.back,width:!v.width})),[{row:3,key:'brakes'},{row:4,key:'arms'},{row:5,key:'back'},{row:6,key:'width'}],9],
+  ['tabla_banos_higiene',f.bathTypes||[],[{row:5,key:'space'},{row:6,key:'door'},{row:8,key:'obstacles'}],12],
+  ['tabla_banos_wc',f.wcTypes||[],[{row:5,key:'space'},{row:6,key:'height'},{row:7,key:'bar'},{row:8,key:'door'},{row:9,key:'lateral'}],11],
+  ['tabla_habitaciones',f.roomTypes||[],[{row:5,key:'between'},{row:6,key:'foot'},{row:7,key:'bedSection'},{row:8,key:'underbed'},{row:9,key:'chairHeight'}],15]
+ ];
+ for(const [key,items,criteria,unitsRow] of matrices){
+  const x=locate(key);if(!x)continue;
+  const t=x.table,max=Math.min(items.length,6);
+  for(let j=0;j<max;j++){
+   const entry=items[j];
+   for(const criterion of criteria){
+    const cc=cells(rows(t)[criterion.row]);if(cc[2+j])fill(cc[2+j],entry[criterion.key]?'X':'');
+   }
+   const unitCells=cells(rows(t)[unitsRow]);if(unitCells[1+j])fill(unitCells[1+j],entry.units??'');
+  }
+  clearMarker(x.p);
+ }
  // Otros bloques conservan la tabla de la plantilla, y se elimina solamente
  // el marcador anterior. No crear una tabla genérica duplicada.
  const rest=['tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_habitaciones','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado','tabla_planificacion','tabla_resultados','tabla_higiene','tabla_movilizaciones'];
