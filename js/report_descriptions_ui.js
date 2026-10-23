@@ -108,10 +108,30 @@ function renderEquipment(){
   const file=input.files?.[0],i=Number(input.dataset.equipoImagen),out=$('equipoImageMessage');
   if(!file)return;
   if(!['image/png','image/jpeg','image/webp'].includes(file.type)){out.textContent='Formato no admitido. Use JPG, PNG o WebP.';input.value='';return;}
-  if(file.size>1024*1024){out.textContent='La imagen supera 1 MB. Reduzca su tamaño antes de adjuntarla.';input.value='';return;}
+  if(file.size>25*1024*1024){out.textContent='La imagen supera 25 MB. Seleccione una imagen menor.';input.value='';return;}
   read();
   const reader=new FileReader();
-  reader.onload=()=>{if(!d.equipos[i])return;d.equipos[i].imagen=String(reader.result||'');renderEquipment();};
+  reader.onload=()=>{
+   const image=new Image();
+   image.onload=()=>{
+    try{
+     const scale=Math.min(1,1600/Math.max(image.naturalWidth,image.naturalHeight));
+     const canvas=document.createElement('canvas');
+     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+     canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+     const ctx=canvas.getContext('2d');
+     if(!ctx)throw Error('No se pudo procesar la imagen.');
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+     ctx.drawImage(image,0,0,canvas.width,canvas.height);
+     const compressed=canvas.toDataURL('image/jpeg',0.82);
+     if(!d.equipos[i])return;
+     d.equipos[i].imagen=compressed;
+     renderEquipment();
+    }catch(e){out.textContent='No se pudo preparar la imagen: '+e.message;}
+   };
+   image.onerror=()=>{out.textContent='No se pudo interpretar la fotografía.';};
+   image.src=String(reader.result||'');
+  };
   reader.onerror=()=>{out.textContent='No se pudo leer la imagen.';};
   reader.readAsDataURL(file);
  }));
