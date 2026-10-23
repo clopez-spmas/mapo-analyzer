@@ -199,26 +199,48 @@ function fillOriginalTables(xml,f,r){
  const set=(table,row,cell,value)=>{const rr=rows(table)[row];if(rr)fill(cells(rr)[cell],value);};
  const clearMarker=p=>p.parentNode.removeChild(p);
  const direct={
-  tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const t=x.table,w=f.workerSchedule||{};
-   const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:5}):'';
+  tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const original=x.table,w=f.workerSchedule||{};
+   const make=(tag)=>doc.createElementNS(ns,'w:'+tag);
+   const tr=(values,header=false)=>{
+    const row=make('tr');
+    values.forEach(value=>{
+     const tc=make('tc'),tcPr=make('tcPr'),p=make('p'),run=make('r'),rp=make('rPr'),txt=make('t');
+     tcPr.appendChild(make('tcW')).setAttributeNS(ns,'w:type','auto');
+     tc.appendChild(tcPr);
+     if(header){const bold=make('b');rp.appendChild(bold);}
+     const font=make('sz');font.setAttributeNS(ns,'w:val','18');rp.appendChild(font);
+     run.appendChild(rp);txt.textContent=String(value??'');txt.setAttribute('xml:space','preserve');
+     run.appendChild(txt);p.appendChild(run);tc.appendChild(p);row.appendChild(tc);
+    });return row;
+   };
+   const table=make('tbl');
+   const tblPr=elements(original,'tblPr')[0];if(tblPr)table.appendChild(tblPr.cloneNode(true));
+   const tblGrid=make('tblGrid');for(let i=0;i<4;i++){const c=make('gridCol');c.setAttributeNS(ns,'w:w','2200');tblGrid.appendChild(c);}table.appendChild(tblGrid);
+   const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:4}):'';
    const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
-   // Ficha corporativa: rellenar exclusivamente las celdas previstas, sin sustituir su diseño.
-   set(t,1,0,'EMPRESA: '+(f.empresa||'')+'\nCENTRO: '+(f.centroTrabajo||''));
-   set(t,1,12,'FECHA: '+date(f.fecha||f.fechaVisita));
-   set(t,3,0,f.unidad||'');set(t,3,2,f.codigo||'');set(t,3,6,f.camas??'');
-   const schedule=w.shifts||{};
-   const shiftKeys=['morning','afternoon','night'],shiftCols=[3,10,13];
-   const opByShift=f.opByShift||f.presenceByShift||{};
-   shiftKeys.forEach((k,i)=>{
-    const val=opByShift[k];
-    if(val!==undefined)set(t,10,shiftCols[i],format(val));
-    const time=schedule[k];
-    if(time&&(time.start||time.end))set(t,11,[3,7,13][i],'De '+(time.start||'--:--')+' hasta '+(time.end||'--:--'));
+   const rowsData=[
+    [['IDENTIFICACIÓN DE LA UNIDAD','', '',''],true],
+    [['Empresa',f.empresa||'','Centro de trabajo',f.centroTrabajo||'']],
+    [['Sala / unidad',f.unidad||'','Fecha de evaluación',date(f.fecha)]],
+    [['Código de sala',f.codigo||'','Número de camas',f.camas??'']],
+    [['Dirección',f.direccion||'','NIF',f.nif||'']],
+    [['PERSONAL QUE REALIZA MOVILIZACIÓN MANUAL DE PACIENTES','','',''],true],
+    [['Tipo de jornada','Hora de inicio','Hora de fin','N.º de personas'],true]
+   ];
+   (w.full||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada completa',e.start||'',e.end||'',e.people??'']]));
+   (w.partial||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada parcial',e.start||'',e.end||'',e.people??'']]));
+   rowsData.push([['PRESENCIA POR TURNO','Inicio','Fin','OP'],true]);
+   [['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].forEach(([name,k])=>{
+    const sh=w.shifts?.[k]||{};
+    rowsData.push([[name,sh.start||'',sh.end||'',format((f.opByShift||f.presenceByShift||{})[k])]]);
    });
-   // No inventar distribución profesional: solo se dispone de horarios y presencia calculada.
-   set(t,20,16,'Op= '+format(f.op));
-   set(t,33,11,'NC= '+(f.nc??''));set(t,33,15,'PC= '+(f.pc??''));
-   set(t,34,11,'NA= '+(f.na??(Number(f.nc||0)+Number(f.pc||0))));
+   rowsData.push([['TOTAL PERSONAL EXPUESTO (OP)',format(f.op),'','']]);
+   rowsData.push([['TIPOLOGÍA DE PACIENTES','Número','',''],true]);
+   rowsData.push([['Pacientes no colaboradores (NC)',f.nc??'','','']]);
+   rowsData.push([['Pacientes parcialmente colaboradores (PC)',f.pc??'','','']]);
+   rowsData.push([['Pacientes no autónomos (NA)',f.na??Number(f.nc||0)+Number(f.pc||0),'','']]);
+   rowsData.forEach(([v,h])=>table.appendChild(tr(v,h)));
+   original.parentNode.replaceChild(table,original);
    clearMarker(x.p);
   },
   tabla_formacion:()=>{const x=locate('tabla_formacion');if(!x)return;const t=x.table;
