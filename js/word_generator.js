@@ -35,6 +35,15 @@ function scalar(key,f,r){
 }
 function cell(v){return '<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">'+xesc(v)+'</w:t></w:r></w:p></w:tc>';}
 function tbl(rows){return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>'<w:'+k+' w:val="single" w:sz="4" w:color="D0D0D0"/>').join('')+'</w:tblBorders></w:tblPr>'+rows.map(row=>'<w:tr>'+row.map(cell).join('')+'</w:tr>').join('')+'</w:tbl>';}
+function mobilizationSummary(f,r){
+ const entries=Object.values(f.mobilizations?.entries||{});
+ const kinds=['manualTotal','manualPartial','aidedTotal','aidedPartial'];
+ const shift=kinds.map(k=>[0,1,2].map(i=>entries.reduce((total,e)=>total+Number(e?.[k]?.[i]||0),0)));
+ const sum=x=>x.reduce((a,b)=>a+b,0);
+ const [mt,mp,at,ap]=shift.map(sum);
+ const pct=(num,den)=>den>0?(100*num/den).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' %':'No calculable';
+ return {shift,mt,mp,at,ap,pctTotal:pct(at,mt+at),pctPartial:pct(ap,mp+ap)};
+}
 function rowsFor(key,f,r){
  const desc=f.informeDescriptivo||{};
  if(key==='tabla_ayudas_menores'){const labels={sabana:'Sábana deslizante',tabla:'Tabla deslizante',cinturon:'Cinturón ergonómico',rollbord:'ROLLBORD u otro similar',gruaActiva:'Grúa activa / bipedestación'};const row=(name,e)=>[name,e.presencia==null?'':e.presencia?'Sí':'No',e.numero??''];const extras=(desc.ayudasMenoresAdicionales||[]).filter(e=>e.descripcion?.trim()).map(e=>row(e.descripcion,e));const legacy=desc.ayudasMenores?.otro;return [['Ayuda menor','Presencia','Unidades'],...Object.entries(labels).map(([k,l])=>row(l,desc.ayudasMenores?.[k]||{})),...extras,...(legacy?.descripcion?.trim()?[row(legacy.descripcion,legacy)]:[])];}
@@ -58,9 +67,15 @@ function rowsFor(key,f,r){
   const builtinNames={wheelchair_bed:'De silla de ruedas a cama',bed_wheelchair:'De cama a silla de ruedas',wheelchair_toilet:'De silla de ruedas a inodoro',toilet_wheelchair:'De inodoro a silla de ruedas',bed_turning:'Giro o cambio postural en cama',bed_shower:'De cama a ducha',wheelchair_armchair:'De silla de ruedas a sillón',armchair_wheelchair:'De sillón a silla de ruedas',bed_stretcher:'De cama a camilla',stretcher_bed:'De camilla a cama',sit_to_stand:'Incorporación a bipedestación'};
   const names={...builtinNames,...Object.fromEntries(custom.map(x=>[x.id,x.name]))};
   const types=manual?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];
+  const summary=mobilizationSummary(f,r);
   return [['Movilización','Total mañana','Total tarde','Total noche','Parcial mañana','Parcial tarde','Parcial noche'],
    ...Object.entries(entries).filter(([id,x])=>types.some(k=>(x[k]||[]).some(n=>Number(n)>0)))
-   .map(([id,x])=>[names[id]||id,...[...types].flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))])];
+   .map(([id,x])=>[names[id]||id,...[...types].flatMap(k=>[0,1,2].map(i=>Number(x[k]?.[i]||0)))]),
+   ['TOTAL POR TURNO (mañana / tarde / noche)',...types.flatMap(k=>summary.shift[['manualTotal','manualPartial','aidedTotal','aidedPartial'].indexOf(k)])],
+   [manual?'LTM — Movilizaciones totales manuales':'LTA — Movilizaciones totales asistidas',manual?summary.mt:summary.at],
+   [manual?'LPM — Movilizaciones parciales manuales':'LPA — Movilizaciones parciales asistidas',manual?summary.mp:summary.ap],
+   ...(!manual?[['%LTA — Porcentaje de movilizaciones totales con equipo de ayuda',summary.pctTotal],['%LPA — Porcentaje de movilizaciones parciales con equipo de ayuda',summary.pctPartial]]:[])
+  ];
  }
  if(key==='tabla_sillas'){const entries=f.wheelchairs?.entries||{};return [['Tipo de silla','Unidades','Frenos adecuados','Reposabrazos adecuados','Respaldo adecuado','Anchura adecuada'],...Object.entries(entries).filter(([k,x])=>Number(x.count)>0).map(([k,x])=>[k,x.count,yes(x.brakes),yes(x.arms),yes(x.back),yes(x.width)])];}
  if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['Espacio','Puerta','Obstáculos']:['Espacio','Altura WC','Barra de apoyo','Puerta','Espacio lateral'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [['Tipo de baño','Unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
