@@ -237,11 +237,6 @@ function fillOriginalTables(xml,f,r){
    ];
    (w.full||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada completa',e.start||'',e.end||'',e.people??'']]));
    (w.partial||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada parcial',e.start||'',e.end||'',e.people??'']]));
-   rowsData.push([['PRESENCIA POR TURNO','Inicio','Fin','OP'],true]);
-   [['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].forEach(([name,k])=>{
-    const sh=w.shifts?.[k]||{};
-    rowsData.push([[name,sh.start||'',sh.end||'',format((f.opByShift||f.presenceByShift||{})[k])]]);
-   });
    rowsData.push([['TOTAL PERSONAL EXPUESTO (OP)',format(f.op),'','']]);
    rowsData.push([['TIPOLOGÍA DE PACIENTES','Número','',''],true]);
    rowsData.push([['Pacientes no colaboradores (NC)',f.nc??'','','']]);
