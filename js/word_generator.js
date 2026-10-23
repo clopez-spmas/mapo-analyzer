@@ -264,26 +264,38 @@ function fillOriginalTables(xml,f,r){
    const tblGrid=make('tblGrid');for(let i=0;i<4;i++){const c=make('gridCol');c.setAttributeNS(ns,'w:w','2200');tblGrid.appendChild(c);}table.appendChild(tblGrid);
    const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:4}):'';
    const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
-   const rowsData=[
-    [['IDENTIFICACIÓN DE LA UNIDAD','', '',''],true],
+   const idRows=[
+    [['IDENTIFICACIÓN DE LA UNIDAD','','',''],true],
     [['Empresa',f.empresa||'','Centro de trabajo',f.centroTrabajo||'']],
     [['Sala / unidad',f.unidad||'','Fecha de evaluación',date(f.fecha)]],
     [['Código de sala',f.codigo||'','Número de camas',f.camas??'']],
-    [['Dirección',f.direccion||'','NIF',f.nif||'']],
+    [['Dirección',f.direccion||'','NIF',f.nif||'']]
+   ];
+   const staffRows=[
     [['PERSONAL QUE REALIZA MOVILIZACIÓN MANUAL DE PACIENTES','','',''],true],
     [['Tipo de jornada','Hora de inicio','Hora de fin','N.º de personas'],true]
    ];
-   (w.full||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada completa',e.start||'',e.end||'',e.people??'']]));
-   (w.partial||[]).filter(e=>e.start||e.end||e.people).forEach(e=>rowsData.push([['Jornada parcial',e.start||'',e.end||'',e.people??'']]));
-   rowsData.push([['TOTAL PERSONAL EXPUESTO (OP)',format(f.op),'','']]);
-   rowsData.push([['TIPOLOGÍA DE PACIENTES','Número','',''],true]);
-   rowsData.push([['Pacientes no colaboradores (NC)',f.nc??'','','']]);
-   rowsData.push([['Pacientes parcialmente colaboradores (PC)',f.pc??'','','']]);
-   rowsData.push([['Pacientes no autónomos (NA)',f.na??Number(f.nc||0)+Number(f.pc||0),'','']]);
-   rowsData.forEach(([v,h])=>table.appendChild(tr(v,h)));
-   styleCorporate(table,[0,5,6,12]);
-   original.parentNode.replaceChild(table,original);
-   separateCorporateTable(table);
+   (w.full||[]).filter(e=>e.start||e.end||e.people).forEach(e=>staffRows.push([['Jornada completa',e.start||'',e.end||'',e.people??'']]));
+   (w.partial||[]).filter(e=>e.start||e.end||e.people).forEach(e=>staffRows.push([['Jornada parcial',e.start||'',e.end||'',e.people??'']]));
+   staffRows.push([['TOTAL PERSONAL EXPUESTO (OP)',format(f.op),'','']]);
+   const patientRows=[
+    [['TIPOLOGÍA DE PACIENTES','Número','',''],true],
+    [['Pacientes no colaboradores (NC)',f.nc??'','','']],
+    [['Pacientes parcialmente colaboradores (PC)',f.pc??'','','']],
+    [['Pacientes no autónomos (NA)',f.na??Number(f.nc||0)+Number(f.pc||0),'','']]
+   ];
+   const parent=original.parentNode;
+   const blocks=[idRows,staffRows,patientRows];
+   for(const [i,block] of blocks.entries()){
+    const separate=make('tbl');
+    const tblPr=elements(original,'tblPr')[0];if(tblPr)separate.appendChild(tblPr.cloneNode(true));
+    const grid=make('tblGrid');for(let col=0;col<4;col++){const c=make('gridCol');c.setAttributeNS(ns,'w:w','2200');grid.appendChild(c);}separate.appendChild(grid);
+    block.forEach(([values,header])=>separate.appendChild(tr(values,header)));
+    styleCorporate(separate,i===1?[0]:[0]);
+    parent.insertBefore(separate,original);
+    separateCorporateTable(separate);
+   }
+   parent.removeChild(original);
    clearMarker(x.p);
   },
   tabla_formacion:()=>{const x=locate('tabla_formacion');if(!x)return;const t=x.table;
