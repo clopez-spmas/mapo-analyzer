@@ -120,11 +120,38 @@ async function insertEquipmentPhotos(zip,xml,f){
  zip.file(relsPath,rels);zip.file('[Content_Types].xml',ct);
  return {xml,inserted:true};
 }
+
+function replaceUnitX(xml,unit){
+ const name=String(unit??'').trim();
+ if(!name)return xml;
+ let precedingUnit=false;
+ return xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g,p=>{
+  const hits=[...p.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)];
+  if(!hits.length){precedingUnit=false;return p;}
+  const joined=hits.map(m=>m[1]).join('');
+  const plain=joined.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  const positions=[];
+  const re=/\bunidad\s*(?:[·:\-]\s*)?x\b/gi;
+  for(const m of plain.matchAll(re))positions.push(m.index+m[0].length-1);
+  if(precedingUnit&&/^\s*x\s*$/i.test(plain))positions.push(plain.search(/x/i));
+  precedingUnit=/\bunidad\s*(?:[·:\-]\s*)?$/i.test(plain.trim());
+  if(!positions.length)return p;
+  // Editar únicamente el carácter X, conservando los estilos y párrafos del modelo.
+  const indices=new Set(positions);
+  let offset=0,idx=0;
+  return p.replace(/(<w:t(?:\s[^>]*)?>)([\s\S]*?)(<\/w:t>)/g,(_all,opening,value,closing)=>{
+   const updated=[...value].map((ch,i)=>indices.has(offset+i)?xesc(name):ch).join('');
+   offset+=value.length;idx++;
+   return opening+updated+closing;
+  });
+ });
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
  if(!doc)throw Error('El documento seleccionado no es una plantilla DOCX compatible.');
  let xml=normalize(await doc.async('string')),d=reportData(),f=d.form||{},r=d.result||{};
+ xml=replaceUnitX(xml,f.unidad);
  if(!Number.isFinite(Number(r.mapo)))throw Error('No hay resultados MAPO calculados para esta unidad. Calcule el índice antes de generar el informe.');
  const found=[...xml.matchAll(/\{([a-z_]+)\}/g)].map(m=>m[1]);const unknown=[...new Set(found.filter(k=>!allKeys.includes(k)))];
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
