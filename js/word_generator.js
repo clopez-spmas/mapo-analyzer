@@ -77,7 +77,16 @@ function rowsFor(key,f,r){
    ...(!manual?[['%LTA — Porcentaje de movilizaciones totales con equipo de ayuda',summary.pctTotal],['%LPA — Porcentaje de movilizaciones parciales con equipo de ayuda',summary.pctPartial]]:[])
   ];
  }
- if(key==='tabla_sillas'){const entries=f.wheelchairs?.entries||{};return [['Tipo de silla','Unidades','Frenos adecuados','Reposabrazos adecuados','Respaldo adecuado','Anchura adecuada'],...Object.entries(entries).filter(([k,x])=>Number(x.count)>0).map(([k,x])=>[k,x.count,yes(x.brakes),yes(x.arms),yes(x.back),yes(x.width)])];}
+ if(key==='tabla_sillas'){
+  const entries=f.wheelchairs?.entries||{};
+  const labels={large_wheel:'Silla de ruedas de ruedas grandes',small_wheel:'Silla de ruedas de ruedas pequeñas',electric:'Silla de ruedas eléctrica',shower:'Silla de ducha',shower_chair:'Silla de ducha'};
+  const lines=Object.entries(entries).filter(([,x])=>Number(x?.count)>0).map(([k,x])=>[
+   labels[k]||k.replace(/_/g,' '),x.count,
+   yes(x.brakes),yes(x.arms),yes(x.back),yes(x.width)
+  ]);
+  const total=lines.reduce((n,row)=>n+Number(row[1]||0),0);
+  return [['Tipo de silla de ruedas o de ducha','N.º de unidades','¿Funcionamiento adecuado de los frenos?','¿Reposabrazos extraíbles o abatibles?','¿Respaldo ergonómicamente adecuado?','¿Anchura máxima adecuada (hasta 70 cm)?'],...lines,['TOTAL DE SILLAS (TSR)',total,'','','','']];
+ }
  if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['Espacio','Puerta','Obstáculos']:['Espacio','Altura WC','Barra de apoyo','Puerta','Espacio lateral'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [['Tipo de baño','Unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
  if(key==='tabla_habitaciones')return [['Tipo de habitación','Unidades','Espacio camas','Espacio pies','Sección de cama','Espacio bajo cama','Sillón'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
  if(key==='tabla_fs_criterios')return [['Criterio FS','Cumplimiento'],['Elevadores',yes(f.fs_elevadores)],['Camillas',yes(f.fs_camillas)],['Camas regulables 3 nodos',yes(f.fs_camas3)]];
@@ -334,7 +343,7 @@ function fillOriginalTables(xml,f,r){
   const pr=elements(existing,'tblPr')[0];
   if(pr)table.appendChild(pr.cloneNode(true));
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:Array(count).fill(Math.floor(9000/count));
+  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
