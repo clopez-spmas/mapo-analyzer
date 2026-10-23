@@ -162,7 +162,10 @@ function positionDescriptions(xml){
  const items=[
   ['{factores_organizativos}',/^factores\s+organizativos\s*:/i],
   ['{descripcion_frecuencia}',/^(?:descripci[oó]n\s+(?:de\s+la\s+)?|frecuencia\s+(?:de\s+las?\s+)?)?frecuencia\b|^frecuencia\b/i],
-  ['{descripcion_formacion}',/^(?:descripci[oó]n\s+(?:de\s+la\s+)?)?formaci[oó]n\b|^factor\s+formaci[oó]n\b/i]
+  ['{descripcion_formacion}',/^(?:descripci[oó]n\s+(?:de\s+la\s+)?)?formaci[oó]n\b|^factor\s+formaci[oó]n\b/i],
+  ['{descripcion_instalaciones}',/^(?:(?:descripci[oó]n\s+de\s+las?\s+)?instalaciones|caracter[ií]sticas\s+de\s+las?\s+instalaciones)\b/i],
+  ['{descripcion_equipos}',/^(?:(?:descripci[oó]n\s+de\s+los?\s+)?equipos\s+de\s+ayuda|equipos\s+disponibles|equipos\s+de\s+elevaci[oó]n)\b/i],
+  ['{tabla_fotos_equipos}',/^(?:(?:descripci[oó]n\s+de\s+los?\s+)?equipos\s+de\s+ayuda|equipos\s+disponibles|equipos\s+de\s+elevaci[oó]n)\b/i]
  ];
  for(const [token,pattern] of items)xml=positionDescriptionAfterHeading(xml,token,pattern);
  return xml;
