@@ -343,21 +343,21 @@ function fillOriginalTables(xml,f,r){
   const table=doc.createElementNS(ns,'w:tbl');
   const pr=elements(existing,'tblPr')[0];
   if(pr)table.appendChild(pr.cloneNode(true));
-  if(key==='tabla_camas'){
-   let properties=elements(table,'tblPr')[0];
-   if(!properties){properties=doc.createElementNS(ns,'w:tblPr');table.insertBefore(properties,table.firstChild);}
-   for(const child of Array.from(properties.childNodes)){if(['tblW','tblInd','tblLayout'].includes(child.localName))properties.removeChild(child);}
-   const tw=doc.createElementNS(ns,'w:tblW');tw.setAttributeNS(ns,'w:w','8000');tw.setAttributeNS(ns,'w:type','dxa');properties.appendChild(tw);
-   const ind=doc.createElementNS(ns,'w:tblInd');ind.setAttributeNS(ns,'w:w','0');ind.setAttributeNS(ns,'w:type','dxa');properties.appendChild(ind);
-   const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
-  }
+  let properties=elements(table,'tblPr')[0];
+  if(!properties){properties=doc.createElementNS(ns,'w:tblPr');table.insertBefore(properties,table.firstChild);}
+  for(const child of Array.from(properties.childNodes)){if(['tblW','tblInd','tblLayout'].includes(child.localName))properties.removeChild(child);}
+  const tw=doc.createElementNS(ns,'w:tblW');tw.setAttributeNS(ns,'w:w','9000');tw.setAttributeNS(ns,'w:type','dxa');properties.appendChild(tw);
+  const ind=doc.createElementNS(ns,'w:tblInd');ind.setAttributeNS(ns,'w:w','0');ind.setAttributeNS(ns,'w:type','dxa');properties.appendChild(ind);
+  const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key==='tabla_camas'?[2060,760,1300,1230,1100,1550]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
+  const widths=key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
   data.forEach((values,index)=>{
    const row=doc.createElementNS(ns,'w:tr');
+   const trPr=doc.createElementNS(ns,'w:trPr');
+   const cantSplit=doc.createElementNS(ns,'w:cantSplit');trPr.appendChild(cantSplit);row.appendChild(trPr);
    values.forEach((value,j)=>{
     const tc=doc.createElementNS(ns,'w:tc');
     const tcPr=doc.createElementNS(ns,'w:tcPr');const tcW=doc.createElementNS(ns,'w:tcW');tcW.setAttributeNS(ns,'w:w',String(widths[j]||1000));tcW.setAttributeNS(ns,'w:type','dxa');tcPr.appendChild(tcW);tc.appendChild(tcPr);
