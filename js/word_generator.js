@@ -87,7 +87,7 @@ function rowsFor(key,f,r){
   const total=lines.reduce((n,row)=>n+Number(row[1]||0),0);
   return [['Tipo de silla de ruedas o de ducha','N.º de unidades','¿Funcionamiento adecuado de los frenos?','¿Reposabrazos extraíbles o abatibles?','¿Respaldo ergonómicamente adecuado?','¿Anchura máxima adecuada (hasta 70 cm)?'],...lines,['TOTAL DE SILLAS (TSR)',total,'','','','']];
  }
- if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['¿Espacio insuficiente para el uso de ayudas?','¿Anchura de puerta inferior a 85 cm?','¿Presencia de obstáculos fijos?']:['Espacio','Altura WC','Barra de apoyo','Puerta','Espacio lateral'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [[bath?'Tipo de baño para higiene':'Tipo de baño con inodoro','Número de unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
+ if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['¿Espacio insuficiente para el uso de ayudas?','¿Anchura de puerta inferior a 85 cm?','¿Presencia de obstáculos fijos?']:['¿Espacio insuficiente para utilizar silla de ruedas?','¿Altura del inodoro inadecuada (45–50 cm)?','¿Ausencia o inadecuación de barra de apoyo lateral?','¿Anchura de puerta inferior a 85 cm?','¿Espacio lateral insuficiente junto al inodoro?'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [[bath?'Tipo de baño para higiene':'Tipo de baño con inodoro','Número de unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
  if(key==='tabla_habitaciones')return [['Tipo de habitación','Unidades','Espacio camas','Espacio pies','Sección de cama','Espacio bajo cama','Sillón'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
  if(key==='tabla_fs_criterios')return [['Criterio FS','Cumplimiento'],['Elevadores',yes(f.fs_elevadores)],['Camillas',yes(f.fs_camillas)],['Camas regulables 3 nodos',yes(f.fs_camas3)]];
  if(key==='tabla_fs_adecuacion')return [['Adecuación FS','Resultado'],['Movilizaciones totales con ayuda (%)',r.taskTotals?.pLTA??''],['Adecuación',yes(r.details?.fsAdequate)],['Suficiencia',yes(r.details?.fsSufficient)]];
@@ -343,7 +343,7 @@ function fillOriginalTables(xml,f,r){
   const pr=elements(existing,'tblPr')[0];
   if(pr)table.appendChild(pr.cloneNode(true));
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:Array(count).fill(Math.floor(9000/count));
+  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
