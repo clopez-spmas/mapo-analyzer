@@ -341,6 +341,16 @@ function fillOriginalTables(xml,f,r){
     const repeat=doc.createElementNS(ns,'w:tblHeader');trPr.appendChild(repeat);
    }
    cells(row).forEach(tc=>{
+    // El informe modelo hereda justificación distribuida: anularla en todas las celdas.
+    for(const paragraph of Array.from(tc.getElementsByTagNameNS(ns,'p'))){
+     let paragraphProperties=elements(paragraph,'pPr')[0];
+     if(!paragraphProperties){paragraphProperties=doc.createElementNS(ns,'w:pPr');paragraph.insertBefore(paragraphProperties,paragraph.firstChild);}
+     for(const child of elements(paragraphProperties,'jc'))paragraphProperties.removeChild(child);
+     const alignment=doc.createElementNS(ns,'w:jc');alignment.setAttributeNS(ns,'w:val','left');paragraphProperties.appendChild(alignment);
+     const spacing=elements(paragraphProperties,'spacing')[0]||doc.createElementNS(ns,'w:spacing');
+     spacing.setAttributeNS(ns,'w:before','0');spacing.setAttributeNS(ns,'w:after','0');
+     if(!spacing.parentNode)paragraphProperties.appendChild(spacing);
+    }
     if(head){let tcPr=elements(tc,'tcPr')[0];if(!tcPr){tcPr=doc.createElementNS(ns,'w:tcPr');tc.insertBefore(tcPr,tc.firstChild);}
      const shd=doc.createElementNS(ns,'w:shd');shd.setAttributeNS(ns,'w:fill',banner?'194986':'D9E8F1');tcPr.appendChild(shd);
     }
@@ -431,6 +441,10 @@ function fillOriginalTables(xml,f,r){
   const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
   const count=Math.max(...data.map(x=>x.length),1);
   const widths=key==='tabla_formacion'?[6900,2100]:key.startsWith('tabla_fs_')||key.startsWith('tabla_fa_')||key.startsWith('tabla_fc_')||key==='tabla_famb_resultado'||key==='tabla_ff_resultado'||key==='tabla_resultados'?[6900,2100]:key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
+  // Distribuir siempre dentro del ancho total de 9000 twips del área de impresión.
+  const total=widths.reduce((a,b)=>a+b,0);
+  if(total!==9000){for(let i=0;i<widths.length;i++)widths[i]=Math.round(widths[i]*9000/total);}
+  widths[widths.length-1]+=9000-widths.reduce((a,b)=>a+b,0);
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
