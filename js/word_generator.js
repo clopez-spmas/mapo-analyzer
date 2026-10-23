@@ -448,7 +448,7 @@ function fillOriginalTables(xml,f,r){
   const newTable=createCorporateTable(x.table,data,key);
   styleCorporate(newTable);
   x.table.parentNode.replaceChild(newTable,x.table);
-  addCorporateTitle(newTable,titlesCorporate[key]);
+  if(!/^tabla_(?:fs_|fa_|fc_|famb_|ff_)/.test(key))addCorporateTitle(newTable,titlesCorporate[key]);
   if(key==='tabla_movilizaciones_manuales'||key==='tabla_movilizaciones_asistidas'){
    const totals=mobilizationSummary(f,r),manual=key.endsWith('_manuales');
    const details=manual?[
@@ -542,7 +542,15 @@ function selectRiskConclusion(xml,r){
 
 function replaceSimulatedConclusion(xml){
  const sim=window.MAPOSimulation?.getReportResult?.();
- if(!sim||!Number.isFinite(Number(sim.mapo)))return xml;
+ if(!sim||!Number.isFinite(Number(sim.mapo))){
+  const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
+  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+   const phrase=Array.from(p.getElementsByTagNameNS(ns,'t')).map(n=>n.textContent||'').join('');
+   if(/Aplicando esta\s*\/\s*s medida\s*\/\s*s/i.test(phrase)&&/\bXX\b/.test(phrase))p.parentNode.removeChild(p);
+  }
+  return new XMLSerializer().serializeToString(doc);
+ }
  const value=Number(sim.mapo);
  const formatted=value.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
  const level=value===0?'AUSENTE':value<=1.5?'ACEPTABLE':value<=5?'MEDIO':'ALTO';
