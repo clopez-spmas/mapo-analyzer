@@ -19,8 +19,10 @@ function reportData(){
  if(room)return {form:room.formData||{},result:room.lastResult||{}};
  return window.MAPOReportState?.()||{form:{},result:{}};
 }
+function europeanDate(v){const text=String(v??'');const m=/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(text);return m?m[3]+'/'+m[2]+'/'+m[1]:text;}
 function scalar(key,f,r){
  if(key==='na')return Number(f.nc||0)+Number(f.pc||0);
+ if(key==='fecha_evaluacion'||key==='fecha_visita')return europeanDate(path(f,fields[key]));
  if(key==='nivel_riesgo')return String(r.nivel||r.classification||r.riskLevel||r.level||'');
  if(key==='descripcion_equipos')return (f.informeDescriptivo?.equipos||[]).map(x=>typeof x==='string'?x:[x.nombre,x.descripcion,x.marca,x.modelo].filter(Boolean).join(' · ')).join('; ');
  if(['pmwc','pmb','pmh','pmamb'].includes(key)){const k={pmwc:'pmWC',pmb:'pmB',pmh:'pmH',pmamb:'pmamb'}[key];const v=r.details?.[k];return Number.isFinite(v)?v.toFixed(2).replace('.',','):'';}
