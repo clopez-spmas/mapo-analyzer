@@ -55,7 +55,7 @@ function rowsFor(key,f,r){
  const standard=(title,cols,items)=>[[title,...cols],...(items||[]).map(x=>[x.description||x.descripcion||x.tipo||'',x.units??x.numero??'',...cols.slice(1).map(k=>yes(x[k]))])];
  if(key==='tabla_personal'){const w=f.workerSchedule||{};return [['Personal','Horario inicio','Horario fin','Número'],...(w.full||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada completa',x.start,x.end,x.people]),...(w.partial||[]).filter(x=>x.start||x.end||x.people).map(x=>['Jornada parcial',x.start,x.end,x.people]),['OP total','','',f.op??'']];}
  if(key==='tabla_formacion')return [
- ['FORMACIÓN DEL PERSONAL — DATOS RECOGIDOS','Respuesta'],
+ ['Aspectos de la formación del personal','Respuesta'],
  ['¿Se ha impartido formación teórico-práctica específica sobre movilización manual de pacientes?',yes(f.ff_curso)],
  ['¿La formación recibida se considera reciente según el criterio del método MAPO?',yes(f.ff_antiguedad)],
  ['¿Se ha proporcionado información o adiestramiento sobre movilización de pacientes y uso de equipos?',yes(f.ff_informacion)],
@@ -430,7 +430,7 @@ function fillOriginalTables(xml,f,r){
   const ind=doc.createElementNS(ns,'w:tblInd');ind.setAttributeNS(ns,'w:w','0');ind.setAttributeNS(ns,'w:type','dxa');properties.appendChild(ind);
   const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key.startsWith('tabla_fs_')||key.startsWith('tabla_fa_')||key.startsWith('tabla_fc_')||key==='tabla_famb_resultado'||key==='tabla_ff_resultado'||key==='tabla_resultados'?[6900,2100]:key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
+  const widths=key==='tabla_formacion'?[6900,2100]:key.startsWith('tabla_fs_')||key.startsWith('tabla_fa_')||key.startsWith('tabla_fc_')||key==='tabla_famb_resultado'||key==='tabla_ff_resultado'||key==='tabla_resultados'?[6900,2100]:key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
@@ -442,6 +442,9 @@ function fillOriginalTables(xml,f,r){
     const tc=doc.createElementNS(ns,'w:tc');
     const tcPr=doc.createElementNS(ns,'w:tcPr');const tcW=doc.createElementNS(ns,'w:tcW');tcW.setAttributeNS(ns,'w:w',String(widths[j]||1000));tcW.setAttributeNS(ns,'w:type','dxa');tcPr.appendChild(tcW);tc.appendChild(tcPr);
     const p=doc.createElementNS(ns,'w:p');
+    const pPr=doc.createElementNS(ns,'w:pPr');
+    const jc=doc.createElementNS(ns,'w:jc');jc.setAttributeNS(ns,'w:val','left');pPr.appendChild(jc);
+    p.appendChild(pPr);
     const run=doc.createElementNS(ns,'w:r');
     const props=doc.createElementNS(ns,'w:rPr');
     if(index===0){props.appendChild(doc.createElementNS(ns,'w:b'));const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','D8E5EF');const tcPr=doc.createElementNS(ns,'w:tcPr');tcPr.appendChild(shade);tc.appendChild(tcPr);}
