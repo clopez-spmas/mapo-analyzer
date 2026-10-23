@@ -200,13 +200,25 @@ function fillOriginalTables(xml,f,r){
  const clearMarker=p=>p.parentNode.removeChild(p);
  const direct={
   tabla_personal:()=>{const x=locate('tabla_personal');if(!x)return;const t=x.table,w=f.workerSchedule||{};
-   // Mantener la ficha corporativa y su estructura combinada.
-   set(t,3,0,f.unidad||'');set(t,3,1,f.codigo||'');set(t,3,2,f.camas||'');
-   set(t,20,1,Number(f.op||0).toLocaleString('es-ES',{maximumFractionDigits:4}));
-   // La tabla distribuye turnos en columnas: mañana, tarde y noche.
-   const sh=w.shifts||{};const shifts=['morning','afternoon','night'];
-   shifts.forEach((k,i)=>{const v=sh[k];if(v)set(t,11,i+1,[v.start,v.end].filter(Boolean).join(' - '));});
-   set(t,33,1,f.nc??'');set(t,33,2,f.pc??'');set(t,34,1,f.na??'');
+   const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:5}):'';
+   const date=v=>{const m=/^(\\d{4})-(\\d{2})-(\\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
+   // Ficha corporativa: rellenar exclusivamente las celdas previstas, sin sustituir su diseño.
+   set(t,1,0,'EMPRESA: '+(f.empresa||'')+'\\nCENTRO: '+(f.centroTrabajo||''));
+   set(t,1,12,'FECHA: '+date(f.fecha||f.fechaVisita));
+   set(t,3,0,f.unidad||'');set(t,3,2,f.codigo||'');set(t,3,6,f.camas??'');
+   const schedule=w.shifts||{};
+   const shiftKeys=['morning','afternoon','night'],shiftCols=[3,10,13];
+   const opByShift=f.opByShift||f.presenceByShift||{};
+   shiftKeys.forEach((k,i)=>{
+    const val=opByShift[k];
+    if(val!==undefined)set(t,10,shiftCols[i],format(val));
+    const time=schedule[k];
+    if(time&&(time.start||time.end))set(t,11,[3,7,13][i],'De '+(time.start||'--:--')+' hasta '+(time.end||'--:--'));
+   });
+   // No inventar distribución profesional: solo se dispone de horarios y presencia calculada.
+   set(t,20,16,'Op= '+format(f.op));
+   set(t,33,11,'NC= '+(f.nc??''));set(t,33,15,'PC= '+(f.pc??''));
+   set(t,34,11,'NA= '+(f.na??(Number(f.nc||0)+Number(f.pc||0))));
    clearMarker(x.p);
   },
   tabla_formacion:()=>{const x=locate('tabla_formacion');if(!x)return;const t=x.table;
