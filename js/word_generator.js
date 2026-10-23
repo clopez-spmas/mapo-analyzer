@@ -307,18 +307,20 @@ function fillOriginalTables(xml,f,r){
 
  // Sustituir las tablas de cálculo y descripción por tablas corporativas completas.
  const formatValue=v=>typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:3}):String(v??'');
- const createCorporateTable=(existing,data)=>{
+ const createCorporateTable=(existing,data,key)=>{
   const table=doc.createElementNS(ns,'w:tbl');
   const pr=elements(existing,'tblPr')[0];
   if(pr)table.appendChild(pr.cloneNode(true));
   const count=Math.max(...data.map(x=>x.length),1);
+  const widths=key==='tabla_camas'?[2600,750,1220,950,850,1630]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
-  for(let i=0;i<count;i++){const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(Math.floor(9000/count)));grid.appendChild(col);}
+  widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
   data.forEach((values,index)=>{
    const row=doc.createElementNS(ns,'w:tr');
-   values.forEach(value=>{
+   values.forEach((value,j)=>{
     const tc=doc.createElementNS(ns,'w:tc');
+    const tcPr=doc.createElementNS(ns,'w:tcPr');const tcW=doc.createElementNS(ns,'w:tcW');tcW.setAttributeNS(ns,'w:w',String(widths[j]||1000));tcW.setAttributeNS(ns,'w:type','dxa');tcPr.appendChild(tcW);tc.appendChild(tcPr);
     const p=doc.createElementNS(ns,'w:p');
     const run=doc.createElementNS(ns,'w:r');
     const props=doc.createElementNS(ns,'w:rPr');
@@ -379,7 +381,7 @@ function fillOriginalTables(xml,f,r){
   const x=locate(key);if(!x)continue;
   const data=rowsFor(key,f,r);
   if(!data)continue;
-  const newTable=createCorporateTable(x.table,data);
+  const newTable=createCorporateTable(x.table,data,key);
   styleCorporate(newTable);
   x.table.parentNode.replaceChild(newTable,x.table);
   addCorporateTitle(newTable,titlesCorporate[key]);
