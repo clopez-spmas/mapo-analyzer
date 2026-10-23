@@ -376,7 +376,31 @@ function fillOriginalTables(xml,f,r){
   const t=doc.createElementNS(ns,'w:t');t.textContent=title;run.appendChild(t);p.appendChild(run);
   table.parentNode.insertBefore(p,table);
  };
- const allTables=[...new Set([...tables,...moreTables])].filter(k=>k!=='tabla_personal'&&k!=='tabla_fotos_equipos');
+
+ const fillPlanningOriginal=()=>{
+  const x=locate('tabla_planificacion');if(!x)return;
+  const t=x.table,rr=rows(t);
+  // El modelo corporativo tiene un título, identificación, cabeceras y
+  // una fila de medida propuesta con celdas combinadas.
+  if(rr.length<5||cells(rr[1]).length!==6||cells(rr[4]).length!==7)
+   throw Error('La tabla de planificación del modelo no tiene su estructura corporativa original.');
+  set(t,1,1,f.empresa||'');
+  set(t,1,3,f.centroTrabajo||'');
+  set(t,1,5,europeanDate(f.fecha));
+  set(t,2,1,f.unidad||'');
+  const measures=(f.planificacionPreventiva?.medidas||[]).map(x=>String(x.medida||'').trim()).filter(Boolean);
+  if(measures.length){
+   const example=rr[4],end=rr[5]||null;
+   measures.forEach((value,i)=>{
+    const row=i===0?example:example.cloneNode(true);
+    if(i>0){t.insertBefore(row,end);fill(cells(row)[0],'');}
+    fill(cells(row)[2],value);
+   });
+  }
+  clearMarker(x.p);
+ };
+ fillPlanningOriginal();
+ const allTables=[...new Set([...tables,...moreTables])].filter(k=>k!=='tabla_personal'&&k!=='tabla_planificacion'&&k!=='tabla_fotos_equipos');
  for(const key of allTables){
   const x=locate(key);if(!x)continue;
   const data=rowsFor(key,f,r);
