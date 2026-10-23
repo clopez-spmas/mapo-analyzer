@@ -87,17 +87,100 @@ function rowsFor(key,f,r){
  if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['¿Espacio insuficiente para el uso de ayudas?','¿Anchura de puerta inferior a 85 cm?','¿Presencia de obstáculos fijos?']:['¿Espacio insuficiente para utilizar silla de ruedas?','¿Altura del inodoro inadecuada (45–50 cm)?','¿Ausencia o inadecuación de barra de apoyo lateral?','¿Anchura de puerta inferior a 85 cm?','¿Espacio lateral insuficiente junto al inodoro?'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [[bath?'Tipo de baño para higiene':'Tipo de baño con inodoro','Número de unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
  if(key==='tabla_habitaciones')return [['Tipo de habitación','Número de habitaciones','¿Espacio entre cama y pared inferior a 90 cm?','¿Espacio libre a los pies de la cama inferior a 120 cm?','¿Cama que requiere levantar manualmente una sección?','¿Espacio bajo la cama inferior a 15 cm?','¿Altura del asiento del sillón inadecuada?'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
  const pct=v=>v==null||v===''?'':typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:2})+' %':String(v)+' %';
- if(key==='tabla_fs_criterios')return [['Criterios de evaluación del factor elevación (FS)','Cumplimiento'],['Disponibilidad de elevadores para movilizaciones totales',yes(f.fs_elevadores)],['Disponibilidad de camillas para movilización e higiene',yes(f.fs_camillas)],['Disponibilidad de camas regulables de tres nodos',yes(f.fs_camas3)]];
- if(key==='tabla_fs_adecuacion')return [['Adecuación y suficiencia de los equipos de elevación','Resultado'],['Porcentaje de movilizaciones totales realizadas con equipos de ayuda (%LTA)',pct(r.taskTotals?.pLTA)],['¿Los equipos de elevación son adecuados?',yes(r.details?.fsAdequate)],['¿Los equipos disponibles son suficientes?',yes(r.details?.fsSufficient)]];
- if(key==='tabla_fs_resultado')return [['Valor asignado al factor de elevación','Valor'],['FS — Factor de elevación',r.fs??'']];
- if(key==='tabla_fa_criterios')return [['Criterios de evaluación del factor ayudas menores (FA)','Cumplimiento'],['Disponibilidad de sábana o tabla deslizante',yes(f.fa_sabana)],['Disponibilidad de otras ayudas menores para movilización',yes(f.fa_dos)],['Disponibilidad de camas con tres nodos',yes(f.fa_camas3)]];
- if(key==='tabla_fa_adecuacion')return [['Adecuación y suficiencia de las ayudas menores','Resultado'],['Porcentaje de movilizaciones parciales realizadas con equipos de ayuda (%LPA)',pct(r.taskTotals?.pLPA)],['¿Las ayudas menores son adecuadas?',yes(r.details?.faAdequate)],['¿Las ayudas menores son suficientes?',yes(r.details?.faSufficient)]];
- if(key==='tabla_fa_resultado')return [['Valor asignado al factor ayudas menores','Valor'],['FA — Factor ayudas menores',r.fa??'']];
- if(key==='tabla_fc_suficiencia')return [['Criterios de evaluación del factor sillas de ruedas (FC)','Resultado'],['Número total de sillas de ruedas disponibles (TSR)',r.details?.tsr??''],['Número de pacientes no autónomos (NA)',Number(f.nc||0)+Number(f.pc||0)],['¿El número de sillas de ruedas es suficiente?',yes(r.details?.fcSufficient)],['PMSR — Puntuación media de sillas de ruedas',r.details?.pmsr??'']];
- if(key==='tabla_fc_resultado')return [['Valor asignado al factor sillas de ruedas','Valor'],['FC — Factor sillas de ruedas',r.fc??'']];
- if(key==='tabla_famb_resultado')return [['Evaluación de las instalaciones y del entorno (Famb)','Puntuación / valor'],['PMB — Puntuación media de baños para higiene',r.details?.pmB??''],['PMWC — Puntuación media de baños con inodoro',r.details?.pmWC??''],['PMH — Puntuación media de habitaciones',r.details?.pmH??''],['PMamb — Puntuación media total del ambiente (PMB + PMWC + PMH)',r.details?.pmamb??''],['Famb — Factor ambiente y entorno',r.famb??'']];
- if(key==='tabla_ff_resultado')return [['Valor asignado al factor formación (FF)','Valor'],['FF — Factor formación del personal',r.ff??'']];
- if(key==='tabla_resultados')return [['Factores empleados para el cálculo del índice MAPO','Resultado'],['NC — Pacientes no colaboradores',scalar('nc',f,r)],['PC — Pacientes parcialmente colaboradores',scalar('pc',f,r)],['NA — Pacientes no autónomos',scalar('na',f,r)],['OP — Personas trabajadoras expuestas',scalar('op',f,r)],['FS — Factor elevación',scalar('fs',f,r)],['FA — Factor ayudas menores',scalar('fa',f,r)],['FC — Factor sillas de ruedas',scalar('fc',f,r)],['Famb — Factor ambiente',scalar('famb',f,r)],['FF — Factor formación',scalar('ff',f,r)],['ÍNDICE DE RIESGO MAPO',scalar('indice_mapo',f,r)],['Nivel de exposición',scalar('nivel_riesgo',f,r)]];
+ const result=(value)=>value==null?'':value;
+ if(key==='tabla_fs_criterios')return [
+ ['FS — NIVEL DE SUFICIENCIA NUMÉRICA','Comprobación'],
+ ['La suficiencia de los equipos para elevaciones totales se establece cuando se cumple, como mínimo, una de las siguientes condiciones:',''],
+ ['¿Existe al menos un elevador por cada 8 pacientes no colaboradores (NC)?',yes(f.fs_elevadores)],
+ ['¿Se dispone de una camilla regulable por cada 8 pacientes NC cuando la transferencia sea habitual, utilizando además sábana, tabla deslizante o equivalente?',yes(f.fs_camillas)],
+ ['¿Existen camas regulables en altura con tres nodos para el 100 % de los pacientes de la unidad?',yes(f.fs_camas3)],
+ ['Suficiencia numérica de los equipos para elevación total',yes(r.details?.fsSufficient)]
+ ];
+ if(key==='tabla_fs_adecuacion')return [
+ ['FS — NIVEL DE ADECUACIÓN','Resultado'],
+ ['La adecuación exige que el equipamiento responda a las necesidades de la unidad y que se utilice al menos en el 90 % de las movilizaciones totales de pacientes.',''],
+ ['%LTA — Porcentaje de levantamientos totales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLTA)],
+ ['¿El porcentaje de levantamientos totales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLTA==null?'':yes(Number(r.taskTotals.pLTA)>=90)],
+ ['Adecuación de los equipos de elevación',yes(r.details?.fsAdequate)]
+ ];
+ if(key==='tabla_fs_resultado')return [
+ ['CARACTERÍSTICAS RELEVANTES PARA ASIGNAR FS','Valor de referencia'],
+ ['Equipos ausentes o simultáneamente inadecuados e insuficientes',4],
+ ['Equipos insuficientes o inadecuados',2],
+ ['Equipos adecuados y suficientes','0,5'],
+ ['VALOR DEL FACTOR DE ELEVACIÓN (FS)',result(r.fs)]
+ ];
+ if(key==='tabla_fa_criterios')return [
+ ['FA — NIVEL DE SUFICIENCIA NUMÉRICA','Comprobación'],
+ ['Para considerar suficientes las ayudas menores debe cumplirse al menos una de las siguientes condiciones:',''],
+ ['¿Se dispone de sábana o tabla deslizante y, como mínimo, de otras dos ayudas menores (rollboard, disco giratorio u otras equivalentes)?',yes(f.fa_sabana)&&yes(f.fa_dos)?'Sí':f.fa_sabana==null||f.fa_dos==null?'':'No'],
+ ['¿Se dispone de sábana o tabla deslizante y todas las camas son regulables en altura con tres nodos de articulación?',f.fa_sabana==null||f.fa_camas3==null?'':yes(Boolean(f.fa_sabana)&&Boolean(f.fa_camas3))],
+ ['Suficiencia numérica de ayudas menores',yes(r.details?.faSufficient)]
+ ];
+ if(key==='tabla_fa_adecuacion')return [
+ ['FA — NIVEL DE ADECUACIÓN','Resultado'],
+ ['Se consideran adecuadas las ayudas menores que satisfacen las exigencias de la unidad y se emplean al menos en el 90 % de las movilizaciones parciales.',''],
+ ['%LPA — Porcentaje de levantamientos parciales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLPA)],
+ ['¿El porcentaje de levantamientos parciales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLPA==null?'':yes(Number(r.taskTotals.pLPA)>=90)],
+ ['Adecuación de las ayudas menores',yes(r.details?.faAdequate)]
+ ];
+ if(key==='tabla_fa_resultado')return [
+ ['CARACTERÍSTICAS RELEVANTES PARA ASIGNAR FA','Valor de referencia'],
+ ['Ayudas menores ausentes o que no reúnen las condiciones de suficiencia y adecuación',1],
+ ['Ayudas menores adecuadas y suficientes','0,5'],
+ ['VALOR DEL FACTOR DE AYUDAS MENORES (FA)',result(r.fa)]
+ ];
+ if(key==='tabla_fc_suficiencia')return [
+ ['FC — SUFICIENCIA DE SILLAS DE RUEDAS','Resultado'],
+ ['El modelo considera suficientes las sillas de ruedas cuando su número es igual o superior al 50 % de los pacientes no autónomos (NA).',''],
+ ['TSR — Número total de sillas de ruedas en la unidad',result(r.details?.tsr)],
+ ['NA — Número de pacientes no autónomos',Number(f.nc||0)+Number(f.pc||0)],
+ ['¿TSR es igual o superior al 50 % de NA?',yes(r.details?.fcSufficient)],
+ ['PMSR — Puntuación media de las sillas de ruedas; representa su inadecuación ergonómica',result(r.details?.pmsr)],
+ ['Tabla de asignación: PMSR de 0 a 1,33','Suficiente: 0,75 / Insuficiente: 1'],
+ ['Tabla de asignación: PMSR de 1,34 a 2,66','Suficiente: 1,12 / Insuficiente: 1,5'],
+ ['Tabla de asignación: PMSR de 2,67 a 4','Suficiente: 1,5 / Insuficiente: 2']
+ ];
+ if(key==='tabla_fc_resultado')return [
+ ['FACTOR SILLA DE RUEDAS (FC)','Valor'],
+ ['El valor se obtiene combinando la puntuación media de inadecuación (PMSR) y la suficiencia de sillas disponibles.',''],
+ ['VALOR DEL FACTOR SILLA DE RUEDAS (FC)',result(r.fc)]
+ ];
+ if(key==='tabla_famb_resultado')return [
+ ['FACTOR AMBIENTE / ENTORNO (Famb)','Puntuación / valor'],
+ ['Se evalúan las condiciones ergonómicas de baños para higiene, baños con inodoro y habitaciones. Las puntuaciones medias de cada entorno se suman para obtener PMamb.',''],
+ ['PMB — Puntuación media de baños para higiene del paciente',result(r.details?.pmB)],
+ ['PMWC — Puntuación media de baños con inodoro',result(r.details?.pmWC)],
+ ['PMH — Puntuación media de habitaciones',result(r.details?.pmH)],
+ ['PMamb — Suma PMB + PMWC + PMH',result(r.details?.pmamb)],
+ ['Tabla del modelo: PMamb entre 0 y 5,8','Famb = 0,75'],
+ ['Tabla del modelo: PMamb entre 5,9 y 11,6','Famb = 1,25'],
+ ['Tabla del modelo: PMamb entre 11,7 y 17,5','Famb = 1,5'],
+ ['VALOR DEL FACTOR AMBIENTE / ENTORNO (Famb)',result(r.famb)]
+ ];
+ if(key==='tabla_ff_resultado')return [
+ ['CARACTERÍSTICAS RELEVANTES PARA ASIGNAR FF','Valor de referencia'],
+ ['Curso adecuado en los dos últimos años para al menos el 75 % de las personas trabajadoras','0,75'],
+ ['Curso adecuado de más de dos años para al menos el 75 % de la plantilla, con eficacia verificada','0,75'],
+ ['Curso adecuado en los dos últimos años para entre el 50 % y el 75 % de las personas trabajadoras',1],
+ ['Solo información o entrenamiento en equipos para el 90 % de la plantilla, con eficacia verificada',1],
+ ['Ausencia de formación o incumplimiento de las condiciones anteriores',2],
+ ['VALOR DEL FACTOR FORMACIÓN (FF)',result(r.ff)]
+ ];
+ if(key==='tabla_resultados')return [
+ ['FACTORES UTILIZADOS EN EL CÁLCULO DEL ÍNDICE MAPO','Resultado'],
+ ['NC — Número medio de pacientes no colaboradores',scalar('nc',f,r)],
+ ['PC — Número medio de pacientes parcialmente colaboradores',scalar('pc',f,r)],
+ ['NA — Número de pacientes no autónomos (NC + PC)',scalar('na',f,r)],
+ ['OP — Personal expuesto equivalente en 24 horas',scalar('op',f,r)],
+ ['FS — Factor de elevación: adecuación y suficiencia de equipos',scalar('fs',f,r)],
+ ['FA — Factor de ayudas menores: adecuación y suficiencia',scalar('fa',f,r)],
+ ['FC — Factor de sillas de ruedas',scalar('fc',f,r)],
+ ['Famb — Factor de instalaciones y entorno',scalar('famb',f,r)],
+ ['FF — Factor formación del personal',scalar('ff',f,r)],
+ ['ÍNDICE DE RIESGO MAPO',scalar('indice_mapo',f,r)],
+ ['NIVEL DE EXPOSICIÓN',scalar('nivel_riesgo',f,r)]
+ ];
  return null;
 }
 function normalize(xml){
@@ -347,7 +430,7 @@ function fillOriginalTables(xml,f,r){
   const ind=doc.createElementNS(ns,'w:tblInd');ind.setAttributeNS(ns,'w:w','0');ind.setAttributeNS(ns,'w:type','dxa');properties.appendChild(ind);
   const layout=doc.createElementNS(ns,'w:tblLayout');layout.setAttributeNS(ns,'w:type','fixed');properties.appendChild(layout);
   const count=Math.max(...data.map(x=>x.length),1);
-  const widths=key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
+  const widths=key.startsWith('tabla_fs_')||key.startsWith('tabla_fa_')||key.startsWith('tabla_fc_')||key==='tabla_famb_resultado'||key==='tabla_ff_resultado'||key==='tabla_resultados'?[6900,2100]:key==='tabla_camas'?[2250,850,1550,1300,1250,1800]:key==='tabla_sillas'?[2300,820,1550,1600,1430,1300]:key==='tabla_banos_higiene'?[2450,900,2050,1850,1750]:key==='tabla_banos_wc'?[1700,800,1350,1300,1450,1150,1250]:key==='tabla_habitaciones'?[1700,850,1370,1370,1510,1220,980]:Array(count).fill(Math.floor(9000/count));
   const grid=doc.createElementNS(ns,'w:tblGrid');
   widths.forEach(width=>{const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(width));grid.appendChild(col);});
   table.appendChild(grid);
