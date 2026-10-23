@@ -249,69 +249,43 @@ function fillOriginalTables(xml,f,r){
   }
  };
  Object.values(direct).forEach(fn=>fn());
- const bindings=[
-  ['tabla_movilizaciones_manuales','mobilizations',4],
-  ['tabla_movilizaciones_asistidas','mobilizations',3],
-  ['tabla_equipos','equips',3],
-  ['tabla_ayudas_menores','minor',2],
-  ['tabla_camas','beds',2]
- ];
- for(const [key,type,first] of bindings){
-  const x=locate(key);if(!x)continue;const t=x.table;
-  if(type==='mobilizations'){
-   const fields=key.endsWith('manuales')?['manualTotal','manualPartial']:['aidedTotal','aidedPartial'];
-   const ids=['head_bed','bed_wheelchair','wheelchair_bed','bed_stretcher','stretcher_bed','wheelchair_toilet','toilet_wheelchair','bed_turning','sit_to_stand'];
-   const entries=f.mobilizations?.entries||{};
-   for(let i=0;i<ids.length;i++){const e=entries[ids[i]]||{};if(!rows(t)[first+i])break;
-    const values=fields.flatMap(k=>(e[k]||[0,0,0]).slice(0,3));
-    const cc=cells(rows(t)[first+i]);
-    // Evitar sobrescribir textos de tareas (primera celda).
-    for(let j=0;j<Math.min(6,cc.length-1);j++)fill(cc[j+1],values[j]||'');
-   }
-  }else if(type==='equips'){
-   const entries=f.informeDescriptivo?.equiposAyudaDetalle||[];
-   entries.slice(0,5).forEach((e,i)=>{
-    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr);
-    fill(cc[0],e.tipo||'');if(cc[1])fill(cc[1],e.numero??'');
+
+ // Sustituir las tablas de cálculo y descripción por tablas corporativas completas.
+ const formatValue=v=>typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:3}):String(v??'');
+ const createCorporateTable=(existing,data)=>{
+  const table=doc.createElementNS(ns,'w:tbl');
+  const pr=elements(existing,'tblPr')[0];
+  if(pr)table.appendChild(pr.cloneNode(true));
+  const count=Math.max(...data.map(x=>x.length),1);
+  const grid=doc.createElementNS(ns,'w:tblGrid');
+  for(let i=0;i<count;i++){const col=doc.createElementNS(ns,'w:gridCol');col.setAttributeNS(ns,'w:w',String(Math.floor(9000/count)));grid.appendChild(col);}
+  table.appendChild(grid);
+  data.forEach((values,index)=>{
+   const row=doc.createElementNS(ns,'w:tr');
+   values.forEach(value=>{
+    const tc=doc.createElementNS(ns,'w:tc');
+    const p=doc.createElementNS(ns,'w:p');
+    const run=doc.createElementNS(ns,'w:r');
+    const props=doc.createElementNS(ns,'w:rPr');
+    if(index===0){props.appendChild(doc.createElementNS(ns,'w:b'));const shade=doc.createElementNS(ns,'w:shd');shade.setAttributeNS(ns,'w:fill','E6EEF4');const tcPr=doc.createElementNS(ns,'w:tcPr');tcPr.appendChild(shade);tc.appendChild(tcPr);}
+    const size=doc.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','18');props.appendChild(size);
+    run.appendChild(props);
+    const t=doc.createElementNS(ns,'w:t');t.textContent=formatValue(value);t.setAttribute('xml:space','preserve');
+    run.appendChild(t);p.appendChild(run);tc.appendChild(p);row.appendChild(tc);
    });
-  }else if(type==='minor'){
-   const aids=f.informeDescriptivo?.ayudasMenores||{};
-   ['sabana','tabla','cinturon','rollbord','gruaActiva'].forEach((k,i)=>{
-    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr),v=aids[k]||{};
-    if(cc[1])fill(cc[1],v.presencia==null?'':v.presencia?'SÍ':'NO');
-    if(cc[2])fill(cc[2],v.numero??'');
-   });
-  }else if(type==='beds'){
-   (f.camasRegulablesInforme||[]).slice(0,4).forEach((e,i)=>{
-    const rr=rows(t)[first+i];if(!rr)return;const cc=cells(rr);
-    [e.descripcion,e.numero,e.electrica?'SÍ':'NO',e.pedal?'SÍ':'NO',e.nodos,e.manual?'SÍ':'NO'].forEach((v,j)=>{if(cc[j])fill(cc[j],v??'');});
-   });
-  }
-  clearMarker(x.p);
- }
- // Matrices corporativas de inadecuaciones, conservando sus títulos y ponderaciones.
- const matrices=[
-  ['tabla_sillas',Object.entries(f.wheelchairs?.entries||{}).filter(([,v])=>Number(v.count)>0).map(([name,v])=>({description:name,units:v.count,brakes:!v.brakes,arms:!v.arms,back:!v.back,width:!v.width})),[{row:3,key:'brakes'},{row:4,key:'arms'},{row:5,key:'back'},{row:6,key:'width'}],9],
-  ['tabla_banos_higiene',f.bathTypes||[],[{row:5,key:'space'},{row:6,key:'door'},{row:8,key:'obstacles'}],12],
-  ['tabla_banos_wc',f.wcTypes||[],[{row:5,key:'space'},{row:6,key:'height'},{row:7,key:'bar'},{row:8,key:'door'},{row:9,key:'lateral'}],11],
-  ['tabla_habitaciones',f.roomTypes||[],[{row:5,key:'between'},{row:6,key:'foot'},{row:7,key:'bedSection'},{row:8,key:'underbed'},{row:9,key:'chairHeight'}],15]
- ];
- for(const [key,items,criteria,unitsRow] of matrices){
+   table.appendChild(row);
+  });
+  return table;
+ };
+ const allTables=[...new Set([...tables,...moreTables])].filter(k=>k!=='tabla_personal'&&k!=='tabla_fotos_equipos');
+ for(const key of allTables){
   const x=locate(key);if(!x)continue;
-  const t=x.table,max=Math.min(items.length,6);
-  for(let j=0;j<max;j++){
-   const entry=items[j];
-   for(const criterion of criteria){
-    const cc=cells(rows(t)[criterion.row]);if(cc[2+j])fill(cc[2+j],entry[criterion.key]?'X':'');
-   }
-   const unitCells=cells(rows(t)[unitsRow]);if(unitCells[1+j])fill(unitCells[1+j],entry.units??'');
-  }
+  const data=rowsFor(key,f,r);
+  if(!data)continue;
+  const newTable=createCorporateTable(x.table,data);
+  x.table.parentNode.replaceChild(newTable,x.table);
   clearMarker(x.p);
  }
- // Otros bloques conservan la tabla de la plantilla, y se elimina solamente
- // el marcador anterior. No crear una tabla genérica duplicada.
- const rest=['tabla_sillas','tabla_banos_higiene','tabla_banos_wc','tabla_habitaciones','tabla_fs_criterios','tabla_fs_adecuacion','tabla_fs_resultado','tabla_fa_criterios','tabla_fa_adecuacion','tabla_fa_resultado','tabla_fc_suficiencia','tabla_fc_resultado','tabla_famb_resultado','tabla_ff_resultado','tabla_planificacion','tabla_resultados','tabla_higiene','tabla_movilizaciones'];
- for(const key of rest){const x=locate(key);if(x)clearMarker(x.p);}
  return new XMLSerializer().serializeToString(doc);
 }
 async function generate(template){
