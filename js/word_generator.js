@@ -1356,15 +1356,17 @@ function fillTemplateTables(xml,f,r){
  // PMamb en la tabla vigente: la celda corporativa dice "PMamb =", no la fórmula completa.
  const pmambResult=r.details?.pmamb;
  if(pmambResult==null||!Number.isFinite(Number(pmambResult)))throw Error('Falta el valor calculado PMamb.');
- const pmambSection=tables.find(t=>/2\\.8\\.\\s*PMamb/i.test(text(t)));
- const pmambCells=pmambSection?direct(pmambSection,'tr').flatMap(row=>cells(row)):[];
- const pmambTarget=pmambCells.find(tc=>/PMamb\\s*=\\s*PMB/i.test(text(tc)));
- if(!pmambTarget)throw Error('No se encuentra la fórmula PMamb en sección 2.8.');
- const pmambParagraph=direct(pmambTarget,'p').find(p=>/PMamb/i.test(text(p)));
+ // Completar PMamb en la misma celda que contiene la fórmula de 2.8.
+ const pmambCell=tables.flatMap(tb=>direct(tb,'tr')).flatMap(row=>cells(row)).find(tc=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH\s*=/i.test(text(tc)));
+ if(!pmambCell)throw Error('No se localiza la celda de fórmula PMamb en la plantilla.');
+ const pmambParagraph=direct(pmambCell,'p').find(p=>/PMamb/i.test(text(p)));
  if(!pmambParagraph)throw Error('No se encuentra el párrafo PMamb.');
- const pmambRun=d.createElementNS(ns,'w:r'),pmambText=d.createElementNS(ns,'w:t');
- pmambText.textContent=' '+num(pmambResult);pmambText.setAttribute('xml:space','preserve');
- pmambRun.appendChild(pmambText);pmambParagraph.appendChild(pmambRun);
+ const valueRun=d.createElementNS(ns,'w:r');
+ const valueNode=d.createElementNS(ns,'w:t');
+ valueNode.appendChild(d.createTextNode(' '+num(pmambResult)));
+ valueNode.setAttribute('xml:space','preserve');
+ valueRun.appendChild(valueNode);
+ pmambParagraph.appendChild(valueRun);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
 
  // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
