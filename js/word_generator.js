@@ -1249,7 +1249,54 @@ function fillTemplateTables(xml,f,r){
   if(final)table.insertBefore(legend,final);
   else table.appendChild(legend);
  }
- matrix(14,f.roomTypes||[],5,null,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
+ // Habitaciones: completar las celdas de cada fila mediante el rótulo del modelo.
+ const rooms=f.roomTypes||[],roomOriginal=tables[14],roomCapacity=6;
+ const roomPages=Math.max(1,Math.ceil(rooms.length/roomCapacity));
+ let previousRoom=roomOriginal;
+ const roomCriteria=[
+  [/Espacio entre cama/i,'between',2],
+  [/Espacio libre desde los pies/i,'foot',2],
+  [/Cama inadecuada/i,'bedSection',1],
+  [/Espacio entre la cama y el suelo/i,'underbed',2],
+  [/Altura del asiento/i,'chairHeight',0.5]
+ ];
+ for(let page=0;page<roomPages;page++){
+  const table=page===0?roomOriginal:roomOriginal.cloneNode(true);
+  if(page>0)previousRoom.parentNode.insertBefore(table,previousRoom.nextSibling);
+  previousRoom=table;
+  const rr=direct(table,'tr'),part=rooms.slice(page*roomCapacity,(page+1)*roomCapacity);
+  const findRow=re=>rr.find(row=>re.test(text(row)));
+  const fillRow=(re,fn)=>{
+   const row=findRow(re);
+   if(!row)throw Error('No se encuentra la fila de habitaciones: '+re);
+   const cc=cells(row);
+   if(cc.length<7)throw Error('La fila de habitaciones no contiene las seis columnas de tipos: '+text(row).slice(0,65));
+   cc.slice(-7,-1).forEach((tc,j)=>write(tc,part[j]?fn(part[j]):''));
+   return row;
+  };
+  for(const [re,key] of roomCriteria)fillRow(re,x=>x[key]===true?'X':x[key]===false?'—':'');
+  fillRow(/Presencia de obstáculos fijos/i,x=>x.observations??'');
+  fillRow(/Altura de cama fija/i,x=>x.bedHeight??'');
+  fillRow(/Barras laterales inadecuadas/i,x=>x.sideRails??'');
+  fillRow(/Anchura de la puerta/i,x=>x.doorWidth??'');
+  fillRow(/Cama sin ruedas/i,x=>x.noWheels??'');
+  const unitsRow=fillRow(/Unidades:\s*N[uú]mero de habitaciones/i,x=>x.units??'');
+  const scoreRow=fillRow(/Puntuaci[oó]n por tipo de habitaci[oó]n/i,x=>num(
+   (x.between===true?2:0)+(x.foot===true?2:0)+(x.bedSection===true?1:0)+(x.underbed===true?2:0)+(x.chairHeight===true?0.5:0)
+  ));
+  const last=page===roomPages-1;
+  const totalUnits=rooms.reduce((n,x)=>n+Number(x.units||0),0);
+  const totalScore=rooms.reduce((n,x)=>n+Number(x.units||0)*((x.between===true?2:0)+(x.foot===true?2:0)+(x.bedSection===true?1:0)+(x.underbed===true?2:0)+(x.chairHeight===true?0.5:0)),0);
+  if(cells(unitsRow).length)write(cells(unitsRow).at(-1),last?num(totalUnits):'');
+  if(cells(scoreRow).length)write(cells(scoreRow).at(-1),last?num(totalScore):'');
+  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const templateRow=rr.find(row=>cells(row).length===1)||rr[0];
+  const legend=templateRow.cloneNode(true);
+  cells(legend).forEach(tc=>write(tc,''));
+  write(cells(legend)[0],description);
+  table.appendChild(legend);
+ }
+
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
    ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
