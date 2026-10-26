@@ -871,6 +871,8 @@ function fillTemplateTables(xml,f,r){
  if(!extras.length)shrink(10,7,1,0);
  extras.forEach((e,j)=>{set(10,7+j,0,e.descripcion);set(10,7+j,1,bool(e.presencia));set(10,7+j,2,e.numero??'');});
  // Equipos: datos registrados bajo el bloque descriptivo, sin cambiar sus preguntas.
+ set(9,8,3,bool(f.informeDescriptivo?.almacenEquipos));
+ set(9,9,3,bool(f.informeDescriptivo?.espacioNuevosEquipos));
  const equipment=f.informeDescriptivo?.equiposAyudaDetalle||[];
  if(equipment.length>5)grow(9,3,5,equipment.length);
  if(equipment.length<5)shrink(9,3,5,equipment.length);
@@ -888,9 +890,9 @@ function fillTemplateTables(xml,f,r){
    flags.forEach(([row,key])=>set(ti,row,col,x?(x[key]===true?'X':x[key]===false?'—':''):''));
   }
  };
- matrix(12,f.bathTypes||[],5,3,12,[3,4,5,7,8,9],[[5,'space'],[6,'door'],[8,'obstacles']]);
- matrix(13,f.wcTypes||[],5,3,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
- matrix(14,f.roomTypes||[],5,3,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
+ matrix(12,f.bathTypes||[],5,null,12,[3,4,5,7,8,9],[[5,'space'],[6,'door'],[8,'obstacles']]);
+ matrix(13,f.wcTypes||[],5,null,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
+ matrix(14,f.roomTypes||[],5,null,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
    ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
