@@ -1076,8 +1076,7 @@ function fillTemplateTables(xml,f,r){
  if(!extras.length)shrink(10,7,1,0);
  extras.forEach((e,j)=>{set(10,7+j,0,e.descripcion);set(10,7+j,1,bool(e.presencia));set(10,7+j,2,e.numero??'');});
  // Equipos: datos registrados bajo el bloque descriptivo, sin cambiar sus preguntas.
- set(9,8,3,bool(f.informeDescriptivo?.almacenEquipos));
- set(9,9,3,bool(f.informeDescriptivo?.espacioNuevosEquipos));
+
  const equipment=f.informeDescriptivo?.equiposAyudaDetalle||[];
  if(equipment.length>5)grow(9,3,5,equipment.length);
  if(equipment.length<5)shrink(9,3,5,equipment.length);
@@ -1085,6 +1084,19 @@ function fillTemplateTables(xml,f,r){
   set(9,3+j,0,e.tipo||'');set(9,3+j,1,e.numero??'');
   ['requisitos','paciente','ambiente','mantenimiento'].forEach((k,n)=>set(9,3+j,2+n,bool(e[k])));
  });
+ // Preguntas de almacenamiento: buscar la fila por el texto de la plantilla,
+ // ya que el número de filas cambia según los equipos registrados.
+ const equipmentRows=direct(tables[9],'tr');
+ for(const [question,value] of [
+  [/¿Existe un lugar para almacenar el equipamiento\?/i,f.informeDescriptivo?.almacenEquipos],
+  [/¿Habría espacio suficiente para almacenar equipos/i,f.informeDescriptivo?.espacioNuevosEquipos]
+ ]){
+  const row=equipmentRows.find(row=>question.test(text(row)));
+  if(!row)throw Error('Falta una pregunta de almacenamiento en la plantilla: '+question.source);
+  const cs=cells(row);
+  if(cs.length<2)throw Error('No hay celda de respuesta para '+question.source);
+  if(value!==undefined&&value!==null)write(cs[cs.length-1],bool(value));
+ }
  // Tablas matriciales: conservar criterios, ponderaciones y las columnas A, B, C... originales.
  const matrix=(ti,data,start,labelrow,countrow,columns,flags)=>{
   if(data.length>columns.length){
