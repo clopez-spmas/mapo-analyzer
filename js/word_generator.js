@@ -1297,6 +1297,22 @@ function fillTemplateTables(xml,f,r){
   table.appendChild(legend);
  }
 
+ // PMamb se muestra junto a la fórmula existente del modelo, sin sustituirla.
+ const environmentTable=tables.find(t=>direct(t,'tr').some(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row))));
+ if(!environmentTable)throw Error('No se encuentra el apartado PMamb en la plantilla.');
+ const environmentRow=direct(environmentTable,'tr').find(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row)));
+ const envCells=cells(environmentRow);
+ const envFormula=envCells.find(tc=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(tc)));
+ const pmamb=r.details?.pmamb;
+ if(pmamb==null||!Number.isFinite(Number(pmamb)))throw Error('El resultado PMamb no está disponible.');
+ if(envFormula){
+  const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
+  t.setAttribute('xml:space','preserve');
+  t.textContent=' '+num(pmamb);
+  run.appendChild(t);
+  const paragraph=direct(envFormula,'p').find(p=>/PMamb\s*=\s*PMB/i.test(text(p)))||direct(envFormula,'p')[0];
+  if(paragraph)paragraph.appendChild(run);
+ }else throw Error('No se encuentra la fórmula PMamb en la celda del modelo.');
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
    ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
@@ -1306,7 +1322,7 @@ function fillTemplateTables(xml,f,r){
  set(22,2,1,(ttot[1]+ttot[3])?bool(ttot[3]/(ttot[1]+ttot[3])>=.9):'');
  set(24,0,1,'PMSR = '+num(r.details?.pmsr));set(24,2,1,'TSR = '+num(r.details?.tsr));
  set(24,3,1,bool(r.details?.fcSufficient));set(25,3,8,'FC = '+num(r.fc));
- set(26,0,3,'PMamb = '+num(r.details?.pmamb));set(26,3,5,'Famb = '+num(r.famb));
+set(26,3,5,'Famb = '+num(r.famb));
  // Planificación: conservar exactamente título, columnas, marcos y zona de aprobación.
  const measures=(f.planificacionPreventiva?.medidas||[]).filter(x=>x.medida?.trim());
  if(measures.length>1)grow(29,4,1,measures.length);
