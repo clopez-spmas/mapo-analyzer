@@ -940,7 +940,7 @@ function fillTemplateTables(xml,f,r){
  fillMob(8,3,assisted,[2,4,5,6,7,8],['aidedTotal','aidedPartial']);
  [1,2,3,4,5,6].forEach((col,j)=>set(7,14,col,num(totals(j<3?'manualTotal':'manualPartial')[j%3])));
  [2,4,5,6,7,8].forEach((col,j)=>set(8,15,col,num(totals(j<3?'aidedTotal':'aidedPartial')[j%3])));
- addValue(7,15,1,num(ttot[0]));addValue(7,15,4,num(ttot[1]));
+ // El resumen manual se completa después de añadir las filas personalizadas.
  addValue(8,16,2,num(ttot[2]));addValue(8,16,6,num(ttot[3]));
  set(8,17,8,pct(ttot[2],ttot[0]+ttot[2]));
  set(8,18,8,pct(ttot[3],ttot[1]+ttot[3]));
@@ -963,6 +963,28 @@ function fillTemplateTables(xml,f,r){
    const e=f.mobilizations?.entries?.[c.id]||{};
    typesFor.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(row)[colsFor[j*3+shift]],num(e[kind]?.[shift]??0))));
   }
+ }
+ // Localizar la fila de resultados por su texto, nunca por un índice que cambia.
+ const manualSummary=rows(7).find(row=>/Total\s+de\s+LTM\s+y\s+LPM/i.test(text(row)));
+ if(manualSummary){
+  const cc=cells(manualSummary);
+  const pieces=cc.map(tc=>text(tc));
+  const li=pieces.findIndex(x=>/LTM/i.test(x));
+  const pi=pieces.findIndex((x,i)=>i>li&&/LPM/i.test(x));
+  if(li>=0&&pi>li){
+   const ltmTarget=cc.slice(li+1,pi).find(tc=>!text(tc).trim());
+   const lpmTarget=cc.slice(pi+1).find(tc=>!text(tc).trim());
+   if(!ltmTarget||!lpmTarget)throw Error('La fila de LTM/LPM no contiene las celdas de resultado previstas.');
+   write(ltmTarget,num(ttot[0]));write(lpmTarget,num(ttot[1]));
+  }else throw Error('No se identifican las fórmulas LTM y LPM del modelo.');
+ }
+ const postureRow=rows(7).find(row=>/no\s+pueden\s+adoptar\s+algunas\s+posturas/i.test(text(row)));
+ if(postureRow){
+  const cc=cells(postureRow);
+  const answer=String(f.pacientesNAPosturas||'').trim();
+  if(answer&&!/^(s[ií]|no)$/i.test(answer))throw Error('Indique Sí o No en la pregunta sobre posturas de pacientes no autónomos.');
+  if(answer&&cc.length>1)write(cc[1],answer);
+  if(answer&&/^s[ií]$/i.test(answer)&&f.pacientesNAPosturasDetalle&&cc.length>2)write(cc[2],f.pacientesNAPosturasDetalle);
  }
  // Tipos de sillas en las columnas A-G existentes en el modelo.
  const chairTypes=Object.entries(f.wheelchairs?.entries||{}).filter(([,x])=>Number(x?.count)>0);
