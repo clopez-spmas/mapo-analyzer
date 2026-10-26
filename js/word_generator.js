@@ -1032,7 +1032,7 @@ function fillTemplateTables(xml,f,r){
  const chairPages=Math.max(1,Math.ceil(chairTypes.length/chairCols.length));
  const wheelchairPoints=x=>['brakes','arms','back','width'].reduce((n,k)=>n+(x[k]===true?0:1),0);
  const chairCaption=(table,part,page)=>{
-  const model=rows(table).find(row=>/Unidades:\s*N[uú]mero/i.test(text(row)))||rows(table)[9];
+  const model=rows(table).find(row=>cells(row).length===1)||rows(table)[0];
   if(!model)throw Error('No se encuentra una fila corporativa para identificar los tipos de sillas.');
   // Una fila final explicativa por cada grupo A-G, conservando los bordes y fuentes de la plantilla.
   const newRow=model.cloneNode(true);
