@@ -1204,7 +1204,51 @@ function fillTemplateTables(xml,f,r){
  const hasAids=Object.values(aids).some(x=>x?.presencia===true);
  const aidTitle=bathRow(bathSource,/¿Hay ayudas para la higiene del paciente/i);
  if(aidTitle&&Object.keys(aids).length&&cells(aidTitle).length>1)write(cells(aidTitle).at(-1),hasAids?'Sí':'No');
- matrix(13,f.wcTypes||[],5,null,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
+ // Tabla corporativa WC: localizar celdas reales por fila, incluidas combinaciones.
+ const wcTypes=f.wcTypes||[],wcOriginal=tables[13],wcCapacity=6;
+ const wcPages=Math.max(1,Math.ceil(wcTypes.length/wcCapacity));
+ let previousWC=wcOriginal;
+ for(let page=0;page<wcPages;page++){
+  const table=page===0?wcOriginal:wcOriginal.cloneNode(true);
+  if(page>0)previousWC.parentNode.insertBefore(table,previousWC.nextSibling);
+  previousWC=table;
+  const part=wcTypes.slice(page*wcCapacity,(page+1)*wcCapacity);
+  const getRow=re=>direct(table,'tr').find(row=>re.test(text(row)));
+  const fillWC=(re,fn)=>{
+   const row=getRow(re);if(!row)throw Error('Falta la fila WC de la plantilla: '+re);
+   const cc=cells(row);
+   if(cc.length<7)throw Error('La fila WC tiene menos de seis columnas: '+text(row).slice(0,65));
+   cc.slice(-7,-1).forEach((tc,j)=>write(tc,part[j]?fn(part[j]):''));
+  };
+  for(const [pattern,key] of [
+   [/Espacio insuficiente/i,'space'],
+   [/Altura del WC inadecuada/i,'height'],
+   [/Ausencia o inadecuaci[oó]n/i,'bar'],
+   [/Anchura de la puerta/i,'door'],
+   [/Espacio lateral entre WC/i,'lateral']
+  ])fillWC(pattern,x=>x[key]===true?'X':x[key]===false?'—':'');
+  fillWC(/Apertura de la puerta/i,x=>x.doorInward??'');
+  fillWC(/Unidades:\s*N[uú]mero/i,x=>x.units??'');
+  fillWC(/Puntuaci[oó]n por tipo de ba[nñ]o/i,x=>{
+   return num((x.space===true?2:0)+(x.height===true?1:0)+(x.bar===true?1:0)+(x.door===true?1:0)+(x.lateral===true?1:0));
+  });
+  const isLast=page===wcPages-1;
+  const totalUnits=wcTypes.reduce((a,x)=>a+Number(x.units||0),0);
+  const totalPoints=wcTypes.reduce((a,x)=>a+Number(x.units||0)*((x.space===true?2:0)+(x.height===true?1:0)+(x.bar===true?1:0)+(x.door===true?1:0)+(x.lateral===true?1:0)),0);
+  const setLast=(re,value)=>{const row=getRow(re);if(row&&cells(row).length)write(cells(row).at(-1),isLast?value:'');};
+  setLast(/Unidades:\s*N[uú]mero/i,num(totalUnits));
+  setLast(/Puntuaci[oó]n por tipo de ba[nñ]o/i,num(totalPoints));
+  setLast(/PMWC\s*:/i,r.details?.pmWC==null?'':num(r.details.pmWC));
+  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const rr=direct(table,'tr'),model=rr.find(row=>cells(row).length===1)||rr[0];
+  if(!model)throw Error('No se puede crear la fila descriptiva de WC.');
+  const legend=model.cloneNode(true);
+  cells(legend).forEach(tc=>write(tc,''));
+  write(cells(legend)[0],description);
+  const final=getRow(/PMWC\s*:/i);
+  if(final)table.insertBefore(legend,final);
+  else table.appendChild(legend);
+ }
  matrix(14,f.roomTypes||[],5,null,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
