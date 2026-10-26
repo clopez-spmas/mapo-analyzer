@@ -1374,9 +1374,11 @@ function fillTemplateTables(xml,f,r){
  if(heading<0||!pr[heading+1]||cells(pr[heading+1]).length<7)throw Error('No coincide la estructura de las medidas de planificación.');
  const original=pr[heading+1],measures=(f.planificacionPreventiva?.medidas||[]).filter(m=>String(m.medida||'').trim());
  const template=original.cloneNode(true);
+ let previousMeasureRow=original;
  for(let i=0;i<Math.max(1,measures.length);i++){
   const row=i===0?original:template.cloneNode(true);
-  if(i>0)original.parentNode.insertBefore(row,pr[heading+2]||null);
+  if(i>0)previousMeasureRow.parentNode.insertBefore(row,previousMeasureRow.nextSibling);
+  previousMeasureRow=row;
   const cs=cells(row);
   write(cs[2],measures[i]?.medida||'');
   // Columna de fecha prevista de aplicación: siempre en blanco.
