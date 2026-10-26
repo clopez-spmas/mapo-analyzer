@@ -1157,7 +1157,8 @@ function fillTemplateTables(xml,f,r){
   const part=baths.slice(page*bathCapacity,(page+1)*bathCapacity);
   bathPatterns.forEach(([re,key])=>bathValues(bathRow(table,re),part,x=>x[key]===true?'X':x[key]===false?'—':''));
   bathValues(bathRow(table,/Apertura de la puerta.*hacia adentro/i),part,x=>x.doorInward??'');
-  // El programa no distingue ducha y bañera fija: no inferir dos respuestas de un solo texto.
+  bathValues(bathRow(table,/Presencia de ducha/i),part,x=>x.shower==null?'':x.shower?'SÍ':'NO');
+  bathValues(bathRow(table,/Bañera fija/i),part,x=>x.fixedBathtub==null?'':x.fixedBathtub?'SÍ':'NO');
   bathValues(bathRow(table,/Unidades:\s*N[uú]mero/i),part,x=>x.units??'');
   const typesRow=bathRow(table,/^C\s*\(baño central\)/i);
   if(typesRow)bathValues(typesRow,part,x=>x.description||'');
