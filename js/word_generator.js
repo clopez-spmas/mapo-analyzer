@@ -854,6 +854,55 @@ function fillTemplateTables(xml,f,r){
  // ni repartir horarios solapados entre turnos sin confirmación del técnico.
  const opRow=direct(staffTable||tables[4],'tr').find(row=>/N.º TOTAL DE PERSONAS|Nº TOTAL DE PERSONAS/i.test(text(row)));
  if(opRow){const cs=cells(opRow);if(cs.length>1)write(cs[cs.length-1],'Op = '+num(r.op??f.op));}
+
+ // Identificación y horarios en la tabla original, sin inferir asignación a turnos.
+ if(staffTable){
+  const rr=direct(staffTable,'tr');
+  const append=(tc,val)=>{
+   if(!tc||val===undefined||val===null||val==='')return;
+   const p=direct(tc,'p')[0];if(!p)return;
+   const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
+   t.textContent=' '+String(val);t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);
+  };
+  const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
+  const header=rr.find(row=>/EMPRESA:/.test(text(row))&&/FECHA:/.test(text(row)));
+  if(header){
+   const cs=cells(header);
+   const identification=cs.find(tc=>/EMPRESA:/.test(text(tc)));
+   if(identification){
+    const paras=direct(identification,'p');
+    paras.forEach(p=>{
+     const t=text(p);
+     if(/EMPRESA:/.test(t))append(p,f.empresa);
+     if(/CENTRO:/.test(t))append(p,f.centroTrabajo);
+    });
+   }
+   const fecha=cs.find(tc=>/FECHA:/.test(text(tc)));
+   if(fecha)append(fecha,date(f.fecha));
+  }
+  const position=rr.findIndex(row=>/Sala\s*\/\s*Unidad/i.test(text(row))&&/camas/i.test(text(row)));
+  if(position>=0&&rr[position+1]){
+   const cs=cells(rr[position+1]);
+   if(cs[0])write(cs[0],f.unidad||'');
+   if(cs[1])write(cs[1],f.codigo||'');
+   if(cs[2])write(cs[2],f.camas??'');
+  }
+  const full=(f.workerSchedule?.full||[]).filter(e=>Number(e.people)>0);
+  const partial=(f.workerSchedule?.partial||[]).filter(e=>Number(e.people)>0);
+  const fmt=list=>list.map(e=>String(e.start||'')+'–'+String(e.end||'')+' ('+e.people+' personas)').join('; ');
+  const first=rr.findIndex(row=>/1\.1\.1\./.test(text(row)));
+  const second=rr.findIndex(row=>/1\.1\.2\./.test(text(row)));
+  const fillSchedule=(from,to,items)=>{
+   if(from<0)return;
+   const segment=rr.slice(from+1,to<0?rr.length:to);
+   const horario=segment.find(row=>/^Horario\s*:/i.test(text(cells(row)[0])));
+   const count=segment.find(row=>/N[ºo°.]?\s*de\s*personas/i.test(text(row)));
+   if(horario&&cells(horario)[1])write(cells(horario)[1],fmt(items));
+   if(count&&cells(count)[1])write(cells(count)[1],items.reduce((n,e)=>n+Number(e.people||0),0));
+  };
+  fillSchedule(first,second,full);
+  fillSchedule(second,-1,partial);
+ }
  // Portada e identificación
  set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
  set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
