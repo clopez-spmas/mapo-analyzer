@@ -683,6 +683,32 @@ function replaceAcknowledgement(xml,f){
  return new XMLSerializer().serializeToString(doc);
 }
 
+function insertPreventiveBullets(xml,f){
+ const measures=(f.planificacionPreventiva?.medidas||[]).map(m=>String(m.medida||'').trim()).filter(Boolean);
+ if(!measures.length)return xml;
+ const doc=new DOMParser().parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const paragraphs=Array.from(doc.getElementsByTagNameNS(ns,'p'));
+ const text=p=>Array.from(p.getElementsByTagNameNS(ns,'t')).map(n=>n.textContent||'').join('');
+ const anchor=paragraphs.find(p=>/se insta a la empresa adoptar las siguientes medidas preventivas\s*:/i.test(text(p)));
+ if(!anchor)throw Error('No aparece el párrafo introductorio de medidas preventivas en la plantilla.');
+ let cursor=anchor;
+ for(const measure of measures){
+  const p=doc.createElementNS(ns,'w:p'),pPr=doc.createElementNS(ns,'w:pPr');
+  const spacing=doc.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:after','80');pPr.appendChild(spacing);
+  const indent=doc.createElementNS(ns,'w:ind');indent.setAttributeNS(ns,'w:left','480');indent.setAttributeNS(ns,'w:hanging','240');pPr.appendChild(indent);
+  p.appendChild(pPr);
+  const symbol=doc.createElementNS(ns,'w:r'),bullet=doc.createElementNS(ns,'w:t');
+  bullet.textContent='●  ';bullet.setAttribute('xml:space','preserve');symbol.appendChild(bullet);p.appendChild(symbol);
+  const run=doc.createElementNS(ns,'w:r'),runPr=doc.createElementNS(ns,'w:rPr');
+  const font=doc.createElementNS(ns,'w:rFonts');font.setAttributeNS(ns,'w:ascii','Arial');font.setAttributeNS(ns,'w:hAnsi','Arial');runPr.appendChild(font);
+  const size=doc.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','20');runPr.appendChild(size);
+  run.appendChild(runPr);
+  const t=doc.createElementNS(ns,'w:t');t.textContent=measure;t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);
+  cursor.parentNode.insertBefore(p,cursor.nextSibling);cursor=p;
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 function replacePlanningIntroduction(xml,f){
  const company=String(f.empresa||'').trim(),person=String(f.solicitanteEstudio||'').trim();
  const title=/^(?:D\.?\s*\/\s*D(?:ña|ª)\.?|D\.|Dña\.?|Sr\.|Sra\.)\s*/i;
@@ -1412,6 +1438,7 @@ async function generate(template){
  xml=selectRiskConclusion(xml,r);
  xml=replaceSimulatedConclusion(xml);
  xml=replaceAcknowledgement(xml,f);
+ xml=insertPreventiveBullets(xml,f);
  xml=replacePlanningIntroduction(xml,f);
  xml=replacePlanningCompanyMentions(xml,f);
  xml=colorMapoResultCell(xml,r);
