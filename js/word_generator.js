@@ -218,11 +218,11 @@ async function insertEquipmentPhotos(zip,xml,f){
  let pid=1000;while(xml.includes('id="'+pid+'"'))pid++;
  const drawing=(relationship,id)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2400000" cy="1750000"/><wp:docPr id="'+id+'" name="Fotografía equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+relationship+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2400000" cy="1750000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
  const photoCell=(body)=>'<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr><w:p><w:r>'+body+'</w:r></w:p></w:tc>';
- let rows='<w:tr>'+cell('Equipo / modelo')+cell('Fotografía')+'</w:tr>';
+ let rows='';
  for(let i=0;i<entries.length;i++){
   const e=entries[i];
   const label=[e.nombre,e.descripcion,e.marca,e.modelo].filter(Boolean).join(' · ')||'Equipo '+(i+1);
-  let photo=cell('Sin fotografía');
+  let photo='<w:p><w:r><w:t>Sin fotografía</w:t></w:r></w:p>';
   const m=/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$/.exec(e.imagen||'');
   if(m){
    const ext=m[1]==='jpg'?'jpeg':m[1];
@@ -231,12 +231,11 @@ async function insertEquipmentPhotos(zip,xml,f){
    const name='mapo_equipo_'+i+'.'+ext,rel='rId'+rid++;
    zip.file('word/media/'+name,m[2].replace(/\s/g,''),{base64:true});
    rels=rels.replace('</Relationships>','<Relationship Id="'+rel+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/></Relationships>');
-   photo=photoCell(drawing(rel,pid++));
+   photo='<w:p><w:r>'+drawing(rel,pid++)+'</w:r></w:p>';
   }
-  rows+='<w:tr>'+cell(label)+photo+'</w:tr>';
+  rows+='<w:p><w:r><w:t>'+xesc(label)+'</w:t></w:r></w:p>'+photo;
  }
- const table='<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>'<w:'+k+' w:val="single" w:sz="4" w:color="D0D0D0"/>').join('')+'</w:tblBorders></w:tblPr>'+rows+'</w:tbl>';
- xml=xml.replace(target[0],table);
+ xml=xml.replace(target[0],rows);
  zip.file(relsPath,rels);zip.file('[Content_Types].xml',ct);
  return {xml,inserted:true};
 }
@@ -923,8 +922,8 @@ async function generate(template){
  const found=[...xml.matchAll(/\{([a-z_]+)\}/g)].map(m=>m[1]);const unknown=[...new Set(found.filter(k=>!allKeys.includes(k)))];
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
- const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  xml=fillTemplateTables(xml,f,r);
+ const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
 
 // Los antiguos marcadores de creación de tablas no deben quedar impresos.
  xml=xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g,p=>{
