@@ -923,6 +923,13 @@ async function generate(template){
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
  xml=fillTemplateTables(xml,f,r);
+
+// Los antiguos marcadores de creación de tablas no deben quedar impresos.
+ xml=xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g,p=>{
+  const visible=p.replace(/<[^>]*>/g,'').trim();
+  return /^\{tabla_[a-z_]+\}$/.test(visible)?'':p;
+});
+
  xml=replaceScalarMarkers(xml,f,r);
  xml=replaceConclusionsSummary(xml,r);
  xml=selectRiskConclusion(xml,r);
