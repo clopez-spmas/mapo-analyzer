@@ -1330,9 +1330,33 @@ function fillTemplateTables(xml,f,r){
  set(19,2,1,(ttot[0]+ttot[2])?bool(ttot[2]/(ttot[0]+ttot[2])>=.9):'');
  set(22,1,1,'%LPA = '+pct(ttot[3],ttot[1]+ttot[3]));
  set(22,2,1,(ttot[1]+ttot[3])?bool(ttot[3]/(ttot[1]+ttot[3])>=.9):'');
- set(24,0,1,'PMSR = '+num(r.details?.pmsr));set(24,2,1,'TSR = '+num(r.details?.tsr));
- set(24,3,1,bool(r.details?.fcSufficient));set(25,3,8,'FC = '+num(r.fc));
-set(26,3,5,'Famb = '+num(r.famb));
+  // Rellenar valores calculados en las mismas celdas con rótulos del modelo.
+ const findLabeledCell=(pattern)=>{
+  for(const table of tables)for(const row of direct(table,'tr'))for(const tc of cells(row))
+   if(pattern.test(text(tc)))return tc;
+  return null;
+ };
+ const replaceLabelValue=(pattern,label,value)=>{
+  if(value==null||!Number.isFinite(Number(value)))throw Error('No existe resultado calculado para '+label);
+  const tc=findLabeledCell(pattern);
+  if(!tc)throw Error('No se encuentra la celda '+label+' en la plantilla.');
+  const paragraphs=direct(tc,'p');
+  const target=paragraphs.find(p=>pattern.test(text(p)))||paragraphs[0];
+  if(!target)throw Error('No existe el párrafo de '+label);
+  const textNodes=all(target,'t');
+  const content=textNodes.map(n=>n.textContent||'').join('');
+  const match=pattern.exec(content);
+  if(!match)throw Error('No se reconoce el rótulo '+label);
+  const valueText=num(value);
+  const prefix=content.slice(0,match.index+match[0].length);
+  textNodes[0].textContent=prefix+' '+valueText;
+  textNodes[0].setAttribute('xml:space','preserve');
+  textNodes.slice(1).forEach(n=>n.textContent='');
+ };
+ replaceLabelValue(/\bFC\s*=\s*$/i,'FC',r.fc);
+ replaceLabelValue(/\bPMamb\s*=\s*$/i,'PMamb',r.details?.pmamb);
+ replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
+
  // Planificación: conservar exactamente título, columnas, marcos y zona de aprobación.
  const measures=(f.planificacionPreventiva?.medidas||[]).filter(x=>x.medida?.trim());
  if(measures.length>1)grow(29,4,1,measures.length);
