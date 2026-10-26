@@ -5,7 +5,7 @@ const MAPO_STUDIES={hospitalizacion:{title:'Salas de hospitalización',descripti
 {title:'Descripción — Instalaciones',custom:'reportDescription',reportKey:'instalaciones',reportLabel:'Instalaciones'},
 {title:'Descripción — Factores organizativos',custom:'reportDescription',reportKey:'organizacion',reportLabel:'Factores organizativos'},
 {title:'Personas trabajadoras que realizan MMP',shiftSchedule:true},
-{title:'Pacientes',fields:[['nc','Número de pacientes no colaboradores (NC)','number'],['pc','Número de pacientes parcialmente colaboradores (PC)','number']]},
+{title:'Pacientes',fields:[['nc','Número de pacientes no colaboradores (NC)','number'],['pc','Número de pacientes parcialmente colaboradores (PC)','number'],['pacientesNAPosturas','¿Existen pacientes no autónomos que no puedan adoptar determinadas posturas? Indique Sí o No','text'],['pacientesNAPosturasDetalle','En caso afirmativo, indique qué posturas no pueden adoptar','text']]},
 {title:'Descripción — Frecuencia',custom:'reportDescription',reportKey:'frecuencia',reportLabel:'Frecuencia'},
 {title:'Tareas de movilización',custom:'mobilizations'},
 {title:'Descripción — Equipos de ayuda disponibles',custom:'reportEquipment'},
