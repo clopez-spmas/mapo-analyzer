@@ -918,27 +918,26 @@ function fillTemplateTables(xml,f,r){
  };
  fillMob(7,4,manual,[1,2,3,4,5,6],['manualTotal','manualPartial']);
  fillMob(8,3,assisted,[1,2,3,4,5,6],['aidedTotal','aidedPartial']);
- [1,2,3,4,5,6].forEach((col,j)=>set(7,14,col,num(totals(j<3?'manualTotal':'manualPartial')[j%3])));
- // Los totales asistidos se rellenan por encabezado, después de insertar tareas adicionales.
- // Tareas personalizadas: insertar filas sobre «Total por turno» clonando la fila «Otros».
+ // Tareas personalizadas: insertarlas antes de «Total por turno» en ambas tablas.
  const customs=(f.mobilizations?.custom||[]).filter(c=>c.name?.trim());
- for(const [ti,manual,typesFor,colsFor,totalRow] of [
-   [7,true,['manualTotal','manualPartial'],[1,2,3,4,5,6],14],
-   [8,false,['aidedTotal','aidedPartial'],[1,2,3,4,5,6],15]
- ]){
-  const related=customs.filter(c=>typesFor.includes(c.category));
-  if(!related.length)continue;
-  const originalOther=rows(ti)[totalRow-1];
-  const totalOriginal=rows(ti)[totalRow];
-  const inserted=[];
-  for(const c of related){
-   const row=originalOther.cloneNode(true);
-   tables[ti].insertBefore(row,totalOriginal);
-   inserted.push(row);
-   write(cells(row)[0],c.name);
-   const e=f.mobilizations?.entries?.[c.id]||{};
-   typesFor.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(row)[colsFor[j*3+shift]],num(e[kind]?.[shift]??0))));
+ for(const [ti,kinds] of [[7,['manualTotal','manualPartial']],[8,['aidedTotal','aidedPartial']]]){
+  const rr=rows(ti);
+  const totalRow=rr.find(row=>/Total\s+por\s+turno/i.test(text(row)));
+  if(!totalRow)throw Error('Falta la fila Total por turno en movilizaciones '+ti);
+  const totalIndex=rr.indexOf(totalRow);
+  const sample=rr.slice(0,totalIndex).reverse().find(row=>/^Otros\s*:/i.test(text(cells(row)[0]||row)))||rr[totalIndex-1];
+  if(!sample||cells(sample).length<7)throw Error('Falta fila de tarea que sirva de modelo en '+ti);
+  for(const c of customs.filter(c=>kinds.includes(c.category))){
+   const entry=f.mobilizations?.entries?.[c.id]||{};
+   const clone=sample.cloneNode(true);
+   write(cells(clone)[0],c.name);
+   kinds.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],num(entry[kind]?.[shift]??0))));
+   totalRow.parentNode.insertBefore(clone,totalRow);
   }
+  // Los totales incluyen todas las entradas, también las tareas personalizadas.
+  const totalCells=cells(totalRow);
+  if(totalCells.length!==7)throw Error('La fila Total por turno no contiene seis valores en tabla '+ti);
+  kinds.forEach((kind,j)=>totals(kind).forEach((value,shift)=>write(totalCells[1+j*3+shift],num(value))));
  }
  // Localizar la fila de resultados por su texto, nunca por un índice que cambia.
  const manualSummary=rows(7).find(row=>/Total\s+de\s+LTM\s+y\s+LPM/i.test(text(row)));
