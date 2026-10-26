@@ -7,7 +7,7 @@
   const help={chair:'Estas son las cuatro características que suman puntos a PMSR. Reposapiés y mantenimiento son datos descriptivos y no suman puntos.',bath:'Estas tres características son las que puntúan en PMB. La apertura de puerta, ducha y bañera se registran como datos descriptivos.',wc:'Estas cinco características suman puntos a PMWC. La apertura de puerta hacia dentro es descriptiva.',room:'Estas cinco características suman puntos a PMH. Obstáculos, altura fija de cama, barras, anchura de puerta y ruedas son datos descriptivos.'};
   function renderEncamados(){
     const v=formData.pacientesNAEncamados||'';
-    return '<div class="registry-card" style="margin-top:20px"><h3>Pregunta complementaria para el informe Word</h3><p>¿El motivo por el que no se usa el baño o la silla de ruedas es porque los pacientes no autónomos (NA) siempre están encamados?</p><div class="choice-row">'+
+    return '<div class="registry-card" style="margin-top:20px"><h3>Información sobre pacientes encamados</h3><p>¿El motivo por el que no se usa el baño o la silla de ruedas es porque los pacientes no autónomos (NA) siempre están encamados?</p><div class="choice-row">'+
     [['si','Sí'],['no','No'],['np','NP']].map(([key,label])=>'<label class="choice"><input type="radio" name="pacientesNAEncamados" value="'+key+'" '+(v===key?'checked':'')+'> '+label+'</label>').join('')+
     '</div><p>Dato descriptivo; no modifica PMH ni Famb.</p></div>';
   }
