@@ -1288,6 +1288,18 @@ function fillTemplateTables(xml,f,r){
   table.appendChild(legend);
  }
 
+ // PMH y respuesta de pacientes encamados: celdas originales del informe.
+ const pmhRow=direct(tables[15],'tr').find(row=>/PMH\s*:\s*Puntuaci[oó]n media de habitaciones/i.test(text(row)));
+ if(!pmhRow)throw Error('No se encuentra la fila PMH en la plantilla.');
+ const pmhCells=cells(pmhRow);
+ if(pmhCells.length<2)throw Error('Falta celda de resultado PMH.');
+ if(r.details?.pmH!=null)write(pmhCells.at(-1),num(r.details.pmH));
+ const bedboundRow=direct(tables[15],'tr').find(row=>/motivo.*no se use el ba[nñ]o.*silla de ruedas/i.test(text(row)));
+ if(!bedboundRow)throw Error('No se encuentra la pregunta sobre pacientes encamados.');
+ const bedCells=cells(bedboundRow);
+ if(bedCells.length<2)throw Error('Falta celda de respuesta de pacientes encamados.');
+ const bedValue=f.pacientesNAEncamados;
+ if(bedValue!==undefined&&bedValue!==null&&bedValue!=='')write(bedCells.at(-1),bedValue===true?'Sí':bedValue===false?'No':String(bedValue));
  // PMamb se muestra junto a la fórmula existente del modelo, sin sustituirla.
  const environmentTable=tables.find(t=>direct(t,'tr').some(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row))));
  if(!environmentTable)throw Error('No se encuentra el apartado PMamb en la plantilla.');
