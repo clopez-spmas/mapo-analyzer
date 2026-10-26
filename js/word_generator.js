@@ -1013,35 +1013,68 @@ function fillTemplateTables(xml,f,r){
   write(cc[2],pct(numerator,denominator));
  }
  // Tipos de sillas en las columnas A-G existentes en el modelo.
+ const chairCatalog={
+  large_wheel:'Silla de ruedas de rueda grande',
+  small_wheel:'Silla de ruedas de rueda pequeña',
+  shower_bath:'Silla de ducha o baño',
+  electric:'Silla de ruedas eléctrica',
+  tilt:'Silla de ruedas basculante',
+  manual_transit:'Silla manual de tránsito (no autopropulsable)',
+  manual_self:'Silla manual autopropulsable',
+  manual_light:'Silla manual ligera',
+  manual_bariatric:'Silla manual bariátrica',
+  manual_reclining:'Silla manual con respaldo reclinable',
+  pediatric:'Silla de ruedas pediátrica'
+ };
+ for(const item of f.wheelchairs?.custom||[])if(item.id&&item.name)chairCatalog[item.id]=item.name;
  const chairTypes=Object.entries(f.wheelchairs?.entries||{}).filter(([,x])=>Number(x?.count)>0);
- if(chairTypes.length>7){
-   const source=tables[11];let previous=source;
-   for(let offset=7;offset<chairTypes.length;offset+=7){
-    const copy=source.cloneNode(true);
-    previous.parentNode.insertBefore(copy,previous.nextSibling);
-    previous=copy;
-    [2,3,4,5,7,8,9].forEach((col,j)=>{
-      const entry=chairTypes[offset+j],x=entry?.[1];
-      const put=(row,value)=>write(cells(rows(copy)[row])[col],value);
-      put(2,x?String.fromCharCode(65+j):'');
-      [['brakes',3],['arms',4],['back',5],['width',6]].forEach(([key,row])=>{
-        put(row,x?(x[key]===false?'X':'—'):'');
-      });
-      put(9,x?.count??'');
-    });
-    write(cells(rows(copy)[8])[10],'');
-    write(cells(rows(copy)[12])[6],'');
-   }
+ const chairCols=[2,3,4,5,7,8,9],chairBase=tables[11];
+ const chairPages=Math.max(1,Math.ceil(chairTypes.length/chairCols.length));
+ const wheelchairPoints=x=>['brakes','arms','back','width'].reduce((n,k)=>n+(x[k]===true?0:1),0);
+ const chairCaption=(table,part,page)=>{
+  const model=rows(table).find(row=>/Unidades:\s*N[uú]mero/i.test(text(row)))||rows(table)[9];
+  if(!model)throw Error('No se encuentra una fila corporativa para identificar los tipos de sillas.');
+  // Una fila final explicativa por cada grupo A-G, conservando los bordes y fuentes de la plantilla.
+  const newRow=model.cloneNode(true);
+  const targetCells=cells(newRow);
+  targetCells.forEach(tc=>write(tc,''));
+  const label=part.map(([kind],i)=>'Tipo '+String.fromCharCode(65+i)+': '+(chairCatalog[kind]||kind.replace(/_/g,' '))).join('  |  ');
+  if(!targetCells[0])throw Error('No hay celda donde insertar la descripción de los tipos de sillas.');
+  write(targetCells[0],label);
+  const last=rows(table)[rows(table).length-1];
+  table.insertBefore(newRow,last);
+ };
+ let chairPagesLast=chairBase;
+ for(let page=0;page<chairPages;page++){
+  const table=page===0?chairBase:chairBase.cloneNode(true);
+  if(page>0){
+   const previous=page===1?chairBase:chairPagesLast;
+   previous.parentNode.insertBefore(table,previous.nextSibling);
   }
- const chairCols=[2,3,4,5,7,8,9];
- chairTypes.forEach(([kind,x],i)=>{
-  const col=chairCols[i];
-  set(11,2,col,String.fromCharCode(65+i));
-  [['brakes',3],['arms',4],['back',5],['width',6]].forEach(([field,row])=>set(11,row,col,x[field]===false?'X':'—'));
-  set(11,9,col,x.count);
- });
- set(11,8,10,'Total de sillas (TSR): '+num(r.details?.tsr));
- set(11,12,6,'PMSR = '+num(r.details?.pmsr));
+  const part=chairTypes.slice(page*chairCols.length,(page+1)*chairCols.length);
+  const rr=direct(table,'tr');
+  const put=(row,col,val)=>write(cells(rr[row])[col],val);
+  chairCols.forEach((col,j)=>{
+   const entry=part[j],x=entry?.[1];
+   put(2,col,entry?String.fromCharCode(65+j):'');
+   for(const [criterion,row] of [['brakes',3],['arms',4],['back',5],['width',6]]){
+    put(row,col,x?(x[criterion]===true?'—':'X'):'');
+   }
+   // No se recogen reposapiés ni mantenimiento: mantener esas filas sin respuesta.
+   put(7,col,'');put(8,col,'');
+   put(9,col,x?.count??'');
+   put(10,col,x?num(wheelchairPoints(x)):'');
+  });
+  // Los valores globales sólo figuran en la última continuación.
+  const isLast=page===chairPages-1;
+  const totalSillas=Number(r.details?.tsr);
+  const totalPuntos=Number(r.details?.wheelchairPoints);
+  put(9,cells(rr[9]).length-1,isLast&&Number.isFinite(totalSillas)?num(totalSillas):'');
+  put(11,cells(rr[11]).length-1,isLast&&Number.isFinite(totalPuntos)?num(totalPuntos):'');
+  put(12,cells(rr[12]).length-1,isLast&&r.details?.pmsr!=null?num(r.details.pmsr):'');
+  chairCaption(table,part,page);
+  chairPagesLast=table;
+ }
  // Camas: ampliar o suprimir solo las filas de equipo, clonando la fila corporativa.
  const beds=f.camasRegulablesInforme||[];
  if(beds.length>4)grow(15,2,4,beds.length);
