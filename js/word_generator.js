@@ -202,44 +202,44 @@ function normalize(xml){
 
 async function insertEquipmentPhotos(zip,xml,f){
  const entries=(f.informeDescriptivo?.equipos||[]).filter(e=>e&&(e.modelo||e.nombre||e.descripcion||e.imagen));
- const token=xml.includes('{tabla_fotos_equipos}')?'{tabla_fotos_equipos}':'{descripcion_equipos}';
- if(!xml.includes(token)||!entries.some(e=>e.imagen?.startsWith('data:image/')))return {xml,inserted:false};
+ if(!entries.length)return {xml,inserted:false};
  const para=/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
- const candidates=[...xml.matchAll(para)].filter(m=>m[0].includes(token));
- const target=candidates.find(m=>m[0].replace(/<[^>]+>/g,'').trim()===token);
- if(!target)throw Error('El marcador '+token+' debe estar en un párrafo independiente para insertar fotografías.');
- const relsPath='word/_rels/document.xml.rels';
- const relsFile=zip.file(relsPath);
- if(!relsFile)throw Error('Falta el archivo de relaciones DOCX.');
- let rels=await relsFile.async('string');
- let ct=await zip.file('[Content_Types].xml').async('string');
- if(!/Extension="jpe?g"/i.test(ct))ct=ct.replace('</Types>','<Default Extension="jpeg" ContentType="image/jpeg"/></Types>');
+ const matches=[...xml.matchAll(para)];
+ const plain=p=>[...p.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)].map(x=>x[1]).join('').trim();
+ const found=matches.find(m=>['{descripcion_equipos}','{tabla_fotos_equipos}'].includes(plain(m[0])));
+ const heading=matches.find(m=>/^Equipos de ayuda disponibles\s*:/i.test(plain(m[0])));
+ if(!found&&!heading)throw Error('No se encontró la sección Equipos de ayuda disponibles en la plantilla.');
+ const relsPath='word/_rels/document.xml.rels',relFile=zip.file(relsPath);
+ if(!relFile)throw Error('Relaciones DOCX no disponibles.');
+ let rels=await relFile.async('string'),ct=await zip.file('[Content_Types].xml').async('string');
  let rid=1;while(rels.includes('Id="rId'+rid+'"'))rid++;
  let pid=1000;while(xml.includes('id="'+pid+'"'))pid++;
- const drawing=(relationship,id)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2400000" cy="1750000"/><wp:docPr id="'+id+'" name="Fotografía equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+relationship+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2400000" cy="1750000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
- const photoCell=(body)=>'<w:tc><w:tcPr><w:tcW w:w="4500" w:type="dxa"/></w:tcPr><w:p><w:r>'+body+'</w:r></w:p></w:tc>';
- let rows='';
+ const drawing=(rel,id)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2400000" cy="1750000"/><wp:docPr id="'+id+'" name="Foto equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rel+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2400000" cy="1750000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
+ const paragraph=content=>'<w:p><w:r>'+content+'</w:r></w:p>';
+ const label=e=>[e.nombre,e.descripcion,e.marca,e.modelo].filter(Boolean).join(' · ');
+ const cell=(content)=>'<w:tc><w:tcPr><w:tcW w:w="4400" w:type="dxa"/></w:tcPr>'+content+'</w:tc>';
+ const headerCell=t=>'<w:tc><w:tcPr><w:tcW w:w="4400" w:type="dxa"/><w:shd w:fill="194986"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr><w:t>'+t+'</w:t></w:r></w:p></w:tc>';
+ let rows='<w:tr>'+headerCell('Equipo / modelo')+headerCell('Fotografía')+'</w:tr>';
  for(let i=0;i<entries.length;i++){
-  const e=entries[i];
-  const label=[e.nombre,e.descripcion,e.marca,e.modelo].filter(Boolean).join(' · ')||'Equipo '+(i+1);
-  let photo='<w:p><w:r><w:t>Sin fotografía</w:t></w:r></w:p>';
+  const e=entries[i];let picture=paragraph('<w:t>Sin fotografía</w:t>');
   const m=/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$/.exec(e.imagen||'');
   if(m){
    const ext=m[1]==='jpg'?'jpeg':m[1];
-   const contentType=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
-   if(!new RegExp('Extension="'+ext+'"','i').test(ct))ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+contentType+'"/></Types>');
-   const name='mapo_equipo_'+i+'.'+ext,rel='rId'+rid++;
-   zip.file('word/media/'+name,m[2].replace(/\s/g,''),{base64:true});
-   rels=rels.replace('</Relationships>','<Relationship Id="'+rel+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/></Relationships>');
-   photo='<w:p><w:r>'+drawing(rel,pid++)+'</w:r></w:p>';
+   const mime=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
+   if(!new RegExp('Extension="'+ext+'"','i').test(ct))ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+mime+'"/></Types>');
+   const file='mapo_equipo_'+i+'.'+ext,rel='rId'+rid++;
+   zip.file('word/media/'+file,m[2].replace(/\s/g,''),{base64:true});
+   rels=rels.replace('</Relationships>','<Relationship Id="'+rel+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+file+'"/></Relationships>');
+   picture=paragraph(drawing(rel,pid++));
   }
-  rows+='<w:p><w:r><w:t>'+xesc(label)+'</w:t></w:r></w:p>'+photo;
+  rows+='<w:tr>'+cell(paragraph('<w:t xml:space="preserve">'+xesc(label(e)||'Equipo '+(i+1))+'</w:t>'))+cell(picture)+'</w:tr>';
  }
- xml=xml.replace(target[0],rows);
+ const table='<w:tbl><w:tblPr><w:tblW w:w="8800" w:type="dxa"/></w:tblPr><w:tblGrid><w:gridCol w:w="4400"/><w:gridCol w:w="4400"/></w:tblGrid>'+rows+'</w:tbl>';
+ if(found)xml=xml.replace(found[0],table);
+ else xml=xml.slice(0,heading.index+heading[0].length)+table+xml.slice(heading.index+heading[0].length);
  zip.file(relsPath,rels);zip.file('[Content_Types].xml',ct);
  return {xml,inserted:true};
 }
-
 function replaceUnitX(xml,unit){
  const name=String(unit??'').trim();
  if(!name)return xml;
