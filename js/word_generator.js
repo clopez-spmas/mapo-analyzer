@@ -852,7 +852,8 @@ function fillTemplateTables(xml,f,r){
  }
  // Personal: el OP ya está calculado por MAPO Analyzer. No inferir categorías profesionales
  // ni repartir horarios solapados entre turnos sin confirmación del técnico.
- set(4,16,14,'Op = '+num(r.op??f.op));
+ const opRow=direct(staffTable||tables[4],'tr').find(row=>/N.º TOTAL DE PERSONAS|Nº TOTAL DE PERSONAS/i.test(text(row)));
+ if(opRow){const cs=cells(opRow);if(cs.length>1)write(cs[cs.length-1],'Op = '+num(r.op??f.op));}
  // Portada e identificación
  set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
  set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
