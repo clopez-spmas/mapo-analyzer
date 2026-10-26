@@ -1343,18 +1343,10 @@ function fillTemplateTables(xml,f,r){
  };
  replaceLabelValue(/\bFC\s*=\s*$/i,'FC',r.fc);
  // La fórmula PMB + PMWC + PMH se mantiene y el resultado va en su misma celda.
- const pmambTable=tables.find(table=>direct(table,'tr').some(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row))));
- if(!pmambTable)throw Error('No se encuentra la fila 2.8 PMamb en el modelo.');
- const pmambRow=direct(pmambTable,'tr').find(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row)));
- const formulaCell=cells(pmambRow).find(tc=>/PMamb\s*=\s*PMB/i.test(text(tc)));
- if(!formulaCell)throw Error('No se encuentra la celda de fórmula PMamb.');
- const formulaParagraph=direct(formulaCell,'p').find(p=>/PMamb\s*=\s*PMB/i.test(text(p)));
- if(!formulaParagraph)throw Error('No se encuentra el párrafo de fórmula PMamb.');
- const pmambValue=r.details?.pmamb;
- if(pmambValue==null||!Number.isFinite(Number(pmambValue)))throw Error('Falta el valor calculado PMamb.');
- const valueRun=d.createElementNS(ns,'w:r'),valueText=d.createElementNS(ns,'w:t');
- valueText.setAttribute('xml:space','preserve');valueText.textContent=' '+num(pmambValue);
- valueRun.appendChild(valueText);formulaParagraph.appendChild(valueRun);
+ // PMamb en la tabla vigente: la celda corporativa dice "PMamb =", no la fórmula completa.
+ const pmambResult=r.details?.pmamb;
+ if(pmambResult==null||!Number.isFinite(Number(pmambResult)))throw Error('Falta el valor calculado PMamb.');
+ replaceLabelValue(/\bPMamb\s*=\s*$/i,'PMamb',pmambResult);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
 
  // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
