@@ -1388,28 +1388,56 @@ async function generate(template){
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'});
- const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download='MAPO_'+(f.unidad||'estudio').replace(/[^\w-]+/g,'_')+'.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+ return blob;
+}
+function downloadBlob(blob,name){
+ const link=document.createElement('a'),url=URL.createObjectURL(blob);
+ link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 function createControls(){
  const host=document.getElementById('wordReportPanel');
  if(!host||document.getElementById('mapoGenerateWord'))return;
  const wrap=document.createElement('div');
- wrap.className='registry-card';
- wrap.id='mapoGenerateWord';
- wrap.innerHTML='<h3>Generar informe Word</h3><div class="actions"><button type="button" id="mapoDownloadWord">Generar informe Word</button></div><p id="mapoWordFeedback" role="status"></p>';
+ wrap.className='registry-card';wrap.id='mapoGenerateWord';
+ wrap.innerHTML='<h3>Generar informe Word</h3><label for="mapoWordFilename">Nombre del archivo Word</label><input id="mapoWordFilename" type="text" autocomplete="off" placeholder="MAPO_nombre_unidad.docx" aria-label="Nombre del informe Word"><p class="small">Se guardará como documento .docx. Si su navegador permite elegir carpeta, se abrirá el selector de archivos; en otros navegadores se descargará con el nombre indicado en la carpeta de descargas configurada.</p><div class="actions"><button type="button" id="mapoDownloadWord">Elegir ubicación y guardar Word</button></div><p id="mapoWordFeedback" role="status"></p>';
  host.appendChild(wrap);
+ const input=wrap.querySelector('#mapoWordFilename');
+ const defaultName=()=>{
+  const f=reportData().form||{};
+  return 'MAPO_'+String(f.unidad||'estudio').replace(/[^\p{L}\p{N}_-]+/gu,'_')+'.docx';
+ };
+ input.value=defaultName();
+ input.dataset.defaultName=input.value;
  wrap.querySelector('#mapoDownloadWord').onclick=async()=>{
   const output=wrap.querySelector('#mapoWordFeedback'),button=wrap.querySelector('#mapoDownloadWord');
   button.disabled=true;output.textContent='Preparando documento...';
   try{
+   let name=String(input.value||'').trim().replace(/[\\/:*?"<>|]/g,'_');
+   if(!name)throw Error('Introduzca un nombre para el informe.');
+   if(!/\.docx$/i.test(name))name+='.docx';
+   let handle=null;
+   if(typeof window.showSaveFilePicker==='function'){
+    try{
+     handle=await window.showSaveFilePicker({suggestedName:name,types:[{description:'Documento de Word',accept:{'application/vnd.openxmlformats-officedocument.wordprocessingml.document':['.docx']}}]});
+    }catch(e){if(e?.name==='AbortError'){output.textContent='Guardado cancelado.';return;}throw e;}
+   }
    const response=await fetch('plantillas/MAPO_Hospitalizacion.docx',{cache:'no-store'});
    if(!response.ok)throw Error('La plantilla oficial no está disponible en la carpeta plantillas/ del programa.');
-   await generate(await response.arrayBuffer());
-   output.textContent='Documento generado. Revise el informe en Word.';
+   const blob=await generate(await response.arrayBuffer());
+   if(handle){
+    const writable=await handle.createWritable();
+    await writable.write(blob);await writable.close();
+    output.textContent='Informe Word guardado en la ubicación seleccionada.';
+   }else{
+    downloadBlob(blob,name);
+    output.textContent='Documento descargado como '+name+'. Si desea seleccionar la carpeta, active «Preguntar dónde guardar cada archivo» en los ajustes del navegador.';
+   }
   }catch(e){output.textContent='No se pudo generar el informe: '+e.message;}
   finally{button.disabled=false;}
  };
 }
+
 function init(){createControls();const result=document.getElementById('result');if(result&&!result.querySelector('#openGeneratorFromResult')){const btn=document.createElement('button');btn.type='button';btn.id='openGeneratorFromResult';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>window.MAPOResultScreens?.showWord?.();result.querySelector('.section-heading .actions')?.appendChild(btn);}}
 function openGenerator(){return window.MAPOResultScreens?.showWord?.();}
 window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator,prepare:createControls};
