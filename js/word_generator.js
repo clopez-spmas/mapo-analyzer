@@ -1356,7 +1356,15 @@ function fillTemplateTables(xml,f,r){
  // PMamb en la tabla vigente: la celda corporativa dice "PMamb =", no la fórmula completa.
  const pmambResult=r.details?.pmamb;
  if(pmambResult==null||!Number.isFinite(Number(pmambResult)))throw Error('Falta el valor calculado PMamb.');
- replaceLabelValue(/\bPMamb\s*=\s*$/i,'PMamb',pmambResult);
+ const pmambSection=tables.find(t=>/2\\.8\\.\\s*PMamb/i.test(text(t)));
+ const pmambCells=pmambSection?direct(pmambSection,'tr').flatMap(row=>cells(row)):[];
+ const pmambTarget=pmambCells.find(tc=>/PMamb\\s*=\\s*PMB/i.test(text(tc)));
+ if(!pmambTarget)throw Error('No se encuentra la fórmula PMamb en sección 2.8.');
+ const pmambParagraph=direct(pmambTarget,'p').find(p=>/PMamb/i.test(text(p)));
+ if(!pmambParagraph)throw Error('No se encuentra el párrafo PMamb.');
+ const pmambRun=d.createElementNS(ns,'w:r'),pmambText=d.createElementNS(ns,'w:t');
+ pmambText.textContent=' '+num(pmambResult);pmambText.setAttribute('xml:space','preserve');
+ pmambRun.appendChild(pmambText);pmambParagraph.appendChild(pmambRun);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
 
  // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
