@@ -830,9 +830,9 @@ function fillTemplateTables(xml,f,r){
  };
  // Categorías profesionales: localizar el encabezado de la tabla vigente
  // y rellenar su fila de datos, sin alterar las celdas ni su formato.
- const staffTable=tables.find(table=>rows(table).some(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc)))));
+ const staffTable=tables.find(table=>direct(table,'tr').some(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc)))));
  if(staffTable){
-  const rr=rows(staffTable);
+  const rr=direct(staffTable,'tr');
   const headerIndex=rr.findIndex(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc))));
   const headerCells=cells(rr[headerIndex]);
   const nextRow=rr[headerIndex+1];
