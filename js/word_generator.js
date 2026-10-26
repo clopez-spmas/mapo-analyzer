@@ -1255,9 +1255,9 @@ function fillTemplateTables(xml,f,r){
  let previousRoom=roomOriginal;
  const roomCriteria=[
   [/Espacio entre cama/i,'between',2],
-  [/Espacio libre desde los pies/i,'foot',2],
+  [/Espacio libre.*pies/i,'foot',2],
   [/Cama inadecuada/i,'bedSection',1],
-  [/Espacio entre la cama y el suelo/i,'underbed',2],
+  [/Espacio.*(?:cama.*suelo|suelo.*cama)/i,'underbed',2],
   [/Altura del asiento/i,'chairHeight',0.5]
  ];
  for(let page=0;page<roomPages;page++){
@@ -1276,11 +1276,11 @@ function fillTemplateTables(xml,f,r){
   };
   for(const [re,key] of roomCriteria)fillRow(re,x=>x[key]===true?'X':x[key]===false?'—':'');
   fillRow(/Presencia de obstáculos fijos/i,x=>x.observations??'');
-  fillRow(/Altura de cama fija/i,x=>x.bedHeight??'');
+  fillRow(/Altura.*cama fija/i,x=>x.bedHeight??'');
   fillRow(/Barras laterales inadecuadas/i,x=>x.sideRails??'');
   fillRow(/Anchura de la puerta/i,x=>x.doorWidth??'');
   fillRow(/Cama sin ruedas/i,x=>x.noWheels??'');
-  const unitsRow=fillRow(/Unidades:\s*N[uú]mero de habitaciones/i,x=>x.units??'');
+  const unitsRow=fillRow(/Unidades:.*habitaciones/i,x=>x.units??'');
   const scoreRow=fillRow(/Puntuaci[oó]n por tipo de habitaci[oó]n/i,x=>num(
    (x.between===true?2:0)+(x.foot===true?2:0)+(x.bedSection===true?1:0)+(x.underbed===true?2:0)+(x.chairHeight===true?0.5:0)
   ));
