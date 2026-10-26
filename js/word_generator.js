@@ -919,8 +919,14 @@ function fillTemplateTables(xml,f,r){
  set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
  set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
  // Formación: conservamos literalmente todas las preguntas y solo completamos respuestas.
- set(6,2,1,bool(f.ff_curso));set(6,2,3,bool(f.ff_informacion));
- set(6,4,3,bool(f.ff_informacion));set(6,6,3,bool(f.ff_eficacia));
+ set(6,2,1,bool(f.ff_curso));
+ set(6,2,3,f.ff_entrenamiento_equipos==null?'':bool(f.ff_entrenamiento_equipos));
+ set(6,3,1,f.ff_meses_formacion??'');
+ set(6,4,1,f.ff_horas_formacion??'');
+ set(6,4,3,f.ff_material_informativo==null?'':bool(f.ff_material_informativo));
+ set(6,5,1,f.ff_personas_formadas??'');
+ set(6,5,3,f.ff_personas_informadas??'');
+ set(6,6,1,bool(f.ff_eficacia));
  // Movilizaciones: correspondencia con las filas fijas de la plantilla.
  const manual=['head_bed','bed_wheelchair','wheelchair_bed','bed_stretcher','stretcher_bed','wheelchair_toilet','toilet_wheelchair','bed_turning','sit_to_stand'];
  const assisted=[...manual,'wheelchair_armchair','armchair_wheelchair'];
