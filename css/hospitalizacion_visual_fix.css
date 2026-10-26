@@ -408,3 +408,17 @@
 #formContainer .wheelchair-table{min-width:1580px!important;}
 #formContainer .wheelchair-table th:nth-child(7),#formContainer .wheelchair-table th:nth-child(8){width:195px;}
 #formContainer .wheelchair-table th:nth-child(9){width:120px;}
+
+/* Vista compacta sin desplazamiento horizontal: nueve columnas visibles. */
+#formContainer .wheelchair-table-wrap{width:100%!important;max-width:100%!important;overflow:visible!important;border:0!important;}
+#formContainer .wheelchair-table{width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;}
+#formContainer .wheelchair-table th,#formContainer .wheelchair-table td{padding:7px 4px!important;font-size:clamp(.67rem,.83vw,.83rem)!important;overflow-wrap:anywhere!important;word-break:normal!important;vertical-align:middle!important;}
+#formContainer .wheelchair-table th:nth-child(1){width:21%!important;}
+#formContainer .wheelchair-table th:nth-child(2){width:10%!important;}
+#formContainer .wheelchair-table th:nth-child(3),#formContainer .wheelchair-table th:nth-child(4),#formContainer .wheelchair-table th:nth-child(5),#formContainer .wheelchair-table th:nth-child(6){width:9%!important;}
+#formContainer .wheelchair-table th:nth-child(7),#formContainer .wheelchair-table th:nth-child(8){width:12%!important;}
+#formContainer .wheelchair-table th:nth-child(9){width:9%!important;}
+#formContainer .wheelchair-table td label{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:3px!important;white-space:normal!important;font-size:inherit!important;}
+#formContainer .wheelchair-table .wc-count,#formContainer .wheelchair-table .wc-custom-name,#formContainer .wheelchair-table .wc-extra{width:100%!important;max-width:100%!important;min-width:0!important;padding:5px 2px!important;font-size:inherit!important;}
+#formContainer .wheelchair-table .wc-extra{white-space:normal!important;text-overflow:clip!important;}
+#formContainer .wheelchair-table .mob-source{font-size:.7rem;}
