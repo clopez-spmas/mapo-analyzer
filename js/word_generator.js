@@ -786,6 +786,16 @@ function fillTemplateTables(xml,f,r){
   }
   ts[0].textContent=String(val);ts[0].setAttribute('xml:space','preserve');
   ts.slice(1).forEach(x=>x.textContent='');
+  // Sólo el dato escrito: estilo uniforme de valor, sin heredar títulos o fórmulas.
+  const run=ts[0].parentNode;
+  if(run?.localName==='r'){
+   let props=direct(run,'rPr')[0];
+   if(!props){props=d.createElementNS(ns,'w:rPr');run.insertBefore(props,run.firstChild);}
+   for(const prop of [...props.childNodes])if(['b','bCs','i','iCs','color','sz','szCs','rFonts','highlight','shd'].includes(prop.localName))props.removeChild(prop);
+   const font=d.createElementNS(ns,'w:rFonts');font.setAttributeNS(ns,'w:ascii','Arial');font.setAttributeNS(ns,'w:hAnsi','Arial');props.appendChild(font);
+   const size=d.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','20');props.appendChild(size);
+   const shade=d.createElementNS(ns,'w:color');shade.setAttributeNS(ns,'w:val','000000');props.appendChild(shade);
+  }
  };
  const set=(i,row,col,v)=>write(cell(i,row,col),v);
  const text=tc=>all(tc,'t').map(t=>t.textContent||'').join('');
