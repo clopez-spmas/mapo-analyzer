@@ -866,95 +866,37 @@ function fillTemplateTables(xml,f,r){
  const shrink=(i,start,capacity,wanted)=>{
   const rr=rows(i);for(let k=capacity-1;k>=wanted;k--){const row=rr[start+k];if(row)row.parentNode.removeChild(row);}
  };
- // Categorías profesionales: localizar el encabezado de la tabla vigente
- // y rellenar su fila de datos, sin alterar las celdas ni su formato.
- const staffTable=tables.find(table=>direct(table,'tr').some(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc)))));
- if(staffTable){
-  const rr=direct(staffTable,'tr');
-  const headerIndex=rr.findIndex(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc))));
-  const headerCells=cells(rr[headerIndex]);
-  const nextRow=rr[headerIndex+1];
-  if(!nextRow)throw Error('La tabla de personal no tiene una fila de datos después de las categorías profesionales.');
-  const dest=cells(nextRow);
-  const findCol=regex=>headerCells.findIndex(tc=>regex.test(text(tc)));
-  const values=[
-   [/Aux\.?\s*enfermer[ií]a/i,f.auxEnfermeria],
-   [/Aux\.?\s*geriatr[ií]a/i,f.auxGeriatria],
-   [/Personal\s+con\s+limitaci[oó]n/i,f.personalLimitacionMMP]
-  ];
-  values.forEach(([re,value])=>{
-   const col=findCol(re);
-   if(col<0)throw Error('Falta una columna profesional del modelo: '+re.source);
-   if(value!==undefined&&value!==null&&value!=='')write(dest[col],value);
-  });
- }
- // Personal: el OP ya está calculado por MAPO Analyzer. No inferir categorías profesionales
- // ni repartir horarios solapados entre turnos sin confirmación del técnico.
- const opRow=direct(staffTable||tables[4],'tr').find(row=>/N.º TOTAL DE PERSONAS|Nº TOTAL DE PERSONAS/i.test(text(row)));
- if(opRow){const cs=cells(opRow);if(cs.length>1)write(cs[cs.length-1],'Op = '+num(r.op??f.op));}
-
- // Identificación y horarios en la tabla original, sin inferir asignación a turnos.
- if(staffTable){
-  const rr=direct(staffTable,'tr');
-  const append=(tc,val)=>{
-   if(!tc||val===undefined||val===null||val==='')return;
-   const p=tc.localName==='p'?tc:direct(tc,'p')[0];if(!p)return;
-   const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
-   t.textContent=' '+String(val);t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);
-  };
-  const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
-  const header=rr.find(row=>/EMPRESA:/.test(text(row))&&/FECHA:/.test(text(row)));
-  if(header){
-   const cs=cells(header);
-   const identification=cs.find(tc=>/EMPRESA:/.test(text(tc)));
-   if(identification){
-    const paras=direct(identification,'p');
-    paras.forEach(p=>{
-     const t=text(p);
-     if(/EMPRESA:/.test(t))append(p,f.empresa);
-     if(/CENTRO:/.test(t))append(p,f.centroTrabajo);
-    });
-   }
-   const fecha=cs.find(tc=>/FECHA:/.test(text(tc)));
-   if(fecha)append(fecha,date(f.fecha));
+ // Tabla nueva del modelo: celdas físicas combinadas, no columnas lógicas.
+ const staff=tables[4],srows=direct(staff,'tr'),sc=i=>cells(srows[i]);
+ if(sc(3).length!==4||sc(7).length!==4||sc(9).length!==2)
+  throw Error('La estructura de personal no coincide con la plantilla revisada.');
+ write(sc(3)[0],f.unidad||'');
+ write(sc(3)[1],f.codigoSala??f.codigo??'');
+ write(sc(3)[2],f.camas??'');
+ if(f.auxEnfermeria!=null)write(sc(7)[0],f.auxEnfermeria);
+ if(f.auxGeriatria!=null)write(sc(7)[1],f.auxGeriatria);
+ if(f.personalLimitacionMMP!=null)write(sc(7)[3],f.personalLimitacionMMP);
+ const displayDate=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
+ const appendTo=(parent,value)=>{if(value==null||value==='')return;const p=parent.localName==='p'?parent:direct(parent,'p')[0];if(!p)return;const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');t.textContent=' '+String(value);t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);};
+ if(sc(1).length===2){
+  for(const para of direct(sc(1)[0],'p')){
+   if(/EMPRESA:/i.test(text(para)))appendTo(para,f.empresa);
+   if(/CENTRO:/i.test(text(para)))appendTo(para,f.centroTrabajo);
   }
-  const position=rr.findIndex(row=>/Sala\s*\/\s*Unidad/i.test(text(row))&&/camas/i.test(text(row)));
-  if(position>=0&&rr[position+1]){
-   const headerCells=cells(rr[position]),values=cells(rr[position+1]);
-   const indexFor=pattern=>headerCells.findIndex(tc=>pattern.test(text(tc)));
-   [[/Sala\s*\/\s*Unidad/i,f.unidad],[/C[oó]digo\s*sala/i,f.codigo],[/N[º.º°o]*\s*de?\s*camas/i,f.camas]].forEach(([pattern,value])=>{
-    const idx=indexFor(pattern);
-    if(idx>=0&&values[idx]&&value!==undefined&&value!==null)write(values[idx],value);
-   });
-  }
-  const full=(f.workerSchedule?.full||[]).filter(e=>Number(e.people)>0);
-  const partial=(f.workerSchedule?.partial||[]).filter(e=>Number(e.people)>0);
-  const first=rr.findIndex(row=>/1\.1\.1\./.test(text(row)));
-  const second=rr.findIndex(row=>/1\.1\.2\./.test(text(row)));
-  const fillSchedule=(from,to,items)=>{
-   if(from<0)return;
-   const section=rr.slice(from+1,to<0?rr.length:to);
-   const horario=section.find(row=>/^Horario\s*:/i.test(text(cells(row)[0])));
-   const count=section.find(row=>/N[ºo°.]?\s*de\s*personas/i.test(text(row)));
-   const timeRow=horario;
-   if(count&&cells(count)[1])write(cells(count)[1],items.reduce((n,e)=>n+Number(e.people||0),0));
-   if(!timeRow||!cells(timeRow)[1])return;
-   const model=timeRow.cloneNode(true);
-   items.forEach((entry,j)=>{
-    const row=j===0?timeRow:model.cloneNode(true);
-    if(j>0)timeRow.parentNode.insertBefore(row,(j===1?timeRow:fillSchedule.last).nextSibling);
-    const cc=cells(row);
-    if(cc[0])write(cc[0],'Horario '+(j+1));
-    if(cc[1])write(cc[1],String(entry.start||'')+'–'+String(entry.end||'')+' · '+entry.people+' personas');
-    fillSchedule.last=row;
-   });
-   if(!items.length)write(cells(timeRow)[1],'');
-  };
-  fillSchedule(first,second,full);
-  fillSchedule(second,-1,partial);
+  appendTo(sc(1)[1],displayDate(f.fecha));
  }
- // Portada e identificación
- set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
+ const ws=f.workerSchedule||{},full=(ws.full||[]).filter(x=>Number(x.people)>0),partial=(ws.partial||[]).filter(x=>Number(x.people)>0);
+ const fillScheduleRows=(head,items)=>{
+  const current=direct(staff,'tr'),first=current[head+1],second=current[head+2];
+  if(!first||!second||cells(first).length!==2)throw Error('No coincide la tabla de horarios.');
+  const sample=first.cloneNode(true),rr=[first,second];
+  while(rr.length<items.length){const cloned=sample.cloneNode(true);rr.at(-1).parentNode.insertBefore(cloned,rr.at(-1).nextSibling);rr.push(cloned);}
+  rr.forEach((row,i)=>{const x=items[i],cc=cells(row);write(cc[0],x?String(x.start||'')+'–'+String(x.end||''):'');write(cc[1],x?x.people:'');});
+ };
+ // El bloque parcial se procesa primero para mantener los índices de la tabla.
+ fillScheduleRows(13,partial);fillScheduleRows(9,full);
+ const opTarget=direct(staff,'tr').find(row=>/N[ºo°.]*\s*TOTAL DE PERSONAS TRABAJADORAS EN 24 HORAS/i.test(text(row)));
+ if(opTarget)write(cells(opTarget).at(-1),'Op= '+num(r.op??f.op));
  set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
  // Formación: conservamos literalmente todas las preguntas y solo completamos respuestas.
  set(6,2,1,bool(f.ff_curso));
