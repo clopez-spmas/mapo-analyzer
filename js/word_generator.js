@@ -1131,7 +1131,48 @@ function fillTemplateTables(xml,f,r){
    flags.forEach(([row,key])=>set(ti,row,col,x?(x[key]===true?'X':x[key]===false?'—':''):''));
   }
  };
- matrix(12,f.bathTypes||[],5,null,12,[3,4,5,7,8,9],[[5,'space'],[6,'door'],[8,'obstacles']]);
+ // Baños de higiene: los criterios y las columnas se localizan en cada fila del modelo.
+ // Las celdas están combinadas de forma distinta según la fila.
+ const baths=f.bathTypes||[],bathSource=tables[12],bathCapacity=6;
+ const bathPages=Math.max(1,Math.ceil(baths.length/bathCapacity));
+ const bathTitleRows=table=>direct(table,'tr');
+ const bathRow=(table,pattern)=>bathTitleRows(table).find(row=>pattern.test(text(row)));
+ const bathValues=(row,part,fn)=>{
+  if(!row)return;
+  const cc=cells(row);
+  if(cc.length<7)throw Error('La fila de baño no tiene las seis celdas de tipos esperadas: '+text(row).slice(0,70));
+  const columns=cc.slice(-7,-1);
+  columns.forEach((tc,j)=>write(tc,part[j]?fn(part[j],j):''));
+ };
+ const bathPatterns=[
+  [/Espacio insuficiente/i,'space'],
+  [/Anchura de la puerta/i,'door'],
+  [/Presencia de obstáculos/i,'obstacles']
+ ];
+ let previousBath=bathSource;
+ for(let page=0;page<bathPages;page++){
+  const table=page===0?bathSource:bathSource.cloneNode(true);
+  if(page>0)previousBath.parentNode.insertBefore(table,previousBath.nextSibling);
+  previousBath=table;
+  const part=baths.slice(page*bathCapacity,(page+1)*bathCapacity);
+  bathPatterns.forEach(([re,key])=>bathValues(bathRow(table,re),part,x=>x[key]===true?'X':x[key]===false?'—':''));
+  bathValues(bathRow(table,/Apertura de la puerta.*hacia adentro/i),part,x=>x.doorInward??'');
+  bathValues(bathRow(table,/Presencia de ducha/i),part,x=>x.fixtures??'');
+  bathValues(bathRow(table,/Bañera fija/i),part,x=>x.fixtures??'');
+  bathValues(bathRow(table,/Unidades:\s*N[uú]mero/i),part,x=>x.units??'');
+  const typesRow=bathRow(table,/^C\s*\(baño central\)/i);
+  if(typesRow)bathValues(typesRow,part,x=>x.description||'');
+  const bottom=bathTitleRows(table);
+  const templateRow=bottom.find(row=>cells(row).length===1)||bottom[0];
+  if(!templateRow)throw Error('No existe fila de título que pueda clonarse para la leyenda de baños.');
+  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const legend=templateRow.cloneNode(true);
+  const legendCells=cells(legend);
+  legendCells.forEach(tc=>write(tc,''));
+  write(legendCells[0],description);
+  table.appendChild(legend);
+ }
+
  matrix(13,f.wcTypes||[],5,null,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
  matrix(14,f.roomTypes||[],5,null,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
