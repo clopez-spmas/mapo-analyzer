@@ -770,7 +770,8 @@ function fillTemplateTables(xml,f,r){
  if(d.getElementsByTagName('parsererror').length)throw Error('Plantilla Word no válida.');
  const direct=(n,t)=>Array.from(n?.childNodes||[]).filter(x=>x.nodeType===1&&x.namespaceURI===ns&&x.localName===t);
  const all=(n,t)=>Array.from(n?.getElementsByTagNameNS(ns,t)||[]);
- const tables=all(d,'tbl').filter(t=>!t.closest||true);
+ const body=all(d,'body')[0];
+ const tables=direct(body,'tbl');
  if(tables.length!==31)throw Error('La plantilla ha cambiado: se esperaban 31 tablas originales, se encontraron '+tables.length+'. Se detiene la generación para evitar modificar el formato.');
  const rows=i=>direct(tables[i],'tr'),cells=row=>direct(row,'tc');
  const unique=row=>cells(row).filter((c,i,a)=>a.indexOf(c)===i);
