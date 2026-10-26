@@ -737,7 +737,7 @@ function replacePlanningCompanyMentions(xml,f){
 function colorMapoResultCell(xml,r){
  const value=Number(r.mapo);
  if(!Number.isFinite(value)||value<0)throw Error('El indice MAPO no es valido para colorear el resultado.');
- const fill=value===0||value<=1.5?'C6E0B4':value<=5?'FFE699':'F4CCCC';
+ const fill=value===0?null:value<=1.5?'00FF00':value<=5?'FFFF00':'FF0000';
  const parser=new DOMParser(),doc=parser.parseFromString(xml,'application/xml');
  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  const direct=(node,tag)=>Array.from(node?.childNodes||[]).filter(n=>n.nodeType===1&&n.namespaceURI===ns&&n.localName===tag);
@@ -756,11 +756,13 @@ function colorMapoResultCell(xml,r){
  let properties=direct(target,'tcPr')[0];
  if(!properties){properties=doc.createElementNS(ns,'w:tcPr');target.insertBefore(properties,target.firstChild);}
  for(const prev of direct(properties,'shd'))properties.removeChild(prev);
- const shading=doc.createElementNS(ns,'w:shd');
- shading.setAttributeNS(ns,'w:val','clear');
- shading.setAttributeNS(ns,'w:color','auto');
- shading.setAttributeNS(ns,'w:fill',fill);
- properties.appendChild(shading);
+ if(fill){
+  const shading=doc.createElementNS(ns,'w:shd');
+  shading.setAttributeNS(ns,'w:val','clear');
+  shading.setAttributeNS(ns,'w:color','auto');
+  shading.setAttributeNS(ns,'w:fill',fill);
+  properties.appendChild(shading);
+ }
  return new XMLSerializer().serializeToString(doc);
 }
 
