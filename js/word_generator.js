@@ -914,7 +914,23 @@ function fillTemplateTables(xml,f,r){
  });
  // Tablas matriciales: conservar criterios, ponderaciones y las columnas A, B, C... originales.
  const matrix=(ti,data,start,labelrow,countrow,columns,flags)=>{
-  if(data.length>columns.length)throw Error('La tabla original '+ti+' admite '+columns.length+' tipos. Se requiere confirmar cómo representarlos sin modificar sus columnas.');
+  if(data.length>columns.length){
+    const source=tables[ti];let previous=source;
+    for(let offset=columns.length;offset<data.length;offset+=columns.length){
+      const copy=source.cloneNode(true);
+      previous.parentNode.insertBefore(copy,previous.nextSibling);
+      previous=copy;
+      columns.forEach((col,j)=>{
+        const x=data[offset+j];
+        if(labelrow!==null)write(cells(rows(copy)[labelrow])[col],x?x.description:'');
+        if(countrow!==null)write(cells(rows(copy)[countrow])[col],x?x.units:'');
+        flags.forEach(([row,key])=>{
+          const value=x?(x[key]===true?'X':x[key]===false?'—':''):'';
+          write(cells(rows(copy)[row])[col],value);
+        });
+      });
+    }
+  }
   for(let j=0;j<columns.length;j++){
    const col=columns[j],x=data[j];
    if(labelrow!==null)set(ti,labelrow,col,x?.description||'');
