@@ -944,21 +944,23 @@ function fillTemplateTables(xml,f,r){
  const manualSummary=rows(7).find(row=>/Total\s+de\s+LTM\s+y\s+LPM/i.test(text(row)));
  if(manualSummary){
   const cc=cells(manualSummary);
-  // La fila corporativa tiene celdas combinadas: rótulo, fórmula LTM,
-  // resultado LTM, fórmula LPM y resultado LPM.
-  const li=cc.findIndex(tc=>/A\s*\+\s*B\s*\+\s*C\s*=\s*LTM/i.test(text(tc)));
-  const pi=cc.findIndex(tc=>/D\s*\+\s*E\s*\+\s*F\s*=\s*LPM/i.test(text(tc)));
-  if(li>=0&&pi>li){
-   const ltmTarget=cc.slice(li+1,pi).find(tc=>!text(tc).trim());
-   const lpmTarget=cc.slice(pi+1).find(tc=>!text(tc).trim());
-   if(!ltmTarget||!lpmTarget)throw Error('No se identifican las celdas de resultado LTM/LPM.');
-   write(ltmTarget,num(ttot[0]));write(lpmTarget,num(ttot[1]));
+  if(cc.length<3)throw Error('La fila de totales LTM/LPM tiene una estructura no compatible.');
+  // No depender de celdas vacías: la plantilla puede contener fórmulas y rótulos
+  // en las mismas celdas de destino. Añadir el total a continuación de cada fórmula.
+  const addAfter=(cell,value)=>{
+   const paras=direct(cell,'p'),target=paras[paras.length-1];
+   if(!target)throw Error('Falta párrafo para resultado de movilizaciones.');
+   const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
+   t.textContent=' '+num(value);t.setAttribute('xml:space','preserve');run.appendChild(t);target.appendChild(run);
+  };
+  const labelledLTM=cc.find(tc=>/LTM/i.test(text(tc))&&!/Total\s+de/i.test(text(tc)));
+  const labelledLPM=cc.find(tc=>/LPM/i.test(text(tc))&&!/Total\s+de/i.test(text(tc)));
+  if(labelledLTM&&labelledLPM&&labelledLTM!==labelledLPM){
+   addAfter(labelledLTM,ttot[0]);addAfter(labelledLPM,ttot[1]);
   }else{
-   // Algunas revisiones del modelo conservan los rótulos de resultado
-   // pero distribuyen las fórmulas en celdas combinadas distintas.
-   const candidates=cc.slice(1).filter(tc=>!text(tc).trim());
-   if(candidates.length<2)throw Error('La fila LTM/LPM no contiene dos celdas libres para resultados.');
-   write(candidates[0],num(ttot[0]));write(candidates[candidates.length-1],num(ttot[1]));
+   // En modelos con rótulos y resultados separados, utilizar las dos
+   // últimas celdas sin modificar el texto del encabezado.
+   addAfter(cc[cc.length-2],ttot[0]);addAfter(cc[cc.length-1],ttot[1]);
   }
  }
  const postureRow=rows(7).find(row=>/no\s+pueden\s+adoptar\s+algunas\s+posturas/i.test(text(row)));
