@@ -850,6 +850,38 @@ function fillTemplateTables(xml,f,r){
  addValue(8,16,2,num(ttot[2]));addValue(8,16,6,num(ttot[3]));
  set(8,17,8,pct(ttot[2],ttot[0]+ttot[2]));
  set(8,18,8,pct(ttot[3],ttot[1]+ttot[3]));
+ // Tareas personalizadas: insertar filas sobre «Total por turno» clonando la fila «Otros».
+ const customs=(f.mobilizations?.custom||[]).filter(c=>c.name?.trim());
+ for(const [ti,manual,typesFor,colsFor,totalRow] of [
+   [7,true,['manualTotal','manualPartial'],[1,2,3,4,5,6],14],
+   [8,false,['aidedTotal','aidedPartial'],[2,4,5,6,7,8],15]
+ ]){
+  const related=customs.filter(c=>typesFor.includes(c.category));
+  if(!related.length)continue;
+  const originalOther=rows(ti)[totalRow-1];
+  const totalOriginal=rows(ti)[totalRow];
+  const inserted=[];
+  for(const c of related){
+   const row=originalOther.cloneNode(true);
+   tables[ti].insertBefore(row,totalOriginal);
+   inserted.push(row);
+   write(cells(row)[0],c.name);
+   const e=f.mobilizations?.entries?.[c.id]||{};
+   typesFor.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(row)[colsFor[j*3+shift]],num(e[kind]?.[shift]??0))));
+  }
+ }
+ // Tipos de sillas en las columnas A-G existentes en el modelo.
+ const chairTypes=Object.entries(f.wheelchairs?.entries||{}).filter(([,x])=>Number(x?.count)>0);
+ if(chairTypes.length>7)throw Error('Hay más de 7 tipos de sillas y el modelo solo permite A-G. Es necesaria confirmación antes de alterar las columnas.');
+ const chairCols=[2,3,4,5,7,8,9];
+ chairTypes.forEach(([kind,x],i)=>{
+  const col=chairCols[i];
+  set(11,2,col,String.fromCharCode(65+i));
+  [['brakes',3],['arms',4],['back',5],['width',6]].forEach(([field,row])=>set(11,row,col,x[field]===false?'X':'—'));
+  set(11,9,col,x.count);
+ });
+ set(11,8,10,'Total de sillas (TSR): '+num(r.details?.tsr));
+ set(11,12,6,'PMSR = '+num(r.details?.pmsr));
  // Camas: ampliar o suprimir solo las filas de equipo, clonando la fila corporativa.
  const beds=f.camasRegulablesInforme||[];
  if(beds.length>4)grow(15,2,4,beds.length);
