@@ -1070,7 +1070,7 @@ function fillTemplateTables(xml,f,r){
  const chairPages=Math.max(1,Math.ceil(chairTypes.length/chairCols.length));
  const wheelchairPoints=x=>['brakes','arms','back','width'].reduce((n,k)=>n+(x[k]===true?0:1),0);
  const chairCaption=(table,part,page)=>{
-  const model=rows(table).find(row=>cells(row).length===1)||rows(table)[0];
+  const model=direct(table,'tr').find(row=>cells(row).length===1)||direct(table,'tr')[0];
   if(!model)throw Error('No se encuentra una fila corporativa para identificar los tipos de sillas.');
   // Una fila final explicativa por cada grupo A-G, conservando los bordes y fuentes de la plantilla.
   const newRow=model.cloneNode(true);
@@ -1079,7 +1079,7 @@ function fillTemplateTables(xml,f,r){
   const label=part.map(([kind],i)=>'Tipo '+String.fromCharCode(65+i)+': '+(chairCatalog[kind]||kind.replace(/_/g,' '))).join('  |  ');
   if(!targetCells[0])throw Error('No hay celda donde insertar la descripción de los tipos de sillas.');
   write(targetCells[0],label);
-  const last=rows(table)[rows(table).length-1];
+  const last=direct(table,'tr')[direct(table,'tr').length-1];
   table.insertBefore(newRow,last);
  };
  let chairPagesLast=chairBase;
