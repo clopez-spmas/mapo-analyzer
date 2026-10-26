@@ -377,3 +377,23 @@
 #formContainer .mapo-identification-grid > label > input{width:100%;box-sizing:border-box;margin-top:0;flex-shrink:0;}
 #formContainer .mapo-identification-grid > label > small{line-height:1.35;}
 @media(max-width:720px){#formContainer .mapo-identification-grid .mapo-field-label{min-height:0;margin-bottom:6px;}}
+
+/* Registro de sillas: una fila real por tipo, sin solapamientos. */
+#formContainer .wheelchair-table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}
+#formContainer .wheelchair-table{width:100%;min-width:1420px;table-layout:fixed;border-collapse:collapse;}
+#formContainer .wheelchair-table th,#formContainer .wheelchair-table td{box-sizing:border-box;padding:10px 9px;vertical-align:middle;text-align:left;overflow-wrap:normal;white-space:normal;border-bottom:1px solid #dbe3ec;}
+#formContainer .wheelchair-table th{white-space:normal;line-height:1.3;font-size:.88rem;}
+#formContainer .wheelchair-table th:nth-child(1){width:260px;}
+#formContainer .wheelchair-table th:nth-child(2){width:135px;}
+#formContainer .wheelchair-table th:nth-child(n+3):nth-child(-n+6){width:135px;}
+#formContainer .wheelchair-table th:nth-child(7),#formContainer .wheelchair-table th:nth-child(8){width:155px;}
+#formContainer .wheelchair-table th:nth-child(9){width:110px;}
+#formContainer .wheelchair-table tbody tr:not(.mob-section){display:table-row;}
+#formContainer .wheelchair-table td label{display:flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap;font-weight:400;}
+#formContainer .wheelchair-table td label input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0;}
+#formContainer .wheelchair-table td .wc-count,#formContainer .wheelchair-table td .wc-custom-name,#formContainer .wheelchair-table td .wc-extra{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
+#formContainer .wheelchair-table td .wc-extra{font-size:.86rem;padding:8px 5px;}
+#formContainer .wheelchair-table .mob-section td{background:#eff4f9;font-weight:700;color:#005a9c;}
+/* Otros registros: cada tipo de habitación, WC o baño permanece en su propia tarjeta vertical. */
+#formContainer .registry-list{display:flex;flex-direction:column;align-items:stretch;gap:16px;}
+#formContainer .registry-list>.registry-card{display:block;width:100%;min-width:0;flex:none;}
