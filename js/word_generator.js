@@ -1164,8 +1164,7 @@ function fillTemplateTables(xml,f,r){
   if(rowScore&&page===bathPages-1)write(cells(rowScore).at(-1),num(totalPoints));
   const pmRow=bathRow(table,/PMB\s*:/i);
   if(pmRow&&page===bathPages-1)write(cells(pmRow).at(-1),r.details?.pmB==null?'':num(r.details.pmB));
-  const typesRow=bathRow(table,/^C\s*\(baño central\)/i);
-  if(typesRow)bathValues(typesRow,part,x=>x.description||'');
+  // Mantener vacías las celdas A-F de clasificación C/H; la leyenda de tipos va en una fila independiente.
   const bottom=bathTitleRows(table);
   const templateRow=bottom.find(row=>cells(row).length===1)||bottom[0];
   if(!templateRow)throw Error('No existe fila de título que pueda clonarse para la leyenda de baños.');
