@@ -1141,7 +1141,7 @@ function fillTemplateTables(xml,f,r){
   if(!row)return;
   const cc=cells(row);
   if(cc.length<7)throw Error('La fila de baño no tiene las seis celdas de tipos esperadas: '+text(row).slice(0,70));
-  const columns=cc.slice(-7,-1);
+  const columns=cc.slice(cc.length-7,cc.length-1);
   columns.forEach((tc,j)=>write(tc,part[j]?fn(part[j],j):''));
  };
  const bathPatterns=[
@@ -1159,7 +1159,19 @@ function fillTemplateTables(xml,f,r){
   bathValues(bathRow(table,/Apertura de la puerta.*hacia adentro/i),part,x=>x.doorInward??'');
   bathValues(bathRow(table,/Presencia de ducha/i),part,x=>x.shower==null?'':x.shower?'SÍ':'NO');
   bathValues(bathRow(table,/Bañera fija/i),part,x=>x.fixedBathtub==null?'':x.fixedBathtub?'SÍ':'NO');
-  bathValues(bathRow(table,/Unidades:\s*N[uú]mero/i),part,x=>x.units??'');
+  bathValues(bathRow(table,/Unidades:\\s*N[uú]mero/i),part,x=>x.units??'');
+  bathValues(bathRow(table,/Puntuaci[oó]n por tipo de ba[nñ]o/i),part,x=>{
+   const points=(x.space===true?2:0)+(x.door===true?1:0)+(x.obstacles===true?1:0);
+   return num(points);
+  });
+  const totalUnits=baths.reduce((n,x)=>n+Number(x.units||0),0);
+  const totalPoints=baths.reduce((n,x)=>n+Number(x.units||0)*((x.space===true?2:0)+(x.door===true?1:0)+(x.obstacles===true?1:0)),0);
+  const rowUnits=bathRow(table,/Unidades:\\s*N[uú]mero/i);
+  if(rowUnits&&page===bathPages-1)write(cells(rowUnits).at(-1),num(totalUnits));
+  const rowScore=bathRow(table,/Puntuaci[oó]n por tipo de ba[nñ]o/i);
+  if(rowScore&&page===bathPages-1)write(cells(rowScore).at(-1),num(totalPoints));
+  const pmRow=bathRow(table,/PMB\s*:/i);
+  if(pmRow&&page===bathPages-1)write(cells(pmRow).at(-1),r.details?.pmB==null?'':num(r.details.pmB));
   const typesRow=bathRow(table,/^C\s*\(baño central\)/i);
   if(typesRow)bathValues(typesRow,part,x=>x.description||'');
   const bottom=bathTitleRows(table);
@@ -1173,6 +1185,25 @@ function fillTemplateTables(xml,f,r){
   table.appendChild(legend);
  }
 
+ const aids=f.ayudasHigiene||{};
+ const aidRows=[
+  [/Camilla para la ducha/i,'camillaDucha'],
+  [/Bañera ergonómica/i,'baneraErgonomica'],
+  [/Ducha ergonómica/i,'duchaErgonomica'],
+  [/Elevador para bañera fija/i,'elevadorBanera']
+ ];
+ for(const [re,key] of aidRows){
+  const row=bathRow(bathSource,re);
+  if(!row)continue;
+  const cc=cells(row),item=aids[key];
+  if(item){
+   if(cc.length>1)write(cc[1],item.numero??'');
+   if(cc.length>2)write(cc[cc.length-1],item.presencia==null?'':item.presencia?'Sí':'No');
+  }
+ }
+ const hasAids=Object.values(aids).some(x=>x?.presencia===true);
+ const aidTitle=bathRow(bathSource,/¿Hay ayudas para la higiene del paciente/i);
+ if(aidTitle&&Object.keys(aids).length&&cells(aidTitle).length>1)write(cells(aidTitle).at(-1),hasAids?'Sí':'No');
  matrix(13,f.wcTypes||[],5,null,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
  matrix(14,f.roomTypes||[],5,null,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
