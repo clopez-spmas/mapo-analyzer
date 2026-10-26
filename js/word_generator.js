@@ -860,7 +860,7 @@ function fillTemplateTables(xml,f,r){
   const rr=direct(staffTable,'tr');
   const append=(tc,val)=>{
    if(!tc||val===undefined||val===null||val==='')return;
-   const p=direct(tc,'p')[0];if(!p)return;
+   const p=tc.localName==='p'?tc:direct(tc,'p')[0];if(!p)return;
    const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
    t.textContent=' '+String(val);t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);
   };
