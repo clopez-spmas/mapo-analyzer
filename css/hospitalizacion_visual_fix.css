@@ -369,3 +369,11 @@
   max-width: none !important;
   min-width: 0 !important;
 }
+
+/* Alineación uniforme de los 16 campos de Identificación de la unidad. */
+#formContainer .mapo-identification-grid{align-items:start;}
+#formContainer .mapo-identification-grid > label{display:flex;flex-direction:column;align-items:stretch;min-width:0;gap:0;}
+#formContainer .mapo-identification-grid .mapo-field-label{display:block;min-height:2.85em;line-height:1.4;}
+#formContainer .mapo-identification-grid > label > input{width:100%;box-sizing:border-box;margin-top:0;flex-shrink:0;}
+#formContainer .mapo-identification-grid > label > small{line-height:1.35;}
+@media(max-width:720px){#formContainer .mapo-identification-grid .mapo-field-label{min-height:0;margin-bottom:6px;}}
