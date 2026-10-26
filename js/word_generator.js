@@ -944,15 +944,22 @@ function fillTemplateTables(xml,f,r){
  const manualSummary=rows(7).find(row=>/Total\s+de\s+LTM\s+y\s+LPM/i.test(text(row)));
  if(manualSummary){
   const cc=cells(manualSummary);
-  const pieces=cc.map(tc=>text(tc));
-  const li=pieces.findIndex(x=>/LTM/i.test(x));
-  const pi=pieces.findIndex((x,i)=>i>li&&/LPM/i.test(x));
+  // La fila corporativa tiene celdas combinadas: rótulo, fórmula LTM,
+  // resultado LTM, fórmula LPM y resultado LPM.
+  const li=cc.findIndex(tc=>/A\s*\+\s*B\s*\+\s*C\s*=\s*LTM/i.test(text(tc)));
+  const pi=cc.findIndex(tc=>/D\s*\+\s*E\s*\+\s*F\s*=\s*LPM/i.test(text(tc)));
   if(li>=0&&pi>li){
    const ltmTarget=cc.slice(li+1,pi).find(tc=>!text(tc).trim());
    const lpmTarget=cc.slice(pi+1).find(tc=>!text(tc).trim());
-   if(!ltmTarget||!lpmTarget)throw Error('La fila de LTM/LPM no contiene las celdas de resultado previstas.');
+   if(!ltmTarget||!lpmTarget)throw Error('No se identifican las celdas de resultado LTM/LPM.');
    write(ltmTarget,num(ttot[0]));write(lpmTarget,num(ttot[1]));
-  }else throw Error('No se identifican las fórmulas LTM y LPM del modelo.');
+  }else{
+   // Algunas revisiones del modelo conservan los rótulos de resultado
+   // pero distribuyen las fórmulas en celdas combinadas distintas.
+   const candidates=cc.slice(1).filter(tc=>!text(tc).trim());
+   if(candidates.length<2)throw Error('La fila LTM/LPM no contiene dos celdas libres para resultados.');
+   write(candidates[0],num(ttot[0]));write(candidates[candidates.length-1],num(ttot[1]));
+  }
  }
  const postureRow=rows(7).find(row=>/no\s+pueden\s+adoptar\s+algunas\s+posturas/i.test(text(row)));
  if(postureRow){
