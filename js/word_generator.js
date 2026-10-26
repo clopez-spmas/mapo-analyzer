@@ -873,7 +873,25 @@ function fillTemplateTables(xml,f,r){
  }
  // Tipos de sillas en las columnas A-G existentes en el modelo.
  const chairTypes=Object.entries(f.wheelchairs?.entries||{}).filter(([,x])=>Number(x?.count)>0);
- if(chairTypes.length>7)throw Error('Hay más de 7 tipos de sillas y el modelo solo permite A-G. Es necesaria confirmación antes de alterar las columnas.');
+ if(chairTypes.length>7){
+   const source=tables[11];let previous=source;
+   for(let offset=7;offset<chairTypes.length;offset+=7){
+    const copy=source.cloneNode(true);
+    previous.parentNode.insertBefore(copy,previous.nextSibling);
+    previous=copy;
+    [2,3,4,5,7,8,9].forEach((col,j)=>{
+      const entry=chairTypes[offset+j],x=entry?.[1];
+      const put=(row,value)=>write(cells(rows(copy)[row])[col],value);
+      put(2,x?String.fromCharCode(65+j):'');
+      [['brakes',3],['arms',4],['back',5],['width',6]].forEach(([key,row])=>{
+        put(row,x?(x[key]===false?'X':'—'):'');
+      });
+      put(9,x?.count??'');
+    });
+    write(cells(rows(copy)[8])[10],'');
+    write(cells(rows(copy)[12])[6],'');
+   }
+  }
  const chairCols=[2,3,4,5,7,8,9];
  chairTypes.forEach(([kind,x],i)=>{
   const col=chairCols[i];
