@@ -828,6 +828,9 @@ function fillTemplateTables(xml,f,r){
  const shrink=(i,start,capacity,wanted)=>{
   const rr=rows(i);for(let k=capacity-1;k>=wanted;k--){const row=rr[start+k];if(row)row.parentNode.removeChild(row);}
  };
+ // Personal: el OP ya está calculado por MAPO Analyzer. No inferir categorías profesionales
+ // ni repartir horarios solapados entre turnos sin confirmación del técnico.
+ set(4,16,14,'Op = '+num(r.op??f.op));
  // Portada e identificación
  set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
  set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
