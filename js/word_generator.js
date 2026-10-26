@@ -1359,13 +1359,30 @@ function fillTemplateTables(xml,f,r){
  replaceLabelValue(/\bPMamb\s*=\s*$/i,'PMamb',r.details?.pmamb);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
 
- // Planificación: conservar exactamente título, columnas, marcos y zona de aprobación.
- const measures=(f.planificacionPreventiva?.medidas||[]).filter(x=>x.medida?.trim());
- if(measures.length>1)grow(29,4,1,measures.length);
- measures.forEach((m,i)=>set(29,4+i,3,m.medida));
- set(29,1,1,f.empresa||'');set(29,1,5,f.centroTrabajo||'');
- set(29,2,1,f.unidad||'');
- const dt=String(f.fecha||'');if(/^\d{4}-\d\d-\d\d/.test(dt))set(29,1,10,dt.slice(8,10)+'/'+dt.slice(5,7)+'/'+dt.slice(0,4));
+ // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
+ const plan=tables.find(t=>direct(t,'tr').some(row=>/FECHA PREVISTA\s*(?:DE\s*)?APLICACI[OÓ]N/i.test(text(row))));
+ if(!plan)throw Error('No se encuentra la tabla corporativa de planificación.');
+ const pr=direct(plan,'tr');
+ const identify=pr.find(row=>/EMPRESA:/i.test(text(row))&&/CENTRO:/i.test(text(row)));
+ if(!identify||cells(identify).length<6)throw Error('La identificación de planificación no tiene seis celdas.');
+ const id=cells(identify),dt=String(f.fecha||'');
+ write(id[1],f.empresa||'');write(id[3],f.centroTrabajo||'');
+ write(id[5],/^\d{4}-\d\d-\d\d/.test(dt)?dt.slice(8,10)+'/'+dt.slice(5,7)+'/'+dt.slice(0,4):dt);
+ const unit=pr.find(row=>/UNIDAD:/i.test(text(row)));
+ if(unit&&cells(unit).length>1)write(cells(unit)[1],f.unidad||'');
+ const heading=pr.findIndex(row=>/RIESGO\/ASPECTO DEFICIENTE/i.test(text(row))&&/MEDIDA PROPUESTA/i.test(text(row)));
+ if(heading<0||!pr[heading+1]||cells(pr[heading+1]).length<7)throw Error('No coincide la estructura de las medidas de planificación.');
+ const original=pr[heading+1],measures=(f.planificacionPreventiva?.medidas||[]).filter(m=>String(m.medida||'').trim());
+ const template=original.cloneNode(true);
+ for(let i=0;i<Math.max(1,measures.length);i++){
+  const row=i===0?original:template.cloneNode(true);
+  if(i>0)original.parentNode.insertBefore(row,pr[heading+2]||null);
+  const cs=cells(row);
+  write(cs[2],measures[i]?.medida||'');
+  // Columna de fecha prevista de aplicación: siempre en blanco.
+  write(cs[3],'');
+  if(i>0){write(cs[4],'');write(cs[5],'');write(cs[6],'');}
+ }
  return new XMLSerializer().serializeToString(d);
 }
 async function generate(template){
