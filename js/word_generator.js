@@ -1289,12 +1289,13 @@ function fillTemplateTables(xml,f,r){
  }
 
  // PMH y respuesta de pacientes encamados: celdas originales del informe.
- const pmhRow=direct(tables[15],'tr').find(row=>/PMH\s*:\s*Puntuaci[oó]n media de habitaciones/i.test(text(row)));
+ const rowWith=(re)=>tables.flatMap(table=>direct(table,'tr')).find(row=>re.test(text(row)));
+ const pmhRow=rowWith(/PMH\s*:\s*Puntuaci[oó]n\s+media\s+de\s+habitaciones/i);
  if(!pmhRow)throw Error('No se encuentra la fila PMH en la plantilla.');
  const pmhCells=cells(pmhRow);
  if(pmhCells.length<2)throw Error('Falta celda de resultado PMH.');
  if(r.details?.pmH!=null)write(pmhCells.at(-1),num(r.details.pmH));
- const bedboundRow=direct(tables[15],'tr').find(row=>/motivo.*no se use el ba[nñ]o.*silla de ruedas/i.test(text(row)));
+ const bedboundRow=rowWith(/motivo\s+que\s+no\s+se\s+use\s+el\s+ba[nñ]o/i);
  if(!bedboundRow)throw Error('No se encuentra la pregunta sobre pacientes encamados.');
  const bedCells=cells(bedboundRow);
  if(bedCells.length<2)throw Error('Falta celda de respuesta de pacientes encamados.');
