@@ -1151,14 +1151,14 @@ function fillTemplateTables(xml,f,r){
   bathValues(bathRow(table,/Apertura de la puerta.*hacia adentro/i),part,x=>x.doorInward??'');
   bathValues(bathRow(table,/Presencia de ducha/i),part,x=>x.shower==null?'':x.shower?'SÍ':'NO');
   bathValues(bathRow(table,/Bañera fija/i),part,x=>x.fixedBathtub==null?'':x.fixedBathtub?'SÍ':'NO');
-  bathValues(bathRow(table,/Unidades:\\s*N[uú]mero/i),part,x=>x.units??'');
+  bathValues(bathRow(table,/Unidades:\s*N[uú]mero/i),part,x=>x.units??'');
   bathValues(bathRow(table,/Puntuaci[oó]n por tipo de ba[nñ]o/i),part,x=>{
    const points=(x.space===true?2:0)+(x.door===true?1:0)+(x.obstacles===true?1:0);
    return num(points);
   });
   const totalUnits=baths.reduce((n,x)=>n+Number(x.units||0),0);
   const totalPoints=baths.reduce((n,x)=>n+Number(x.units||0)*((x.space===true?2:0)+(x.door===true?1:0)+(x.obstacles===true?1:0)),0);
-  const rowUnits=bathRow(table,/Unidades:\\s*N[uú]mero/i);
+  const rowUnits=bathRow(table,/Unidades:\s*N[uú]mero/i);
   if(rowUnits&&page===bathPages-1)write(cells(rowUnits).at(-1),num(totalUnits));
   const rowScore=bathRow(table,/Puntuaci[oó]n por tipo de ba[nñ]o/i);
   if(rowScore&&page===bathPages-1)write(cells(rowScore).at(-1),num(totalPoints));
