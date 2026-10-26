@@ -828,6 +828,28 @@ function fillTemplateTables(xml,f,r){
  const shrink=(i,start,capacity,wanted)=>{
   const rr=rows(i);for(let k=capacity-1;k>=wanted;k--){const row=rr[start+k];if(row)row.parentNode.removeChild(row);}
  };
+ // Categorías profesionales: localizar el encabezado de la tabla vigente
+ // y rellenar su fila de datos, sin alterar las celdas ni su formato.
+ const staffTable=tables.find(table=>rows(table).some(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc)))));
+ if(staffTable){
+  const rr=rows(staffTable);
+  const headerIndex=rr.findIndex(row=>cells(row).some(tc=>/Aux\.?\s*enfermer[ií]a/i.test(text(tc))));
+  const headerCells=cells(rr[headerIndex]);
+  const nextRow=rr[headerIndex+1];
+  if(!nextRow)throw Error('La tabla de personal no tiene una fila de datos después de las categorías profesionales.');
+  const dest=cells(nextRow);
+  const findCol=regex=>headerCells.findIndex(tc=>regex.test(text(tc)));
+  const values=[
+   [/Aux\.?\s*enfermer[ií]a/i,f.auxEnfermeria],
+   [/Aux\.?\s*geriatr[ií]a/i,f.auxGeriatria],
+   [/Personal\s+con\s+limitaci[oó]n/i,f.personalLimitacionMMP]
+  ];
+  values.forEach(([re,value])=>{
+   const col=findCol(re);
+   if(col<0)throw Error('Falta una columna profesional del modelo: '+re.source);
+   if(value!==undefined&&value!==null&&value!=='')write(dest[col],value);
+  });
+ }
  // Personal: el OP ya está calculado por MAPO Analyzer. No inferir categorías profesionales
  // ni repartir horarios solapados entre turnos sin confirmación del técnico.
  set(4,16,14,'Op = '+num(r.op??f.op));
