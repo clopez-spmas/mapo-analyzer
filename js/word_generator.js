@@ -1436,6 +1436,17 @@ function downloadBlob(blob,name){
  link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+function refreshFilename(){
+ const input=document.getElementById('mapoWordFilename');
+ if(!input)return;
+ const f=reportData().form||{};
+ const room=window.MAPOMultiRoom?.state?.rooms?.[window.MAPOMultiRoom?.state?.active];
+ const label=String(f.unidad||room?.name||'estudio').replace(/[^\p{L}\p{N}_-]+/gu,'_');
+ const currentDefault='MAPO_'+label+'.docx';
+ // Conservar nombres elegidos manualmente; actualizar sólo el sugerido.
+ if(!input.value||input.value===input.dataset.defaultName)input.value=currentDefault;
+ input.dataset.defaultName=currentDefault;
+}
 function createControls(){
  const host=document.getElementById('wordReportPanel');
  if(!host||document.getElementById('mapoGenerateWord'))return;
@@ -1450,6 +1461,7 @@ function createControls(){
  };
  input.value=defaultName();
  input.dataset.defaultName=input.value;
+ refreshFilename();
  wrap.querySelector('#mapoDownloadWord').onclick=async()=>{
   const output=wrap.querySelector('#mapoWordFeedback'),button=wrap.querySelector('#mapoDownloadWord');
   button.disabled=true;output.textContent='Preparando documento...';
@@ -1481,6 +1493,6 @@ function createControls(){
 
 function init(){createControls();const result=document.getElementById('result');if(result&&!result.querySelector('#openGeneratorFromResult')){const btn=document.createElement('button');btn.type='button';btn.id='openGeneratorFromResult';btn.className='secondary';btn.textContent='Generar informe Word';btn.onclick=()=>window.MAPOResultScreens?.showWord?.();result.querySelector('.section-heading .actions')?.appendChild(btn);}}
 function openGenerator(){return window.MAPOResultScreens?.showWord?.();}
-window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator,prepare:createControls};
+window.MAPOWordGenerator={generate,markers:allKeys,open:openGenerator,prepare:createControls,refreshFilename};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
