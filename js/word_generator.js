@@ -1020,6 +1020,16 @@ function fillTemplateTables(xml,f,r){
  const chairCols=[2,3,4,5,7,8,9],chairBase=tables[11];
  const chairPages=Math.max(1,Math.ceil(chairTypes.length/chairCols.length));
  const wheelchairPoints=x=>['brakes','arms','back','width'].reduce((n,k)=>n+(x[k]===true?0:1),0);
+ const writeLegend=(tc,lines)=>{
+  write(tc,lines[0]||'');
+  const first=all(tc,'t')[0],run=first?.parentNode;
+  if(!run)return;
+  for(const line of lines.slice(1)){
+   const br=d.createElementNS(ns,'w:br'),t=d.createElementNS(ns,'w:t');
+   t.textContent=line;t.setAttribute('xml:space','preserve');
+   run.appendChild(br);run.appendChild(t);
+  }
+ };
  const chairCaption=(table,part,page)=>{
   const model=direct(table,'tr').find(row=>cells(row).length===1)||direct(table,'tr')[0];
   if(!model)throw Error('No se encuentra una fila corporativa para identificar los tipos de sillas.');
@@ -1029,7 +1039,7 @@ function fillTemplateTables(xml,f,r){
   targetCells.forEach(tc=>write(tc,''));
   const label=part.map(([kind],i)=>'Tipo '+String.fromCharCode(65+i)+': '+(chairCatalog[kind]||kind.replace(/_/g,' '))).join('  |  ');
   if(!targetCells[0])throw Error('No hay celda donde insertar la descripción de los tipos de sillas.');
-  write(targetCells[0],label);
+  writeLegend(targetCells[0],label.split('  |  '));
   const last=direct(table,'tr')[direct(table,'tr').length-1];
   table.insertBefore(newRow,last);
  };
@@ -1181,7 +1191,7 @@ function fillTemplateTables(xml,f,r){
   const legend=templateRow.cloneNode(true);
   const legendCells=cells(legend);
   legendCells.forEach(tc=>write(tc,''));
-  write(legendCells[0],description);
+  writeLegend(legendCells[0],description.split('  |  '));
   table.appendChild(legend);
  }
 
@@ -1244,7 +1254,7 @@ function fillTemplateTables(xml,f,r){
   if(!model)throw Error('No se puede crear la fila descriptiva de WC.');
   const legend=model.cloneNode(true);
   cells(legend).forEach(tc=>write(tc,''));
-  write(cells(legend)[0],description);
+  writeLegend(cells(legend)[0],description.split('  |  '));
   const final=getRow(/PMWC\s*:/i);
   if(final)table.insertBefore(legend,final);
   else table.appendChild(legend);
@@ -1293,7 +1303,7 @@ function fillTemplateTables(xml,f,r){
   const templateRow=rr.find(row=>cells(row).length===1)||rr[0];
   const legend=templateRow.cloneNode(true);
   cells(legend).forEach(tc=>write(tc,''));
-  write(cells(legend)[0],description);
+  writeLegend(cells(legend)[0],description.split('  |  '));
   table.appendChild(legend);
  }
 
