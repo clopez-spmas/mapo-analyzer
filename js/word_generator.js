@@ -1060,8 +1060,9 @@ function fillTemplateTables(xml,f,r){
    for(const [criterion,row] of [['brakes',3],['arms',4],['back',5],['width',6]]){
     put(row,col,x?(x[criterion]===true?'—':'X'):'');
    }
-   // No se recogen reposapiés ni mantenimiento: mantener esas filas sin respuesta.
-   put(7,col,'');put(8,col,'');
+   // Respuestas descriptivas; no intervienen en el cálculo de PMSR.
+   put(7,col,x?.footrests==null?'':x.footrests?'NO':'SÍ');
+   put(8,col,x?.maintenance==null?'':x.maintenance?'NO':'SÍ');
    put(9,col,x?.count??'');
    put(10,col,x?num(wheelchairPoints(x)):'');
   });
