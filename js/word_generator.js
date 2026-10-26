@@ -1300,22 +1300,7 @@ function fillTemplateTables(xml,f,r){
  if(bedCells.length<2)throw Error('Falta celda de respuesta de pacientes encamados.');
  const bedValue=f.pacientesNAEncamados;
  if(bedValue!==undefined&&bedValue!==null&&bedValue!=='')write(bedCells.at(-1),bedValue===true?'Sí':bedValue===false?'No':String(bedValue));
- // PMamb se muestra junto a la fórmula existente del modelo, sin sustituirla.
- const environmentTable=tables.find(t=>direct(t,'tr').some(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row))));
- if(!environmentTable)throw Error('No se encuentra el apartado PMamb en la plantilla.');
- const environmentRow=direct(environmentTable,'tr').find(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row)));
- const envCells=cells(environmentRow);
- const envFormula=envCells.find(tc=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(tc)));
- const pmamb=r.details?.pmamb;
- if(pmamb==null||!Number.isFinite(Number(pmamb)))throw Error('El resultado PMamb no está disponible.');
- if(envFormula){
-  const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
-  t.setAttribute('xml:space','preserve');
-  t.textContent=' '+num(pmamb);
-  run.appendChild(t);
-  const paragraph=direct(envFormula,'p').find(p=>/PMamb\s*=\s*PMB/i.test(text(p)))||direct(envFormula,'p')[0];
-  if(paragraph)paragraph.appendChild(run);
- }else throw Error('No se encuentra la fórmula PMamb en la celda del modelo.');
+ // PMamb se completa una única vez, dentro de la celda corporativa rotulada PMamb =.
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
    ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
@@ -1347,7 +1332,19 @@ function fillTemplateTables(xml,f,r){
   textNodes.slice(1).forEach(n=>n.textContent='');
  };
  replaceLabelValue(/\bFC\s*=\s*$/i,'FC',r.fc);
- replaceLabelValue(/\bPMamb\s*=\s*$/i,'PMamb',r.details?.pmamb);
+ // La fórmula PMB + PMWC + PMH se mantiene y el resultado va en su misma celda.
+ const pmambTable=tables.find(table=>direct(table,'tr').some(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row))));
+ if(!pmambTable)throw Error('No se encuentra la fila 2.8 PMamb en el modelo.');
+ const pmambRow=direct(pmambTable,'tr').find(row=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH/i.test(text(row)));
+ const formulaCell=cells(pmambRow).find(tc=>/PMamb\s*=\s*PMB/i.test(text(tc)));
+ if(!formulaCell)throw Error('No se encuentra la celda de fórmula PMamb.');
+ const formulaParagraph=direct(formulaCell,'p').find(p=>/PMamb\s*=\s*PMB/i.test(text(p)));
+ if(!formulaParagraph)throw Error('No se encuentra el párrafo de fórmula PMamb.');
+ const pmambValue=r.details?.pmamb;
+ if(pmambValue==null||!Number.isFinite(Number(pmambValue)))throw Error('Falta el valor calculado PMamb.');
+ const valueRun=d.createElementNS(ns,'w:r'),valueText=d.createElementNS(ns,'w:t');
+ valueText.setAttribute('xml:space','preserve');valueText.textContent=' '+num(pmambValue);
+ valueRun.appendChild(valueText);formulaParagraph.appendChild(valueRun);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
 
  // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
