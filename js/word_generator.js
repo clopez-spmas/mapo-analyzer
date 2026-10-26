@@ -882,23 +882,35 @@ function fillTemplateTables(xml,f,r){
   }
   const position=rr.findIndex(row=>/Sala\s*\/\s*Unidad/i.test(text(row))&&/camas/i.test(text(row)));
   if(position>=0&&rr[position+1]){
-   const cs=cells(rr[position+1]);
-   if(cs[0])write(cs[0],f.unidad||'');
-   if(cs[1])write(cs[1],f.codigo||'');
-   if(cs[2])write(cs[2],f.camas??'');
+   const headerCells=cells(rr[position]),values=cells(rr[position+1]);
+   const indexFor=pattern=>headerCells.findIndex(tc=>pattern.test(text(tc)));
+   [[/Sala\s*\/\s*Unidad/i,f.unidad],[/C[oó]digo\s*sala/i,f.codigo],[/N[º.º°o]*\s*de?\s*camas/i,f.camas]].forEach(([pattern,value])=>{
+    const idx=indexFor(pattern);
+    if(idx>=0&&values[idx]&&value!==undefined&&value!==null)write(values[idx],value);
+   });
   }
   const full=(f.workerSchedule?.full||[]).filter(e=>Number(e.people)>0);
   const partial=(f.workerSchedule?.partial||[]).filter(e=>Number(e.people)>0);
-  const fmt=list=>list.map(e=>String(e.start||'')+'–'+String(e.end||'')+' ('+e.people+' personas)').join('; ');
   const first=rr.findIndex(row=>/1\.1\.1\./.test(text(row)));
   const second=rr.findIndex(row=>/1\.1\.2\./.test(text(row)));
   const fillSchedule=(from,to,items)=>{
    if(from<0)return;
-   const segment=rr.slice(from+1,to<0?rr.length:to);
-   const horario=segment.find(row=>/^Horario\s*:/i.test(text(cells(row)[0])));
-   const count=segment.find(row=>/N[ºo°.]?\s*de\s*personas/i.test(text(row)));
-   if(horario&&cells(horario)[1])write(cells(horario)[1],fmt(items));
+   const section=rr.slice(from+1,to<0?rr.length:to);
+   const horario=section.find(row=>/^Horario\s*:/i.test(text(cells(row)[0])));
+   const count=section.find(row=>/N[ºo°.]?\s*de\s*personas/i.test(text(row)));
+   const timeRow=horario;
    if(count&&cells(count)[1])write(cells(count)[1],items.reduce((n,e)=>n+Number(e.people||0),0));
+   if(!timeRow||!cells(timeRow)[1])return;
+   const model=timeRow.cloneNode(true);
+   items.forEach((entry,j)=>{
+    const row=j===0?timeRow:model.cloneNode(true);
+    if(j>0)timeRow.parentNode.insertBefore(row,(j===1?timeRow:fillSchedule.last).nextSibling);
+    const cc=cells(row);
+    if(cc[0])write(cc[0],'Horario '+(j+1));
+    if(cc[1])write(cc[1],String(entry.start||'')+'–'+String(entry.end||'')+' · '+entry.people+' personas');
+    fillSchedule.last=row;
+   });
+   if(!items.length)write(cells(timeRow)[1],'');
   };
   fillSchedule(first,second,full);
   fillSchedule(second,-1,partial);
