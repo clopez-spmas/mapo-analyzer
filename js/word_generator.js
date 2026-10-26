@@ -937,9 +937,9 @@ function fillTemplateTables(xml,f,r){
   });
  };
  fillMob(7,4,manual,[1,2,3,4,5,6],['manualTotal','manualPartial']);
- fillMob(8,3,assisted,[2,4,5,6,7,8],['aidedTotal','aidedPartial']);
+ fillMob(8,3,assisted,[1,2,3,4,5,6],['aidedTotal','aidedPartial']);
  [1,2,3,4,5,6].forEach((col,j)=>set(7,14,col,num(totals(j<3?'manualTotal':'manualPartial')[j%3])));
- [2,4,5,6,7,8].forEach((col,j)=>set(8,15,col,num(totals(j<3?'aidedTotal':'aidedPartial')[j%3])));
+ [1,2,3,4,5,6].forEach((col,j)=>set(8,15,col,num(totals(j<3?'aidedTotal':'aidedPartial')[j%3])));
  // El resumen manual se completa después de añadir las filas personalizadas.
  addValue(8,16,2,num(ttot[2]));addValue(8,16,6,num(ttot[3]));
  set(8,17,8,pct(ttot[2],ttot[0]+ttot[2]));
@@ -948,7 +948,7 @@ function fillTemplateTables(xml,f,r){
  const customs=(f.mobilizations?.custom||[]).filter(c=>c.name?.trim());
  for(const [ti,manual,typesFor,colsFor,totalRow] of [
    [7,true,['manualTotal','manualPartial'],[1,2,3,4,5,6],14],
-   [8,false,['aidedTotal','aidedPartial'],[2,4,5,6,7,8],15]
+   [8,false,['aidedTotal','aidedPartial'],[1,2,3,4,5,6],15]
  ]){
   const related=customs.filter(c=>typesFor.includes(c.category));
   if(!related.length)continue;
