@@ -764,6 +764,152 @@ function colorMapoResultCell(xml,r){
  properties.appendChild(shading);
  return new XMLSerializer().serializeToString(doc);
 }
+
+function fillTemplateTables(xml,f,r){
+ const d=new DOMParser().parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ if(d.getElementsByTagName('parsererror').length)throw Error('Plantilla Word no válida.');
+ const direct=(n,t)=>Array.from(n?.childNodes||[]).filter(x=>x.nodeType===1&&x.namespaceURI===ns&&x.localName===t);
+ const all=(n,t)=>Array.from(n?.getElementsByTagNameNS(ns,t)||[]);
+ const tables=all(d,'tbl').filter(t=>!t.closest||true);
+ if(tables.length!==31)throw Error('La plantilla ha cambiado: se esperaban 31 tablas originales, se encontraron '+tables.length+'. Se detiene la generación para evitar modificar el formato.');
+ const rows=i=>direct(tables[i],'tr'),cells=row=>direct(row,'tc');
+ const unique=row=>cells(row).filter((c,i,a)=>a.indexOf(c)===i);
+ const cell=(i,row,col)=>cells(rows(i)[row]||{})[col];
+ const write=(tc,val)=>{
+  if(!tc||val===undefined||val===null)return;
+  let ts=all(tc,'t');
+  if(!ts.length){
+   let p=direct(tc,'p')[0];if(!p){p=d.createElementNS(ns,'w:p');tc.appendChild(p);}
+   let run=direct(p,'r')[0];if(!run){run=d.createElementNS(ns,'w:r');p.appendChild(run);}
+   const t=d.createElementNS(ns,'w:t');run.appendChild(t);ts=[t];
+  }
+  ts[0].textContent=String(val);ts[0].setAttribute('xml:space','preserve');
+  ts.slice(1).forEach(x=>x.textContent='');
+ };
+ const set=(i,row,col,v)=>write(cell(i,row,col),v);
+ const text=tc=>all(tc,'t').map(t=>t.textContent||'').join('');
+ const addValue=(i,row,col,v)=>{
+  const tc=cell(i,row,col);if(!tc||v===undefined||v===null)return;
+  const txt=text(tc).trim();
+  if(txt&&txt.includes('{'))return;
+  write(tc,(txt?(txt+' '):'')+String(v));
+ };
+ const bool=v=>v===true?'Sí':v===false?'No':'';
+ const num=v=>v==null?'':Number(v).toLocaleString('es-ES',{maximumFractionDigits:4});
+ const entries=Object.values(f.mobilizations?.entries||{});
+ const sum=(type,shift)=>entries.reduce((n,e)=>n+Number(e[type]?.[shift]||0),0);
+ const totals=type=>[0,1,2].map(shift=>sum(type,shift));
+ const types=['manualTotal','manualPartial','aidedTotal','aidedPartial'];
+ const pct=(n,den)=>den?num(n/den*100)+' %':'';
+ const ttot=types.map(type=>totals(type).reduce((a,b)=>a+b,0));
+ const descriptions={
+  head_bed:'Desplazamiento hacia la cabecera de la cama',
+  bed_wheelchair:'De la cama a la silla de ruedas/sillón/silla',
+  wheelchair_bed:'De la silla de ruedas/sillón/silla a la cama',
+  bed_stretcher:'De la cama a la camilla',
+  stretcher_bed:'De la camilla a la cama',
+  wheelchair_toilet:'De la silla de ruedas al WC',
+  toilet_wheelchair:'Del WC a la silla de ruedas',
+  bed_turning:'Rotación en la cama y cambio postural',
+  sit_to_stand:'Levantamiento de posición sentada a postura de pie',
+  bed_shower:'De la cama a la ducha',
+  shower_bed:'De la ducha a la cama',
+  wheelchair_armchair:'De la silla de ruedas al sillón',
+  armchair_wheelchair:'Del sillón a la silla de ruedas'
+ };
+ // Sólo se clonan filas del modelo. Nunca se recrean tablas, anchos, bordes ni estilos.
+ const grow=(i,start,capacity,wanted)=>{
+  if(wanted<=capacity)return;
+  const template=rows(i)[start+capacity-1],before=rows(i)[start+capacity];
+  if(!template||!before)throw Error('No se puede ampliar la tabla original '+i);
+  for(let j=capacity;j<wanted;j++)tables[i].insertBefore(template.cloneNode(true),before);
+ };
+ const shrink=(i,start,capacity,wanted)=>{
+  const rr=rows(i);for(let k=capacity-1;k>=wanted;k--){const row=rr[start+k];if(row)row.parentNode.removeChild(row);}
+ };
+ // Portada e identificación
+ set(4,3,0,f.unidad||'');set(4,3,2,f.codigo||'');set(4,3,6,f.camas??'');
+ set(5,3,1,'NC = '+num(f.nc));set(5,3,2,'PC = '+num(f.pc));set(5,4,1,'NA = '+num(f.na));
+ // Formación: conservamos literalmente todas las preguntas y solo completamos respuestas.
+ set(6,2,1,bool(f.ff_curso));set(6,2,3,bool(f.ff_informacion));
+ set(6,4,3,bool(f.ff_informacion));set(6,6,3,bool(f.ff_eficacia));
+ // Movilizaciones: correspondencia con las filas fijas de la plantilla.
+ const manual=['head_bed','bed_wheelchair','wheelchair_bed','bed_stretcher','stretcher_bed','wheelchair_toilet','toilet_wheelchair','bed_turning','sit_to_stand'];
+ const assisted=[...manual,'wheelchair_armchair','armchair_wheelchair'];
+ const fillMob=(ti,start,taskNames,offsets,keys)=>{
+  taskNames.forEach((k,i)=>{
+   const e=f.mobilizations?.entries?.[k]||{};
+   keys.forEach((key,j)=>[0,1,2].forEach((shift)=>set(ti,start+i,offsets[j*3+shift],num(e[key]?.[shift]??0))));
+  });
+ };
+ fillMob(7,4,manual,[1,2,3,4,5,6],['manualTotal','manualPartial']);
+ fillMob(8,3,assisted,[2,4,5,6,7,8],['aidedTotal','aidedPartial']);
+ [1,2,3,4,5,6].forEach((col,j)=>set(7,14,col,num(totals(j<3?'manualTotal':'manualPartial')[j%3])));
+ [2,4,5,6,7,8].forEach((col,j)=>set(8,15,col,num(totals(j<3?'aidedTotal':'aidedPartial')[j%3])));
+ addValue(7,15,1,num(ttot[0]));addValue(7,15,4,num(ttot[1]));
+ addValue(8,16,2,num(ttot[2]));addValue(8,16,6,num(ttot[3]));
+ set(8,17,8,pct(ttot[2],ttot[0]+ttot[2]));
+ set(8,18,8,pct(ttot[3],ttot[1]+ttot[3]));
+ // Camas: ampliar o suprimir solo las filas de equipo, clonando la fila corporativa.
+ const beds=f.camasRegulablesInforme||[];
+ if(beds.length>4)grow(15,2,4,beds.length);
+ else if(beds.length<4)shrink(15,2,4,beds.length);
+ beds.forEach((b,k)=>{
+  set(15,2+k,0,b.descripcion||'');set(15,2+k,1,b.numero??'');
+  set(15,2+k,2,bool(b.electrica));set(15,2+k,3,bool(b.pedal));
+  set(15,2+k,4,b.nodos??'');set(15,2+k,5,bool(b.manual));
+ });
+ // Ayudas menores, conservando la nomenclatura de las filas de la plantilla.
+ const help=f.informeDescriptivo?.ayudasMenores||{};
+ ['sabana','tabla','cinturon','rollbord','gruaActiva'].forEach((key,j)=>{
+  const v=help[key]||{};set(10,2+j,1,bool(v.presencia));set(10,2+j,2,v.numero??'');
+ });
+ const extras=[...(f.informeDescriptivo?.ayudasMenoresAdicionales||[])].filter(x=>x.descripcion?.trim());
+ const legacy=help.otro;if(legacy?.descripcion?.trim())extras.push(legacy);
+ if(extras.length>1)grow(10,7,1,extras.length);
+ if(!extras.length)shrink(10,7,1,0);
+ extras.forEach((e,j)=>{set(10,7+j,0,e.descripcion);set(10,7+j,1,bool(e.presencia));set(10,7+j,2,e.numero??'');});
+ // Equipos: datos registrados bajo el bloque descriptivo, sin cambiar sus preguntas.
+ const equipment=f.informeDescriptivo?.equiposAyudaDetalle||[];
+ if(equipment.length>5)grow(9,3,5,equipment.length);
+ if(equipment.length<5)shrink(9,3,5,equipment.length);
+ equipment.forEach((e,j)=>{
+  set(9,3+j,0,e.tipo||'');set(9,3+j,1,e.numero??'');
+  ['requisitos','paciente','ambiente','mantenimiento'].forEach((k,n)=>set(9,3+j,2+n,bool(e[k])));
+ });
+ // Tablas matriciales: conservar criterios, ponderaciones y las columnas A, B, C... originales.
+ const matrix=(ti,data,start,labelrow,countrow,columns,flags)=>{
+  if(data.length>columns.length)throw Error('La tabla original '+ti+' admite '+columns.length+' tipos. Se requiere confirmar cómo representarlos sin modificar sus columnas.');
+  for(let j=0;j<columns.length;j++){
+   const col=columns[j],x=data[j];
+   if(labelrow!==null)set(ti,labelrow,col,x?.description||'');
+   if(countrow!==null)set(ti,countrow,col,x?.units??'');
+   flags.forEach(([row,key])=>set(ti,row,col,x?(x[key]===true?'X':x[key]===false?'—':''):''));
+  }
+ };
+ matrix(12,f.bathTypes||[],5,3,12,[3,4,5,7,8,9],[[5,'space'],[6,'door'],[8,'obstacles']]);
+ matrix(13,f.wcTypes||[],5,3,11,[2,3,4,6,7,8],[[5,'space'],[6,'height'],[7,'bar'],[8,'door'],[9,'lateral']]);
+ matrix(14,f.roomTypes||[],5,3,15,[2,3,4,5,6,7],[[5,'between'],[6,'foot'],[7,'bedSection'],[8,'underbed'],[9,'chairHeight']]);
+ // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
+ [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
+   ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
+ set(19,1,1,'%LTA = '+pct(ttot[2],ttot[0]+ttot[2]));
+ set(19,2,1,(ttot[0]+ttot[2])?bool(ttot[2]/(ttot[0]+ttot[2])>=.9):'');
+ set(22,1,1,'%LPA = '+pct(ttot[3],ttot[1]+ttot[3]));
+ set(22,2,1,(ttot[1]+ttot[3])?bool(ttot[3]/(ttot[1]+ttot[3])>=.9):'');
+ set(24,0,1,'PMSR = '+num(r.details?.pmsr));set(24,2,1,'TSR = '+num(r.details?.tsr));
+ set(24,3,1,bool(r.details?.fcSufficient));set(25,3,8,'FC = '+num(r.fc));
+ set(26,0,3,'PMamb = '+num(r.details?.pmamb));set(26,3,5,'Famb = '+num(r.famb));
+ // Planificación: conservar exactamente título, columnas, marcos y zona de aprobación.
+ const measures=(f.planificacionPreventiva?.medidas||[]).filter(x=>x.medida?.trim());
+ if(measures.length>1)grow(29,4,1,measures.length);
+ measures.forEach((m,i)=>set(29,4+i,3,m.medida));
+ set(29,1,1,f.empresa||'');set(29,1,5,f.centroTrabajo||'');
+ set(29,2,1,f.unidad||'');
+ const dt=String(f.fecha||'');if(/^\d{4}-\d\d-\d\d/.test(dt))set(29,1,10,dt.slice(8,10)+'/'+dt.slice(5,7)+'/'+dt.slice(0,4));
+ return new XMLSerializer().serializeToString(d);
+}
 async function generate(template){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -776,7 +922,7 @@ async function generate(template){
  if(unknown.length)throw Error('Marcadores no reconocidos: '+unknown.join(', '));
  if(!found.length)throw Error('La plantilla no contiene marcadores compatibles. Consulte el catálogo de marcadores.');
  const photos=await insertEquipmentPhotos(zip,xml,f);xml=photos.xml;
- xml=fillOriginalTables(xml,f,r);
+ xml=fillTemplateTables(xml,f,r);
  xml=replaceScalarMarkers(xml,f,r);
  xml=replaceConclusionsSummary(xml,r);
  xml=selectRiskConclusion(xml,r);
