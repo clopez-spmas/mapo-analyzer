@@ -397,3 +397,14 @@
 /* Otros registros: cada tipo de habitación, WC o baño permanece en su propia tarjeta vertical. */
 #formContainer .registry-list{display:flex;flex-direction:column;align-items:stretch;gap:16px;}
 #formContainer .registry-list>.registry-card{display:block;width:100%;min-width:0;flex:none;}
+
+/* Controles visibles para consultar todas las columnas de sillas. */
+#formContainer .wheelchair-scroll-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px 12px;background:#f1f6fb;border:1px solid #d5e2ef;border-radius:8px;}
+#formContainer .wheelchair-scroll-controls span{flex:1 1 310px;font-size:.9rem;color:#38546b;}
+#formContainer .wheelchair-scroll-controls button{flex:0 0 auto;}
+#formContainer .wheelchair-table-wrap{overflow-x:scroll!important;overflow-y:hidden!important;scrollbar-width:auto;scrollbar-color:#678aad #edf2f7;border:1px solid #d7e1eb;border-radius:8px;}
+#formContainer .wheelchair-table-wrap::-webkit-scrollbar{height:14px;}
+#formContainer .wheelchair-table-wrap::-webkit-scrollbar-thumb{background:#678aad;border:3px solid #edf2f7;border-radius:8px;}
+#formContainer .wheelchair-table{min-width:1580px!important;}
+#formContainer .wheelchair-table th:nth-child(7),#formContainer .wheelchair-table th:nth-child(8){width:195px;}
+#formContainer .wheelchair-table th:nth-child(9){width:120px;}
