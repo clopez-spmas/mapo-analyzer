@@ -384,7 +384,7 @@ function fillOriginalTables(xml,f,r){
    const table=make('tbl');
    const tblPr=elements(original,'tblPr')[0];if(tblPr)table.appendChild(tblPr.cloneNode(true));
    const tblGrid=make('tblGrid');for(let i=0;i<4;i++){const c=make('gridCol');c.setAttributeNS(ns,'w:w','2200');tblGrid.appendChild(c);}table.appendChild(tblGrid);
-   const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{maximumFractionDigits:4}):'';
+   const format=n=>Number.isFinite(Number(n))?Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
    const date=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||''));return m?m[3]+'/'+m[2]+'/'+m[1]:String(v||'');};
    const idRows=[
     [['IDENTIFICACIÓN DE LA UNIDAD','','',''],true],
@@ -428,7 +428,7 @@ function fillOriginalTables(xml,f,r){
  direct.tabla_personal();
 
  // Sustituir las tablas de cálculo y descripción por tablas corporativas completas.
- const formatValue=v=>typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:3}):String(v??'');
+ const formatValue=v=>typeof v==='number'?v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}):String(v??'');
  const createCorporateTable=(existing,data,key)=>{
   const table=doc.createElementNS(ns,'w:tbl');
   const pr=elements(existing,'tblPr')[0];
@@ -853,7 +853,7 @@ function fillTemplateTables(xml,f,r){
   write(tc,(txt?(txt+' '):'')+String(v));
  };
  const bool=v=>v===true?'Sí':v===false?'No':'';
- const num=v=>v==null?'':Number(v).toLocaleString('es-ES',{maximumFractionDigits:4});
+ const num=v=>v==null?'':Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
  const entries=Object.values(f.mobilizations?.entries||{});
  const sum=(type,shift)=>entries.reduce((n,e)=>n+Number(e[type]?.[shift]||0),0);
  const totals=type=>[0,1,2].map(shift=>sum(type,shift));
@@ -1558,10 +1558,10 @@ async function generateStudy(template){
  combined+=para('Personal expuesto equivalente (OP): '+Number(merged.op).toLocaleString('es-ES'));
  const factorLabels=[['FS','fs'],['FA','fa'],['FC','fc'],['Famb','famb'],['FF','ff']];
  for(const [label,key] of factorLabels)combined+=para(label+': '+Number(result[key]).toLocaleString('es-ES'));
- combined+=para('Índice MAPO global: '+Number(result.mapo).toLocaleString('es-ES',{maximumFractionDigits:3}),true);
+ combined+=para('Índice MAPO global: '+Number(result.mapo).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}),true);
  combined+=para('Nivel de exposición global: '+result.nivel,true);
  combined+=para('Comparativa por salas',true);
- for(const room of valid)combined+=para(room.name+': MAPO '+Number(room.result.mapo).toLocaleString('es-ES',{maximumFractionDigits:3})+' — '+(room.result.nivel||''));
+ for(const room of valid)combined+=para(room.name+': MAPO '+Number(room.result.mapo).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' — '+(room.result.nivel||''));
  xml=xml.replace(bodyMatch[0],'<w:body>'+combined+section+'</w:body>');
  main.file('word/document.xml',xml);
  main.file(relPath,rels);main.file('[Content_Types].xml',types);
