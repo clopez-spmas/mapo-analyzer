@@ -1412,13 +1412,14 @@ function fillTemplateTables(xml,f,r){
  valueRun.appendChild(valueNode);
  pmambParagraph.appendChild(valueRun);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
- // Mantener Famb y su valor en una única línea en la celda corporativa estrecha.
+ // Escribir Famb en formato consistente con los valores corporativos: Arial 11.
  const fambCell=findLabeledCell(/\bFamb\s*=\s*/i);
  if(fambCell){
   let tcPr=direct(fambCell,'tcPr')[0];
   if(!tcPr){tcPr=d.createElementNS(ns,'w:tcPr');fambCell.insertBefore(tcPr,fambCell.firstChild);}
   if(!direct(tcPr,'noWrap').length)tcPr.appendChild(d.createElementNS(ns,'w:noWrap'));
-  const p=direct(fambCell,'p')[0];
+  const paragraphs=direct(fambCell,'p');
+  const p=paragraphs.find(p=>/Famb/i.test(text(p)))||paragraphs[0];
   if(p){
    const tNodes=all(p,'t');
    if(tNodes.length){
@@ -1431,8 +1432,9 @@ function fillTemplateTables(xml,f,r){
    for(const run of all(p,'r')){
     let rp=direct(run,'rPr')[0];
     if(!rp){rp=d.createElementNS(ns,'w:rPr');run.insertBefore(rp,run.firstChild);}
-    direct(rp,'sz').forEach(n=>n.parentNode.removeChild(n));
-    const sz=d.createElementNS(ns,'w:sz');sz.setAttributeNS(ns,'w:val','16');rp.appendChild(sz);
+    for(const prop of [...rp.childNodes])if(['sz','szCs','rFonts'].includes(prop.localName))rp.removeChild(prop);
+    const font=d.createElementNS(ns,'w:rFonts');font.setAttributeNS(ns,'w:ascii','Arial');font.setAttributeNS(ns,'w:hAnsi','Arial');rp.appendChild(font);
+    for(const tag of ['sz','szCs']){const size=d.createElementNS(ns,'w:'+tag);size.setAttributeNS(ns,'w:val','22');rp.appendChild(size);}
    }
   }
  }
