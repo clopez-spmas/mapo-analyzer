@@ -698,12 +698,17 @@ function insertPreventiveBullets(xml,f){
   const spacing=doc.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:after','80');pPr.appendChild(spacing);
   const indent=doc.createElementNS(ns,'w:ind');indent.setAttributeNS(ns,'w:left','480');indent.setAttributeNS(ns,'w:hanging','240');pPr.appendChild(indent);
   p.appendChild(pPr);
+  const styleRun=(run)=>{
+   const pr=doc.createElementNS(ns,'w:rPr');
+   const fonts=doc.createElementNS(ns,'w:rFonts');
+   fonts.setAttributeNS(ns,'w:ascii','Arial');fonts.setAttributeNS(ns,'w:hAnsi','Arial');fonts.setAttributeNS(ns,'w:cs','Arial');pr.appendChild(fonts);
+   const sz=doc.createElementNS(ns,'w:sz');sz.setAttributeNS(ns,'w:val','22');pr.appendChild(sz);
+   const szCs=doc.createElementNS(ns,'w:szCs');szCs.setAttributeNS(ns,'w:val','22');pr.appendChild(szCs);
+   run.appendChild(pr);
+  };
   const symbol=doc.createElementNS(ns,'w:r'),bullet=doc.createElementNS(ns,'w:t');
-  bullet.textContent='●  ';bullet.setAttribute('xml:space','preserve');symbol.appendChild(bullet);p.appendChild(symbol);
-  const run=doc.createElementNS(ns,'w:r'),runPr=doc.createElementNS(ns,'w:rPr');
-  const font=doc.createElementNS(ns,'w:rFonts');font.setAttributeNS(ns,'w:ascii','Arial');font.setAttributeNS(ns,'w:hAnsi','Arial');runPr.appendChild(font);
-  const size=doc.createElementNS(ns,'w:sz');size.setAttributeNS(ns,'w:val','20');runPr.appendChild(size);
-  run.appendChild(runPr);
+  styleRun(symbol);bullet.textContent='●  ';bullet.setAttribute('xml:space','preserve');symbol.appendChild(bullet);p.appendChild(symbol);
+  const run=doc.createElementNS(ns,'w:r');styleRun(run);
   const t=doc.createElementNS(ns,'w:t');t.textContent=measure;t.setAttribute('xml:space','preserve');run.appendChild(t);p.appendChild(run);
   cursor.parentNode.insertBefore(p,cursor.nextSibling);cursor=p;
  }
