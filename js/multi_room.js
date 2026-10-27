@@ -27,7 +27,53 @@
  function nextStep(){if(selectedStudy==='hospitalizacion'&&document.querySelector('#formContainer .dashboard-grid')){currentStep=0;currentRoom().currentStep=0;renderStep();updateBanner();window.MAPONavigation?.bindStandard?.();return;}const total=MAPO_STUDIES[selectedStudy].steps.length;if(currentStep>=total-1)return;capture();currentStep++;currentRoom().currentStep=currentStep;renderStep();updateBanner();window.MAPONavigation?.bindStandard?.();}
  async function saveMultiStudy(){capture();if(state.study==='hospitalizacion')state.rooms.forEach(r=>{r.lastResult=window.MAPOStudyIO?.refreshCalculatedResult?.(r.formData,r.lastResult)||r.lastResult;});await window.MAPOStudyIO.saveJson({format:'MAPO Analyzer Multi-Room Study',schemaVersion:4,savedAt:new Date().toISOString(),study:state.study,active:state.active,rooms:clone(state.rooms)},'MAPO_estudio_multi_sala.json');}
  async function loadMultiStudyFile(file){try{const d=JSON.parse(await file.text());if(d?.format!=='MAPO Analyzer Multi-Room Study'||!Array.isArray(d.rooms))throw Error('El archivo no es un estudio MAPO multi-sala válido.');state.rooms=d.rooms.map((r,i)=>({name:r.name||`Unidad ${i+1}`,formData:r.formData||{},currentStep:(d.study==='hospitalizacion'&&Number(d.schemaVersion||1)<4?(Number(d.schemaVersion||1)===3?(Number(r.currentStep)||0)+((Number(r.currentStep)||0)>=9?1:0):([0,2,5,14,7,1,3,4,6,8,10,11,12,13,15][(Number(r.currentStep)||0)+(Number(d.schemaVersion||1)<2&&Number(r.currentStep)>0?5:0)]??0)):(Number(r.currentStep)||0)),lastResult:r.lastResult||null}));state.active=Math.max(0,Math.min(state.rooms.length-1,Number(d.active)||0));state.study=d.study||null;if(state.study==='hospitalizacion'){selectedStudy=state.study;state.rooms.forEach(r=>{r.lastResult=window.MAPOStudyIO?.refreshCalculatedResult?.(r.formData,r.lastResult)||r.lastResult;});}if(state.study)beginSelectedStudy(state.study);else{show('roomSetup',true);renderNames(state.rooms.length);prepareRoomSetup();}}catch(e){const x=$('error');if(x){x.textContent=e.message;x.hidden=false;}}}
+
+ // Evaluación conjunta: sumar datos no compartidos de las salas y reutilizar
+ // exactamente el motor de cálculo de hospitalización, sin medias de índices.
+ function globalMAPO(){
+  syncCurrentRoom();
+  if(state.study!=='hospitalizacion'||!state.rooms.length)return null;
+  const rooms=state.rooms.map((room,i)=>({name:label(room,i),form:room.formData||{},result:room.lastResult||{}}));
+  const missing=rooms.filter(({form})=>!(Number(form.op)>0)||!Number.isFinite(Number(form.nc))||!Number.isFinite(Number(form.pc)));
+  if(missing.length)throw Error('Faltan OP, NC o PC válidos en: '+missing.map(r=>r.name).join(', '));
+  const merged={nc:0,pc:0,na:0,op:0,mobilizations:{entries:{}},wheelchairs:{entries:{},custom:[]},bathTypes:[],wcTypes:[],roomTypes:[]};
+  const fields=['manualTotal','manualPartial','aidedTotal','aidedPartial'];
+  let trained=0,base=0,infoTrained=0;
+  for(let i=0;i<rooms.length;i++){
+   const f=rooms[i].form,prefix='s'+i+'_';
+   for(const key of ['nc','pc','op'])merged[key]+=Number(f[key]||0);
+   for(const key of ['bathTypes','wcTypes','roomTypes'])merged[key].push(...clone(f[key]||[]));
+   const entries=f.mobilizations?.entries||{};
+   for(const [key,e] of Object.entries(entries)){
+    const aggregate=merged.mobilizations.entries[key]||{manualTotal:[0,0,0],manualPartial:[0,0,0],aidedTotal:[0,0,0],aidedPartial:[0,0,0]};
+    fields.forEach(k=>[0,1,2].forEach(j=>aggregate[k][j]+=Number(e?.[k]?.[j]||0)));
+    merged.mobilizations.entries[key]=aggregate;
+   }
+   for(const [key,e] of Object.entries(f.wheelchairs?.entries||{})){
+    const x=merged.wheelchairs.entries[prefix+key]=clone(e);
+    if(Number(x.count||0)<=0)delete merged.wheelchairs.entries[prefix+key];
+   }
+   const weight=Number(f.op)||0;
+   base+=weight;
+   trained+=Number.isFinite(Number(f.ff_personas_formadas))&&f.ff_personas_formadas!==''?Number(f.ff_personas_formadas):weight*Number(f.ff_cobertura||0)/100;
+   infoTrained+=Number.isFinite(Number(f.ff_personas_informadas))&&f.ff_personas_informadas!==''?Number(f.ff_personas_informadas):weight*(f.ff_informacion===true?1:0);
+  }
+  merged.na=merged.nc+merged.pc;
+  merged.ff_cobertura=base?100*trained/base:0;
+  merged.ff_curso=rooms.every(x=>x.form.ff_curso===true);
+  merged.ff_antiguedad=rooms.every(x=>x.form.ff_antiguedad===true);
+  merged.ff_eficacia=rooms.every(x=>x.form.ff_eficacia===true);
+  merged.ff_informacion=base>0&&infoTrained/base>=.9;
+  // La suficiencia no puede asumirse por intercambio de equipos entre salas.
+  for(const k of ['fs_elevadores','fs_camillas','fs_camas3','fa_sabana','fa_dos','fa_camas3']){
+   merged[k]=rooms.every(x=>x.form[k]===true);
+  }
+  const factors=window.MAPOCalculationEngine?.calculateHospitalizacionFactors?.(merged);
+  if(!factors||!['fs','fa','fc','famb','ff'].every(k=>Number.isFinite(factors[k])))throw Error('No se puede calcular MAPO global: faltan factores válidos.');
+  const mapo=((merged.nc/merged.op*factors.fs)+(merged.pc/merged.op*factors.fa))*factors.fc*factors.famb*factors.ff;
+  return {merged,result:{...factors,mapo,nivel:mapo===0?'Ausente':mapo<=1.5?'Aceptable':mapo<=5?'Medio':'Alto'},rooms};
+ }
  function init(){const n=$('roomCount');if(n&&!n.dataset.multiRoomBound){n.dataset.multiRoomBound='1';const f=()=>renderNames(Number(n.value)||1);n.addEventListener('input',f);n.addEventListener('change',f);}$('loadMultiStudyFile')?.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)loadMultiStudyFile(f);e.target.value='';});setTimeout(()=>ensureRoomNavigation(),0);}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
- window.MAPOMultiRoom={state,openStudySetup,prepareRoomSetup,beginSelectedStudy,setStudyType,saveMultiStudy,loadMultiStudyFile,switchRoom,previousStep,nextStep,renderNames,renderModuleHub,openModule,openHospitalDashboard,syncCurrentRoom,restoreCurrentRoom};
+ window.MAPOMultiRoom={state,openStudySetup,prepareRoomSetup,beginSelectedStudy,setStudyType,saveMultiStudy,loadMultiStudyFile,switchRoom,previousStep,nextStep,renderNames,renderModuleHub,openModule,openHospitalDashboard,syncCurrentRoom,restoreCurrentRoom,globalMAPO};
 })();
