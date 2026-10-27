@@ -918,50 +918,48 @@ function fillTemplateTables(xml,f,r){
  };
  fillMob(7,4,manual,[1,2,3,4,5,6],['manualTotal','manualPartial']);
  fillMob(8,3,assisted,[1,2,3,4,5,6],['aidedTotal','aidedPartial']);
- // Tareas personalizadas: insertarlas antes de «Total por turno» en ambas tablas.
+ // Todas las tareas del estudio, incluidas las personalizadas, antes del total.
  const customs=(f.mobilizations?.custom||[]).filter(c=>c.name?.trim());
- for(const [ti,kinds] of [[7,['manualTotal','manualPartial']],[8,['aidedTotal','aidedPartial']]]){
-  const rr=rows(ti);
+ const tableTasks={
+  7:{keys:['manualTotal','manualPartial'],standard:manual},
+  8:{keys:['aidedTotal','aidedPartial'],standard:assisted}
+ };
+ const tableSums={};
+ for(const ti of [7,8]){
+  const {keys,standard}=tableTasks[ti],rr=rows(ti);
   const totalRow=rr.find(row=>/Total\s+por\s+turno/i.test(text(row)));
-  if(!totalRow)throw Error('Falta la fila Total por turno en movilizaciones '+ti);
-  const totalIndex=rr.indexOf(totalRow);
-  const sample=rr.slice(0,totalIndex).reverse().find(row=>/^Otros\s*:/i.test(text(cells(row)[0]||row)))||rr[totalIndex-1];
-  if(!sample||cells(sample).length<7)throw Error('Falta fila de tarea que sirva de modelo en '+ti);
-  for(const c of customs.filter(c=>kinds.includes(c.category))){
+  if(!totalRow)throw Error('Falta Total por turno en movilizaciones '+ti);
+  const idx=rr.indexOf(totalRow);
+  const sample=rr.slice(0,idx).reverse().find(row=>/^Otros\s*:/i.test(text(cells(row)[0]||row)))||rr[idx-1];
+  if(!sample||cells(sample).length<7)throw Error('No existe fila base de tareas en '+ti);
+  const related=customs.filter(c=>keys.includes(c.category));
+  for(const c of related){
    const entry=f.mobilizations?.entries?.[c.id]||{};
    const clone=sample.cloneNode(true);
    write(cells(clone)[0],c.name);
-   kinds.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],num(entry[kind]?.[shift]??0))));
+   keys.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],num(entry[kind]?.[shift]??0))));
    totalRow.parentNode.insertBefore(clone,totalRow);
   }
-  // Los totales incluyen todas las entradas, también las tareas personalizadas.
-  const totalCells=cells(totalRow);
-  if(totalCells.length!==7)throw Error('La fila Total por turno no contiene seis valores en tabla '+ti);
-  kinds.forEach((kind,j)=>totals(kind).forEach((value,shift)=>write(totalCells[1+j*3+shift],num(value))));
+  // Sumar las mismas tareas que se muestran, sin incluir categorías no representadas.
+  const ids=[...standard,...related.map(c=>c.id)];
+  const sums=keys.map(kind=>[0,1,2].map(shift=>ids.reduce((n,id)=>n+Number(f.mobilizations?.entries?.[id]?.[kind]?.[shift]||0),0)));
+  tableSums[ti]=sums;
+  const cs=cells(totalRow);
+  if(cs.length!==7)throw Error('La fila Total por turno debe tener seis celdas de resultados en '+ti);
+  sums.forEach((values,j)=>values.forEach((v,k)=>write(cs[1+j*3+k],num(v))));
  }
- // Localizar la fila de resultados por su texto, nunca por un índice que cambia.
- const manualSummary=rows(7).find(row=>/Total\s+de\s+LTM\s+y\s+LPM/i.test(text(row)));
- if(manualSummary){
-  const cc=cells(manualSummary);
-  if(cc.length<3)throw Error('La fila de totales LTM/LPM tiene una estructura no compatible.');
-  // No depender de celdas vacías: la plantilla puede contener fórmulas y rótulos
-  // en las mismas celdas de destino. Añadir el total a continuación de cada fórmula.
-  const addAfter=(cell,value)=>{
-   const paras=direct(cell,'p'),target=paras[paras.length-1];
-   if(!target)throw Error('Falta párrafo para resultado de movilizaciones.');
-   const run=d.createElementNS(ns,'w:r'),t=d.createElementNS(ns,'w:t');
-   t.textContent=' '+num(value);t.setAttribute('xml:space','preserve');run.appendChild(t);target.appendChild(run);
-  };
-  const labelledLTM=cc.find(tc=>/LTM/i.test(text(tc))&&!/Total\s+de/i.test(text(tc)));
-  const labelledLPM=cc.find(tc=>/LPM/i.test(text(tc))&&!/Total\s+de/i.test(text(tc)));
-  if(labelledLTM&&labelledLPM&&labelledLTM!==labelledLPM){
-   addAfter(labelledLTM,ttot[0]);addAfter(labelledLPM,ttot[1]);
-  }else{
-   // En modelos con rótulos y resultados separados, utilizar las dos
-   // últimas celdas sin modificar el texto del encabezado.
-   addAfter(cc[cc.length-2],ttot[0]);addAfter(cc[cc.length-1],ttot[1]);
-  }
- }
+ // La fila de fórmulas tiene cinco celdas físicas: título, fórmula,
+ // resultado LTM/LTA, fórmula, resultado LPM/LPA. No añadir al texto de la fórmula.
+ const setSummary=(ti,rx)=>{
+  const row=rows(ti).find(x=>rx.test(text(x)));
+  if(!row)throw Error('Falta fila de totales de movilización en '+ti);
+  const cc=cells(row);
+  if(cc.length!==5)throw Error('Estructura de totales no prevista en '+ti+': '+cc.length);
+  const sums=tableSums[ti].map(v=>v.reduce((a,b)=>a+b,0));
+  write(cc[2],num(sums[0]));write(cc[4],num(sums[1]));
+ };
+ setSummary(7,/Total\s+de\s+LTM\s+y\s+LPM/i);
+ setSummary(8,/Total\s+de\s+LTA\s+y\s+LPA/i);
  const postureRow=rows(7).find(row=>/no\s+pueden\s+adoptar\s+algunas\s+posturas/i.test(text(row)));
  if(postureRow){
   const cc=cells(postureRow);
@@ -970,35 +968,19 @@ function fillTemplateTables(xml,f,r){
   if(answer&&cc.length>1)write(cc[1],answer);
   if(answer&&/^s[ií]$/i.test(answer)&&f.pacientesNAPosturasDetalle&&cc.length>2)write(cc[2],f.pacientesNAPosturasDetalle);
  }
- // Resultados de la tabla LTA/LPA. Buscar las filas originales por su rótulo:
- // su posición cambia al añadir movilizaciones personalizadas.
+ // Porcentajes con los mismos totales de las tareas visibles.
+ const manualTotals=tableSums[7].map(v=>v.reduce((a,b)=>a+b,0));
+ const assistedTotals=tableSums[8].map(v=>v.reduce((a,b)=>a+b,0));
  const assistedRows=rows(8);
- const turnRow=assistedRows.find(row=>/Total\s+por\s+turno/i.test(text(row)));
- if(!turnRow)throw Error('Falta la fila Total por turno.');
- const shiftTotals=['aidedTotal','aidedPartial'].flatMap(type=>totals(type));
- const turnCells=cells(turnRow);
- // El encabezado «Total por turno» ocupa dos columnas combinadas:
- // hay siete celdas físicas (rótulo + seis valores G a L).
- if(turnCells.length!==7)throw Error('Estructura inesperada del total por turno: '+turnCells.length+' celdas.');
- for(let i=0;i<6;i++)write(turnCells[i+1],num(shiftTotals[i]));
- const assistedSummary=assistedRows.find(row=>/Total\s+de\s+LTA\s+y\s+LPA/i.test(text(row)));
- if(!assistedSummary)throw Error('No se encuentra la fila LTA/LPA.');
- const totalsCells=cells(assistedSummary);
- // Cinco celdas físicas: rótulo, fórmula LTA, resultado LTA,
- // fórmula LPA, resultado LPA.
- if(totalsCells.length!==5||!/LTA/i.test(text(totalsCells[1]))||!/LPA/i.test(text(totalsCells[3])))
-  throw Error('La estructura de LTA/LPA no coincide con la plantilla.');
- write(totalsCells[2],num(ttot[2]));
- write(totalsCells[4],num(ttot[3]));
  for(const [label,numerator,denominator] of [
-  ['%LTA',ttot[2],ttot[0]+ttot[2]],['%LPA',ttot[3],ttot[1]+ttot[3]]
+  ['%LTA',assistedTotals[0],manualTotals[0]+assistedTotals[0]],
+  ['%LPA',assistedTotals[1],manualTotals[1]+assistedTotals[1]]
  ]){
   const resultRow=assistedRows.find(row=>text(cells(row)[0]).trim().startsWith(label+':'));
-  if(!resultRow)throw Error('Falta la fila '+label);
-  const cc=cells(resultRow);
-  // Rótulo combinado, fórmula combinada y resultado.
-  if(cc.length!==3)throw Error('La fila '+label+' debe tener tres celdas físicas.');
-  write(cc[2],pct(numerator,denominator));
+  if(!resultRow)throw Error('Falta fila '+label);
+  const cs=cells(resultRow);
+  if(cs.length!==3)throw Error('La fila '+label+' no tiene tres celdas físicas.');
+  write(cs[2],pct(numerator,denominator));
  }
  // Tipos de sillas en las columnas A-G existentes en el modelo.
  const chairCatalog={
