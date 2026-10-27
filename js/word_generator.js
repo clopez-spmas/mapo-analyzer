@@ -1509,7 +1509,8 @@ function refreshFilename(){
  if(!input)return;
  const f=reportData().form||{};
  const room=window.MAPOMultiRoom?.state?.rooms?.[window.MAPOMultiRoom?.state?.active];
- const label=String(f.unidad||room?.name||'estudio').replace(/[^\p{L}\p{N}_-]+/gu,'_');
+ const multi=(window.MAPOMultiRoom?.state?.rooms?.length||0)>1;
+ const label=String(multi?(f.centroTrabajo||f.empresa||'Hospital')+'_multisala':(f.unidad||room?.name||'estudio')).replace(/[^\p{L}\p{N}_-]+/gu,'_');
  const currentDefault='MAPO_'+label+'.docx';
  // Conservar nombres elegidos manualmente; actualizar sólo el sugerido.
  if(!input.value||input.value===input.dataset.defaultName)input.value=currentDefault;
@@ -1520,7 +1521,7 @@ function createControls(){
  if(!host||document.getElementById('mapoGenerateWord'))return;
  const wrap=document.createElement('div');
  wrap.className='registry-card';wrap.id='mapoGenerateWord';
- wrap.innerHTML='<h3>Generar informe Word</h3><label for="mapoWordFilename">Nombre del archivo Word</label><input id="mapoWordFilename" type="text" autocomplete="off" placeholder="MAPO_nombre_unidad.docx" aria-label="Nombre del informe Word"><p class="small">Se guardará como documento .docx. Si su navegador permite elegir carpeta, se abrirá el selector de archivos; en otros navegadores se descargará con el nombre indicado en la carpeta de descargas configurada.</p><div class="actions"><button type="button" id="mapoDownloadWord">Elegir ubicación y guardar Word</button></div><p id="mapoWordFeedback" role="status"></p>';
+ wrap.innerHTML='<h3>Generar informe Word</h3><p id="mapoWordScope">En estudios multisala se generará un único documento con todas las salas y el resultado global.</p><label for="mapoWordFilename">Nombre del archivo Word</label><input id="mapoWordFilename" type="text" autocomplete="off" placeholder="MAPO_nombre_unidad.docx" aria-label="Nombre del informe Word"><p class="small">Se guardará como documento .docx. Si su navegador permite elegir carpeta, se abrirá el selector de archivos; en otros navegadores se descargará con el nombre indicado en la carpeta de descargas configurada.</p><div class="actions"><button type="button" id="mapoDownloadWord">Elegir ubicación y guardar Word</button></div><p id="mapoWordFeedback" role="status"></p>';
  host.appendChild(wrap);
  const input=wrap.querySelector('#mapoWordFilename');
  const defaultName=()=>{
