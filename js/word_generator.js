@@ -1320,6 +1320,19 @@ function fillTemplateTables(xml,f,r){
  const bedValue=f.pacientesNAEncamados;
  if(bedValue!==undefined&&bedValue!==null&&bedValue!=='')write(bedCells.at(-1),bedValue===true?'Sí':bedValue===false?'No':String(bedValue));
  // PMamb se completa una única vez, dentro de la celda corporativa rotulada PMamb =.
+ // FC: completar PMSR, TSR y suficiencia en la tabla corporativa por rótulos.
+ const fcRows=tables.flatMap(tb=>direct(tb,'tr'));
+ const fcCellText=tc=>text(tc).replace(/\s+/g,' ').trim();
+ const fcWrite=(re,value)=>{
+  const row=fcRows.find(row=>re.test(fcCellText(cells(row)[0]||row)));
+  if(!row||cells(row).length<2)throw Error('No se encuentra la respuesta del factor FC: '+re.source);
+  const cc=cells(row),destination=cc[cc.length-1];
+  write(destination,value);
+ };
+ const twoDecimals=v=>Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+ if(r.details?.pmsr!=null)fcWrite(/^PMSR\s*:/i,'PMSR = '+twoDecimals(r.details.pmsr));
+ if(r.details?.tsr!=null)fcWrite(/^Total de sillas de ruedas en la sala/i,'TSR = '+Math.round(Number(r.details.tsr)));
+ if(r.details?.fcSufficient!=null)fcWrite(/^¿TSR\s*[≥>=]+\s*50\s*%\s*NA/i,r.details.fcSufficient?'Sí':'No');
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
  [ ['fs_elevadores',18,1],['fs_camillas',18,2],['fs_camas3',18,3],
    ['fa_sabana',21,1],['fa_camas3',21,2] ].forEach(([key,ti,ri])=>set(ti,ri,1,bool(f[key])));
