@@ -854,6 +854,7 @@ function fillTemplateTables(xml,f,r){
  };
  const bool=v=>v===true?'Sí':v===false?'No':'';
  const num=v=>v==null?'':Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const integer=v=>v==null?'':Number(v).toLocaleString('es-ES',{maximumFractionDigits:0});
  const entries=Object.values(f.mobilizations?.entries||{});
  const sum=(type,shift)=>entries.reduce((n,e)=>n+Number(e[type]?.[shift]||0),0);
  const totals=type=>[0,1,2].map(shift=>sum(type,shift));
@@ -932,7 +933,7 @@ function fillTemplateTables(xml,f,r){
  const fillMob=(ti,start,taskNames,offsets,keys)=>{
   taskNames.forEach((k,i)=>{
    const e=f.mobilizations?.entries?.[k]||{};
-   keys.forEach((key,j)=>[0,1,2].forEach((shift)=>set(ti,start+i,offsets[j*3+shift],num(e[key]?.[shift]??0))));
+   keys.forEach((key,j)=>[0,1,2].forEach((shift)=>set(ti,start+i,offsets[j*3+shift],integer(e[key]?.[shift]??0))));
   });
  };
  fillMob(7,4,manual,[1,2,3,4,5,6],['manualTotal','manualPartial']);
@@ -956,7 +957,7 @@ function fillTemplateTables(xml,f,r){
    const entry=f.mobilizations?.entries?.[c.id]||{};
    const clone=sample.cloneNode(true);
    write(cells(clone)[0],c.name);
-   keys.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],num(entry[kind]?.[shift]??0))));
+   keys.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],integer(entry[kind]?.[shift]??0))));
    totalRow.parentNode.insertBefore(clone,totalRow);
   }
   // Sumar las mismas tareas que se muestran, sin incluir categorías no representadas.
@@ -965,7 +966,7 @@ function fillTemplateTables(xml,f,r){
   tableSums[ti]=sums;
   const cs=cells(totalRow);
   if(cs.length!==7)throw Error('La fila Total por turno debe tener seis celdas de resultados en '+ti);
-  sums.forEach((values,j)=>values.forEach((v,k)=>write(cs[1+j*3+k],num(v))));
+  sums.forEach((values,j)=>values.forEach((v,k)=>write(cs[1+j*3+k],integer(v))));
  }
  // La fila de fórmulas tiene cinco celdas físicas: título, fórmula,
  // resultado LTM/LTA, fórmula, resultado LPM/LPA. No añadir al texto de la fórmula.
@@ -1089,8 +1090,8 @@ function fillTemplateTables(xml,f,r){
   const isLast=page===chairPages-1;
   const totalSillas=Number(r.details?.tsr);
   const totalPuntos=Number(r.details?.wheelchairPoints);
-  put(9,cells(rr[9]).length-1,isLast&&Number.isFinite(totalSillas)?num(totalSillas):'');
-  put(11,cells(rr[11]).length-1,isLast&&Number.isFinite(totalPuntos)?num(totalPuntos):'');
+  put(9,cells(rr[9]).length-1,isLast&&Number.isFinite(totalSillas)?integer(totalSillas):'');
+  put(11,cells(rr[11]).length-1,isLast&&Number.isFinite(totalPuntos)?integer(totalPuntos):'');
   put(12,cells(rr[12]).length-1,isLast&&r.details?.pmsr!=null?num(r.details.pmsr):'');
   chairCaption(table,part,page);
   chairPagesLast=table;
