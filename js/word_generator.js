@@ -1080,8 +1080,10 @@ function fillTemplateTables(xml,f,r){
    // Respuestas descriptivas; no intervienen en el cálculo de PMSR.
    put(7,col,x?.footrests==null?'':x.footrests?'NO':'SÍ');
    put(8,col,x?.maintenance==null?'':x.maintenance?'NO':'SÍ');
-   put(9,col,x?.count??'');
-   put(10,col,x?num(wheelchairPoints(x)):'');
+   // Las filas de unidades y puntuaciones carecen de la columna física «Valor X»:
+   // A-G ocupan índices 1-7 y el total está en la última celda.
+   put(9,1+j,x?.count??'');
+   put(10,1+j,x?num(wheelchairPoints(x)):'');
   });
   // Los valores globales sólo figuran en la última continuación.
   const isLast=page===chairPages-1;
