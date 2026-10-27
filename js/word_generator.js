@@ -596,6 +596,20 @@ function replaceScalarMarkers(xml,f,r){
    }
   }
   nodes.forEach((n,i)=>{n.textContent=values[i];n.setAttribute('xml:space','preserve');});
+  // Homogeneizar el texto insertado en los marcadores descriptivos:
+  // Arial 11, negro, sin negrita ni cursiva; no alterar encabezados.
+  const isDescription=matches.some(m=>['factores_organizativos','descripcion_frecuencia','descripcion_formacion','descripcion_instalaciones','descripcion_equipos','conclusiones'].includes(m[1]));
+  if(isDescription){
+   const affected=new Set(nodes.filter(n=>(n.textContent||'').trim()).map(n=>n.parentNode).filter(run=>run?.localName==='r'));
+   for(const run of affected){
+    let pr=Array.from(run.childNodes).find(n=>n.localName==='rPr'&&n.namespaceURI===ns);
+    if(!pr){pr=doc.createElementNS(ns,'w:rPr');run.insertBefore(pr,run.firstChild);}
+    for(const x of [...pr.childNodes])if(['rFonts','sz','szCs','b','bCs','i','iCs','color'].includes(x.localName))pr.removeChild(x);
+    const fonts=doc.createElementNS(ns,'w:rFonts');fonts.setAttributeNS(ns,'w:ascii','Arial');fonts.setAttributeNS(ns,'w:hAnsi','Arial');fonts.setAttributeNS(ns,'w:cs','Arial');pr.appendChild(fonts);
+    for(const tag of ['sz','szCs']){const size=doc.createElementNS(ns,'w:'+tag);size.setAttributeNS(ns,'w:val','22');pr.appendChild(size);}
+    const color=doc.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','000000');pr.appendChild(color);
+   }
+  }
  }
  return new XMLSerializer().serializeToString(doc);
 }
