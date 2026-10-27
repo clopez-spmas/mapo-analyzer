@@ -1380,6 +1380,30 @@ function fillTemplateTables(xml,f,r){
  valueRun.appendChild(valueNode);
  pmambParagraph.appendChild(valueRun);
  replaceLabelValue(/\bFamb\s*=\s*$/i,'Famb',r.famb);
+ // Mantener Famb y su valor en una única línea en la celda corporativa estrecha.
+ const fambCell=findLabeledCell(/\bFamb\s*=\s*/i);
+ if(fambCell){
+  let tcPr=direct(fambCell,'tcPr')[0];
+  if(!tcPr){tcPr=d.createElementNS(ns,'w:tcPr');fambCell.insertBefore(tcPr,fambCell.firstChild);}
+  if(!direct(tcPr,'noWrap').length)tcPr.appendChild(d.createElementNS(ns,'w:noWrap'));
+  const p=direct(fambCell,'p')[0];
+  if(p){
+   const tNodes=all(p,'t');
+   if(tNodes.length){
+    tNodes[0].textContent='Famb = '+Number(r.famb).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+    tNodes[0].setAttribute('xml:space','preserve');
+    tNodes.slice(1).forEach(n=>n.textContent='');
+   }
+   all(p,'br').forEach(n=>n.parentNode?.removeChild(n));
+   all(p,'tab').forEach(n=>n.parentNode?.removeChild(n));
+   for(const run of all(p,'r')){
+    let rp=direct(run,'rPr')[0];
+    if(!rp){rp=d.createElementNS(ns,'w:rPr');run.insertBefore(rp,run.firstChild);}
+    direct(rp,'sz').forEach(n=>n.parentNode.removeChild(n));
+    const sz=d.createElementNS(ns,'w:sz');sz.setAttributeNS(ns,'w:val','16');rp.appendChild(sz);
+   }
+  }
+ }
 
  // Planificación: rellenar exclusivamente los campos del modelo; no modificar el resto.
  const plan=tables.find(t=>direct(t,'tr').some(row=>/FECHA PREVISTA\s*(?:DE\s*)?APLICACI[OÓ]N/i.test(text(row))));
