@@ -1363,6 +1363,16 @@ function fillTemplateTables(xml,f,r){
   textNodes[0].setAttribute('xml:space','preserve');
   textNodes.slice(1).forEach(n=>n.textContent='');
  };
+ // Tabla de asignación Famb: introducir PMamb en la celda de resultado.
+ const pmambFactorRow=tables.flatMap(tb=>direct(tb,'tr')).find(row=>{
+  const cc=cells(row);
+  return cc.length>=2&&/PMamb:\s*Puntuaci[oó]n\s*media\s*entorno\/ambiente/i.test(text(cc[0]))&&/PMamb\s*=/i.test(text(cc.at(-1)));
+ });
+ if(!pmambFactorRow)throw Error('No se encuentra el campo PMamb de asignación Famb.');
+ const pmambFactorCell=cells(pmambFactorRow).at(-1);
+ const pmambCalculated=r.details?.pmamb;
+ if(pmambCalculated==null||!Number.isFinite(Number(pmambCalculated)))throw Error('No existe valor PMamb calculado.');
+ write(pmambFactorCell,'PMamb = '+Number(pmambCalculated).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}));
  replaceLabelValue(/\bFC\s*=\s*$/i,'FC',r.fc);
  // La fórmula PMB + PMWC + PMH se mantiene y el resultado va en su misma celda.
  // PMamb en la tabla vigente: la celda corporativa dice "PMamb =", no la fórmula completa.
