@@ -1,8 +1,5 @@
-/* Pantalla de acceso inicial de MAPO Analyzer.
-   Las instrucciones se sirven como un PDF estático para que puedan sustituirse
-   sin modificar este código. */
+/* Pantalla de acceso inicial de MAPO Analyzer. Las instrucciones por modalidad se enlazan desde la selección de estudio. */
 (function(){
-  const INSTRUCTIONS_URL='instrucciones/instrucciones.pdf';
   function $(id){return document.getElementById(id);}
 
   function showAccessScreen(){
@@ -26,17 +23,11 @@
   }
 
   function init(){
-    const instructions=$('instructionsButton');
     const enter=$('enterProgram');
-    if(instructions){
-      instructions.href=INSTRUCTIONS_URL;
-      instructions.target='_blank';
-      instructions.rel='noopener';
-    }
     if(enter)enter.addEventListener('click',enterProgram);
     showAccessScreen();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-  window.MAPOAccess={enterProgram,showAccessScreen,INSTRUCTIONS_URL};
+  window.MAPOAccess={enterProgram,showAccessScreen};
 })();
