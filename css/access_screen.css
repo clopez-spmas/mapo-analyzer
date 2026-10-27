@@ -201,8 +201,3 @@ body:has(#accessScreen:not([hidden])) .header {
 #studySelection .instruction-status{display:inline-block;padding:4px 10px;border-radius:999px;background:#e4eaf1;color:#536579;font-size:.75rem;font-weight:700}
 #studySelection .instruction-note{margin:5px 0 0;color:#67798d;font-size:.82rem;line-height:1.55}
 @media(max-width:780px){#studySelection .study-instruction-links{grid-template-columns:1fr}#studySelection .instruction-card{min-height:84px}#studySelection .study-instructions{padding:18px}}
-
-/* Acceso diferenciado para retomar evaluaciones guardadas */
-#studySelection #loadStudyStart{margin-top:24px!important;padding-top:20px;border-top:1px solid #dbe4ee}
-#studySelection #loadStudyStart:before{content:'Gestión de estudios';display:block;font-size:1rem;font-weight:700;color:#245982;margin-bottom:12px}
-#studySelection #loadStudyStartButton{min-height:44px;border-radius:9px}
