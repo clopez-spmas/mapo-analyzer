@@ -1011,6 +1011,7 @@ function fillTemplateTables(xml,f,r){
   direct(pPr,'jc').forEach(node=>pPr.removeChild(node));
   const jc=d.createElementNS(ns,'w:jc');jc.setAttributeNS(ns,'w:val','left');pPr.appendChild(jc);
   direct(pPr,'tabs').forEach(node=>pPr.removeChild(node));
+  all(p,'tab').forEach(node=>node.parentNode?.removeChild(node));
   const ts=all(p,'t');if(!ts.length)return;
   const run=ts[0].parentNode;
   for(const line of lines.slice(1)){
