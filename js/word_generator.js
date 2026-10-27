@@ -1396,11 +1396,11 @@ function fillTemplateTables(xml,f,r){
  }
  return new XMLSerializer().serializeToString(d);
 }
-async function generate(template){
+async function generate(template,providedData){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
  if(!doc)throw Error('El documento seleccionado no es una plantilla DOCX compatible.');
- let xml=normalize(await doc.async('string')),d=reportData(),f=d.form||{},r=d.result||{};
+ let xml=normalize(await doc.async('string')),d=providedData||reportData(),f=d.form||{},r=d.result||{};
  xml=replaceUnitX(xml,f.unidad);
  xml=positionDescriptions(xml);
  if(!Number.isFinite(Number(r.mapo)))throw Error('No hay resultados MAPO calculados para esta unidad. Calcule el índice antes de generar el informe.');
@@ -1430,6 +1430,74 @@ async function generate(template){
  zip.file('word/document.xml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'});
  return blob;
+}
+async function generateStudy(template){
+ const mr=window.MAPOMultiRoom,rooms=mr?.state?.rooms||[];
+ if(rooms.length<=1)return generate(template);
+ const {merged,result}=mr.globalMAPO();
+ const valid=rooms.map((room,i)=>{
+  const form=room.formData||{};
+  const previous=room.lastResult||{};
+  const refreshed=window.MAPOStudyIO?.refreshCalculatedResult?.(form,previous)||previous;
+  if(!Number.isFinite(Number(refreshed.mapo)))throw Error('Falta calcular el índice MAPO de la sala '+(room.name||i+1));
+  return {form,result:refreshed,name:room.name||'Sala '+(i+1)};
+ });
+ const docs=[];
+ for(const room of valid)docs.push(await JSZip.loadAsync(await generate(template,room)));
+ const main=docs[0],mainDoc=main.file('word/document.xml');
+ let xml=await mainDoc.async('string');
+ const bodyMatch=/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/.exec(xml);
+ if(!bodyMatch)throw Error('No se puede identificar el cuerpo del informe Word.');
+ const sectionMatch=/<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(bodyMatch[1]);
+ const section=sectionMatch?.[0]||'';
+ let combined=bodyMatch[1].replace(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g,'');
+ const relPath='word/_rels/document.xml.rels';
+ let rels=await main.file(relPath).async('string'),types=await main.file('[Content_Types].xml').async('string');
+ let relIndex=9000;
+ const escape=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const para=(content,bold=false)=>'<w:p><w:r>'+(bold?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+escape(content)+'</w:t></w:r></w:p>';
+ const pageBreak='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+ for(let i=1;i<docs.length;i++){
+  const src=docs[i],other=await src.file('word/document.xml').async('string');
+  const body=/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/.exec(other);
+  if(!body)throw Error('No se puede leer la sala '+(i+1));
+  let fragment=body[1].replace(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g,'');
+  const srcRels=await src.file(relPath).async('string');
+  for(const m of srcRels.matchAll(/<Relationship\b[^>]*\/>/g)){
+   const tag=m[0],id=/\bId="([^"]+)"/.exec(tag)?.[1],target=/\bTarget="([^"]+)"/.exec(tag)?.[1];
+   if(!id||!target||!tag.includes('/image'))continue;
+   const oldFile='word/'+target.replace(/^\/?/,'');
+   const raw=src.file(oldFile);
+   if(!raw)continue;
+   const extension=target.split('.').pop(),filename='mapo_multi_'+i+'_'+relIndex+'.'+extension;
+   main.file('word/media/'+filename,await raw.async('uint8array'));
+   const newid='rId'+relIndex++;
+   fragment=fragment.replaceAll('r:embed="'+id+'"','r:embed="'+newid+'"');
+   rels=rels.replace('</Relationships>','<Relationship Id="'+newid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+filename+'"/></Relationships>');
+   const extPattern=new RegExp('Extension="'+extension+'"','i');
+   if(!extPattern.test(types)){
+    const mime=extension==='png'?'image/png':extension==='webp'?'image/webp':'image/jpeg';
+    types=types.replace('</Types>','<Default Extension="'+extension+'" ContentType="'+mime+'"/></Types>');
+   }
+  }
+  combined+=pageBreak+fragment;
+ }
+ // El informe global contiene datos y cálculos agregados, no una media de índices.
+ combined+=pageBreak+para('RESULTADOS GLOBALES DEL HOSPITAL',true);
+ combined+=para('Evaluación conjunta de '+valid.length+' salas independientes.',false);
+ combined+=para('Pacientes no colaboradores (NC): '+merged.nc);
+ combined+=para('Pacientes parcialmente colaboradores (PC): '+merged.pc);
+ combined+=para('Personal expuesto equivalente (OP): '+Number(merged.op).toLocaleString('es-ES'));
+ const factorLabels=[['FS','fs'],['FA','fa'],['FC','fc'],['Famb','famb'],['FF','ff']];
+ for(const [label,key] of factorLabels)combined+=para(label+': '+Number(result[key]).toLocaleString('es-ES'));
+ combined+=para('Índice MAPO global: '+Number(result.mapo).toLocaleString('es-ES',{maximumFractionDigits:3}),true);
+ combined+=para('Nivel de exposición global: '+result.nivel,true);
+ combined+=para('Comparativa por salas',true);
+ for(const room of valid)combined+=para(room.name+': MAPO '+Number(room.result.mapo).toLocaleString('es-ES',{maximumFractionDigits:3})+' — '+(room.result.nivel||''));
+ xml=xml.replace(bodyMatch[0],'<w:body>'+combined+section+'</w:body>');
+ main.file('word/document.xml',xml);
+ main.file(relPath,rels);main.file('[Content_Types].xml',types);
+ return main.generateAsync({type:'blob',compression:'DEFLATE'});
 }
 function downloadBlob(blob,name){
  const link=document.createElement('a'),url=URL.createObjectURL(blob);
@@ -1477,7 +1545,7 @@ function createControls(){
    }
    const response=await fetch('plantillas/MAPO_Hospitalizacion.docx',{cache:'no-store'});
    if(!response.ok)throw Error('La plantilla oficial no está disponible en la carpeta plantillas/ del programa.');
-   const blob=await generate(await response.arrayBuffer());
+   const blob=await generateStudy(await response.arrayBuffer());
    if(handle){
     const writable=await handle.createWritable();
     await writable.write(blob);await writable.close();
