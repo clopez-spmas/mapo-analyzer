@@ -1403,8 +1403,8 @@ function fillTemplateTables(xml,f,r){
  // Completar PMamb en la misma celda que contiene la fórmula de 2.8.
  const pmambCell=tables.flatMap(tb=>direct(tb,'tr')).flatMap(row=>cells(row)).find(tc=>/PMamb\s*=\s*PMB\s*\+\s*PMWC\s*\+\s*PMH\s*=/i.test(text(tc)));
  if(!pmambCell)throw Error('No se localiza la celda de fórmula PMamb en la plantilla.');
- const pmambParagraph=direct(pmambCell,'p').find(p=>/PMamb/i.test(text(p)))||direct(pmambCell,'p').at(-1);
- if(!pmambParagraph)throw Error('La celda PMamb no contiene ningún párrafo editable.');
+ const pmambParagraph=all(pmambCell,'p').find(p=>/PMamb\s*=\s*PMB/i.test(text(p)))||all(pmambCell,'p').find(p=>/PMamb/i.test(text(p)));
+ if(!pmambParagraph)throw Error('No se encuentra el párrafo de la fórmula PMamb dentro de la celda.');
  const valueRun=d.createElementNS(ns,'w:r');
  const valueNode=d.createElementNS(ns,'w:t');
  valueNode.appendChild(d.createTextNode(' '+num(pmambResult)));
