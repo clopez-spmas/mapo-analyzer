@@ -64,10 +64,14 @@
   merged.ff_antiguedad=rooms.every(x=>x.form.ff_antiguedad===true);
   merged.ff_eficacia=rooms.every(x=>x.form.ff_eficacia===true);
   merged.ff_informacion=base>0&&infoTrained/base>=.9;
-  // La suficiencia no puede asumirse por intercambio de equipos entre salas.
-  for(const k of ['fs_elevadores','fs_camillas','fs_camas3','fa_sabana','fa_dos','fa_camas3']){
-   merged[k]=rooms.every(x=>x.form[k]===true);
-  }
+  // Cada sala dispone de sus propios equipos: una sala suficiente no
+  // compensa una sala insuficiente, aunque usen diferentes equipos.
+  const yes=x=>x===true||x==='yes';
+  const allElevators=rooms.every(({form:f})=>yes(f.fs_elevadores)||yes(f.fs_camillas)||yes(f.fs_camas3));
+  const allMinorAids=rooms.every(({form:f})=>(yes(f.fa_sabana)&&yes(f.fa_dos))||(yes(f.fa_sabana)&&yes(f.fa_camas3)));
+  merged.fs_elevadores=allElevators;
+  merged.fs_camillas=false;merged.fs_camas3=false;
+  merged.fa_sabana=allMinorAids;merged.fa_dos=allMinorAids;merged.fa_camas3=false;
   const factors=window.MAPOCalculationEngine?.calculateHospitalizacionFactors?.(merged);
   if(!factors||!['fs','fa','fc','famb','ff'].every(k=>Number.isFinite(factors[k])))throw Error('No se puede calcular MAPO global: faltan factores válidos.');
   const mapo=((merged.nc/merged.op*factors.fs)+(merged.pc/merged.op*factors.fa))*factors.fc*factors.famb*factors.ff;
