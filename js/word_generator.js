@@ -998,17 +998,34 @@ function fillTemplateTables(xml,f,r){
  };
  for(const item of f.wheelchairs?.custom||[])if(item.id&&item.name)chairCatalog[item.id]=item.name;
  const chairTypes=Object.entries(f.wheelchairs?.entries||{}).filter(([,x])=>Number(x?.count)>0);
- const chairCols=[2,3,4,5,7,8,9],chairBase=tables[11];
+ const chairCols=[2,3,4,5,6,7,8],chairBase=tables[11];
  const chairPages=Math.max(1,Math.ceil(chairTypes.length/chairCols.length));
  const wheelchairPoints=x=>['brakes','arms','back','width'].reduce((n,k)=>n+(x[k]===true?0:1),0);
  const writeLegend=(tc,lines)=>{
   write(tc,lines[0]||'');
-  const first=all(tc,'t')[0],run=first?.parentNode;
-  if(!run)return;
+  const p=direct(tc,'p')[0];if(!p)return;
+  // La fila corporativa original utiliza alineación distribuida:
+  // imponer alineación izquierda y eliminar tabulaciones de la leyenda.
+  let pPr=direct(p,'pPr')[0];
+  if(!pPr){pPr=d.createElementNS(ns,'w:pPr');p.insertBefore(pPr,p.firstChild);}
+  direct(pPr,'jc').forEach(node=>pPr.removeChild(node));
+  const jc=d.createElementNS(ns,'w:jc');jc.setAttributeNS(ns,'w:val','left');pPr.appendChild(jc);
+  direct(pPr,'tabs').forEach(node=>pPr.removeChild(node));
+  const ts=all(p,'t');if(!ts.length)return;
+  const run=ts[0].parentNode;
   for(const line of lines.slice(1)){
    const br=d.createElementNS(ns,'w:br'),t=d.createElementNS(ns,'w:t');
    t.textContent=line;t.setAttribute('xml:space','preserve');
    run.appendChild(br);run.appendChild(t);
+  }
+ };
+ const whiteTypeHeader=(tc,value)=>{
+  write(tc,value);
+  for(const run of all(tc,'r')){
+   let props=direct(run,'rPr')[0];
+   if(!props){props=d.createElementNS(ns,'w:rPr');run.insertBefore(props,run.firstChild);}
+   direct(props,'color').forEach(node=>props.removeChild(node));
+   const color=d.createElementNS(ns,'w:color');color.setAttributeNS(ns,'w:val','FFFFFF');props.appendChild(color);
   }
  };
  const chairCaption=(table,part,page)=>{
@@ -1036,7 +1053,7 @@ function fillTemplateTables(xml,f,r){
   const put=(row,col,val)=>write(cells(rr[row])[col],val);
   chairCols.forEach((col,j)=>{
    const entry=part[j],x=entry?.[1];
-   put(2,col,entry?String.fromCharCode(65+j):'');
+   whiteTypeHeader(cells(rr[2])[col],entry?String.fromCharCode(65+j):'');
    for(const [criterion,row] of [['brakes',3],['arms',4],['back',5],['width',6]]){
     put(row,col,x?(x[criterion]===true?'—':'X'):'');
    }
