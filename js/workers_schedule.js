@@ -38,8 +38,12 @@ function calculate(){
   const turns=referenceTurns(full);
   const rows=[['Mañana','morning'],['Tarde','afternoon'],['Noche','night']].map(([name,key])=>{
     const turn=turns[key];
-    const fullPresent=full.reduce((n,r)=>n+presenceInTurn(r,turn),0);
-    const partialPresent=partial.reduce((n,r)=>n+presenceInTurn(r,turn),0);
+    const bestTurn=r=>['morning','afternoon','night'].reduce((best,k)=>{
+      const t=turns[k],score=overlap(r.start,r.end,t.start,t.end)/dur(r.start,r.end);
+      return score>best.score?{key:k,score}:best;
+    },{key:'morning',score:-1}).key;
+    const fullPresent=full.filter(r=>bestTurn(r)===key).reduce((n,r)=>n+Number(r.people)*dayFactor(r)*Math.min(1,dur(r.start,r.end)/dur(turn.start,turn.end)),0);
+    const partialPresent=partial.filter(r=>bestTurn(r)===key).reduce((n,r)=>n+Number(r.people)*dayFactor(r)*Math.min(1,dur(r.start,r.end)/dur(turn.start,turn.end)),0);
     return {name,key,turn,fullPresent,partialPresent,totalPresent:fullPresent+partialPresent,op:fullPresent+partialPresent};
   });
   const A=rows.reduce((n,r)=>n+r.fullPresent,0),D=rows.reduce((n,r)=>n+r.partialPresent,0);
