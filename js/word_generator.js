@@ -1261,11 +1261,11 @@ function fillTemplateTables(xml,f,r){
   const totalUnits=baths.reduce((n,x)=>n+Number(x.units||0),0);
   const totalPoints=baths.reduce((n,x)=>n+Number(x.units||0)*((x.space===true?2:0)+(x.door===true?1:0)+(x.obstacles===true?1:0)),0);
   const rowUnits=bathRow(table,/Unidades:\s*N[uú]mero/i);
-  if(rowUnits&&page===bathPages-1)write(cells(rowUnits).at(-1),num(totalUnits));
+  if(rowUnits)write(cells(rowUnits).at(-1),page===bathPages-1?num(totalUnits):'');
   const rowScore=bathRow(table,/Puntuaci[oó]n por tipo de ba[nñ]o/i);
-  if(rowScore&&page===bathPages-1)write(cells(rowScore).at(-1),num(totalPoints));
+  if(rowScore)write(cells(rowScore).at(-1),page===bathPages-1?num(totalPoints):'');
   const pmRow=bathRow(table,/PMB\s*:/i);
-  if(pmRow&&page===bathPages-1)write(cells(pmRow).at(-1),r.details?.pmB==null?'':num(r.details.pmB));
+  if(pmRow)write(cells(pmRow).at(-1),page===bathPages-1&&r.details?.pmB!=null?num(r.details.pmB):'');
   // Mantener vacías las celdas A-F de clasificación C/H; la leyenda de tipos va en una fila independiente.
   const bottom=bathTitleRows(table);
   const templateRow=bottom.find(row=>cells(row).length===1)||bottom[0];
@@ -1402,6 +1402,9 @@ function fillTemplateTables(xml,f,r){
   cells(legend).forEach(tc=>write(tc,''));
   writeLegend(cells(legend)[0],description.split('  |  '));
   table.appendChild(legend);
+  // Las tablas intermedias no muestran puntuación media ni totales globales.
+  const pmRow=rr.find(row=>/PMH\s*:\s*Puntuaci[oó]n\s+media\s+de\s+habitaciones/i.test(text(row)));
+  if(pmRow&&cells(pmRow).length)write(cells(pmRow).at(-1),last&&r.details?.pmH!=null?num(r.details.pmH):'');
  }
 
  // PMH y respuesta de pacientes encamados: celdas originales del informe.
@@ -1410,7 +1413,7 @@ function fillTemplateTables(xml,f,r){
  if(!pmhRow)throw Error('No se encuentra la fila PMH en la plantilla.');
  const pmhCells=cells(pmhRow);
  if(pmhCells.length<2)throw Error('Falta celda de resultado PMH.');
- if(r.details?.pmH!=null)write(pmhCells.at(-1),num(r.details.pmH));
+ if(roomPages===1&&r.details?.pmH!=null)write(pmhCells.at(-1),num(r.details.pmH));
  const bedboundRow=rowWith(/motivo\s+que\s+no\s+se\s+use\s+el\s+ba[nñ]o/i);
  if(!bedboundRow)throw Error('No se encuentra la pregunta sobre pacientes encamados.');
  const bedCells=cells(bedboundRow);
