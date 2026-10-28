@@ -619,7 +619,26 @@ function replaceScalarMarkers(xml,f,r){
     values[last]=values[last].slice(right);
    }
   }
-  nodes.forEach((n,i)=>{n.textContent=values[i];n.setAttribute('xml:space','preserve');});
+  nodes.forEach((n,i)=>{
+   const parts=String(values[i]??'').replace(/\\r\\n?/g,'\\n').split('\\n');
+   n.textContent=parts[0];
+   n.setAttribute('xml:space','preserve');
+   if(parts.length>1){
+    const run=n.parentNode;
+    if(run?.localName==='r'&&run.namespaceURI===ns){
+     let after=n;
+     for(let j=1;j<parts.length;j++){
+      const br=doc.createElementNS(ns,'w:br');
+      run.insertBefore(br,after.nextSibling);
+      const next=doc.createElementNS(ns,'w:t');
+      next.setAttribute('xml:space','preserve');
+      next.textContent=parts[j];
+      run.insertBefore(next,br.nextSibling);
+      after=next;
+     }
+    }
+   }
+  });
   // Homogeneizar el texto insertado en los marcadores descriptivos:
   // Arial 11, negro, sin negrita ni cursiva; no alterar encabezados.
   const isDescription=matches.some(m=>['factores_organizativos','descripcion_frecuencia','descripcion_formacion','descripcion_instalaciones','descripcion_equipos','conclusiones'].includes(m[1]));
