@@ -14,7 +14,33 @@
   return {...previous,...factors,mapo,nivel:mapo===0?'Ausente':mapo<=1.5?'Irrelevante':mapo<=5?'Medio':'Alto'};
  }
  function snapshot(){captureCurrentStep();lastResult=refreshCalculatedResult(formData,lastResult);return{format:'MAPO Analyzer Study',schemaVersion:4,savedAt:new Date().toISOString(),study:selectedStudy,currentStep,formData:JSON.parse(JSON.stringify(formData||{})),lastResult:lastResult?JSON.parse(JSON.stringify(lastResult)):null};}
- async function saveJson(data,suggestedName='MAPO_estudio.json'){/* Descarga independiente de permisos o referencias antiguas del selector de archivos del navegador. */const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=suggestedName;document.body.appendChild(a);try{a.click();}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}}
+ async function saveJson(data,suggestedName='MAPO_estudio.json'){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
+  // El selector permite elegir nombre y carpeta. No se reutilizan manejadores
+  // anteriores: pueden quedar invalidados por el navegador.
+  if(typeof window.showSaveFilePicker==='function'){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName,
+        types:[{description:'Estudio MAPO (JSON)',accept:{'application/json':['.json']}}]
+      });
+      const writable=await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    }catch(error){
+      // Cancelar voluntariamente no debe iniciar una descarga.
+      if(error?.name==='AbortError')throw error;
+      // Otros errores del selector o del sistema de archivos: descarga alternativa.
+      console.warn('No se pudo guardar con el selector; se usará la descarga.',error);
+    }
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=suggestedName;
+  document.body.appendChild(a);
+  try{a.click();}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+}
  async function loadStudyFile(file){if(!file)return;try{const text=await file.text();const data=JSON.parse(text);if(data?.format==='MAPO Analyzer Multi-Room Study'){if(typeof window.MAPOMultiRoom?.loadMultiStudyFile!=='function')throw Error('El módulo de estudios multi-sala no está disponible.');await window.MAPOMultiRoom.loadMultiStudyFile(file);return;}if(!data||data.format!=='MAPO Analyzer Study'||!data.study||!MAPO_STUDIES[data.study])throw Error('El archivo no es un estudio MAPO válido.');selectedStudy=data.study;currentStep=Math.max(0,Math.min(MAPO_STUDIES[selectedStudy].steps.length-1,(selectedStudy==='hospitalizacion'&&Number(data.schemaVersion||1)<4?(Number(data.schemaVersion||1)===3?(Number(data.currentStep)||0)+((Number(data.currentStep)||0)>=9?1:0):([0,2,5,14,7,1,3,4,6,8,10,11,12,13,15][(Number(data.currentStep)||0)+(Number(data.schemaVersion||1)<2&&Number(data.currentStep)>0?5:0)]??0)):(Number(data.currentStep)||0))));formData=data.formData&&typeof data.formData==='object'?data.formData:{};lastResult=refreshCalculatedResult(formData,data.lastResult||null);const selection=$('studySelection'),panel=$('studyPanel'),roomSetup=$('roomSetup'),hub=$('moduleHub');if(selection)selection.hidden=true;if(roomSetup)roomSetup.hidden=true;if(hub)hub.hidden=true;if(panel)panel.hidden=false;clearError();renderStep();window.MAPONavigation?.bindStandard?.();}catch(e){const b=$('error');if(b){b.textContent='No se pudo cargar el estudio: '+e.message;b.hidden=false;}}}
  function bind(){const save=$('saveStudy'),load=$('loadStudy');if(save&&!save.dataset.mapoBound){save.dataset.mapoBound='1';save.onclick=async()=>{try{if(window.MAPOMultiRoom?.saveMultiStudy){await window.MAPOMultiRoom.saveMultiStudy();window.MAPOCloseGuard?.clearDirty();return;}await saveJson(snapshot());window.MAPOCloseGuard?.clearDirty();}catch(e){if(e?.name!=='AbortError'){const b=$('error');if(b){b.textContent='No se pudo guardar el estudio: '+e.message;b.hidden=false;}}}};}if(load&&!load.dataset.mapoBound){load.dataset.mapoBound='1';load.onclick=()=>($('loadStudyFile')||$('loadMultiStudyFile'))?.click();}}
  function ensureControls(){let save=$('saveStudy'),load=$('loadStudy');const bar=$('legacyStepActions');if(bar){if(!save){save=document.createElement('button');save.type='button';save.id='saveStudy';save.className='secondary';save.textContent='Guardar estudio';bar.appendChild(save);}if(!load){load=document.createElement('button');load.type='button';load.id='loadStudy';load.className='secondary';load.textContent='Cargar estudio';bar.appendChild(load);}}if(!save||!load)return;let f=$('loadStudyFile');if(!f&&!$('loadMultiStudyFile')){f=document.createElement('input');f.id='loadStudyFile';f.type='file';f.accept='.json,application/json';f.hidden=true;document.body.appendChild(f);}if(f&&!f.dataset.mapoBound){f.dataset.mapoBound='1';f.onchange=e=>{const file=e.target.files?.[0];if(file){loadStudyFile(file);window.MAPOCloseGuard?.clearDirty();}e.target.value='';};}bind();}
