@@ -1215,6 +1215,15 @@ function fillTemplateTables(xml,f,r){
    flags.forEach(([row,key])=>set(ti,row,col,x?(x[key]===true?'X':x[key]===false?'—':''):''));
   }
  };
+ // Numeración correlativa entre tablas: A..Z, AA..AZ, etc.
+ const typeLetter=index=>{let n=index+1,out='';while(n>0){n--;out=String.fromCharCode(65+n%26)+out;n=Math.floor(n/26);}return out;};
+ const renumberTypeHeaders=(table,offset)=>{
+  if(!offset)return;
+  for(const row of direct(table,'tr').slice(0,3))for(const tc of cells(row)){
+   const label=text(tc).trim(),m=/^(?:Tipo\s*)?([A-F])(?:\s*[:.)])?$/i.exec(label);
+   if(m)write(tc,label.replace(m[1],typeLetter(offset+m[1].toUpperCase().charCodeAt(0)-65)));
+  }
+ };
  // Baños de higiene: los criterios y las columnas se localizan en cada fila del modelo.
  // Las celdas están combinadas de forma distinta según la fila.
  const baths=f.bathTypes||[],bathSource=tables[12],bathCapacity=6;
@@ -1239,6 +1248,7 @@ function fillTemplateTables(xml,f,r){
   if(page>0)previousBath.parentNode.insertBefore(table,previousBath.nextSibling);
   previousBath=table;
   const part=baths.slice(page*bathCapacity,(page+1)*bathCapacity);
+   renumberTypeHeaders(table,page*bathCapacity);
   bathPatterns.forEach(([re,key])=>bathValues(bathRow(table,re),part,x=>x[key]===true?'X':x[key]===false?'—':''));
   bathValues(bathRow(table,/Apertura de la puerta.*hacia adentro/i),part,x=>x.doorInward??'');
   bathValues(bathRow(table,/Presencia de ducha/i),part,x=>x.shower==null?'':x.shower?'SÍ':'NO');
@@ -1260,7 +1270,7 @@ function fillTemplateTables(xml,f,r){
   const bottom=bathTitleRows(table);
   const templateRow=bottom.find(row=>cells(row).length===1)||bottom[0];
   if(!templateRow)throw Error('No existe fila de título que pueda clonarse para la leyenda de baños.');
-  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const description=part.map((x,j)=>'Tipo '+typeLetter(page*bathCapacity+j)+': '+(x.description||'Sin descripción')).join('  |  ');
   const legend=templateRow.cloneNode(true);
   const legendCells=cells(legend);
   legendCells.forEach(tc=>write(tc,''));
@@ -1296,6 +1306,7 @@ function fillTemplateTables(xml,f,r){
   if(page>0)previousWC.parentNode.insertBefore(table,previousWC.nextSibling);
   previousWC=table;
   const part=wcTypes.slice(page*wcCapacity,(page+1)*wcCapacity);
+   renumberTypeHeaders(table,page*wcCapacity);
   const getRow=re=>direct(table,'tr').find(row=>re.test(text(row)));
   const fillWC=(re,fn)=>{
    const row=getRow(re);if(!row)throw Error('Falta la fila WC de la plantilla: '+re);
@@ -1322,7 +1333,7 @@ function fillTemplateTables(xml,f,r){
   setLast(/Unidades:\s*N[uú]mero/i,num(totalUnits));
   setLast(/Puntuaci[oó]n por tipo de ba[nñ]o/i,num(totalPoints));
   setLast(/PMWC\s*:/i,r.details?.pmWC==null?'':num(r.details.pmWC));
-  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const description=part.map((x,j)=>'Tipo '+typeLetter(page*wcCapacity+j)+': '+(x.description||'Sin descripción')).join('  |  ');
   const rr=direct(table,'tr'),model=rr.find(row=>cells(row).length===1)||rr[0];
   if(!model)throw Error('No se puede crear la fila descriptiva de WC.');
   const legend=model.cloneNode(true);
@@ -1348,6 +1359,7 @@ function fillTemplateTables(xml,f,r){
   if(page>0)previousRoom.parentNode.insertBefore(table,previousRoom.nextSibling);
   previousRoom=table;
   const rr=direct(table,'tr'),part=rooms.slice(page*roomCapacity,(page+1)*roomCapacity);
+   renumberTypeHeaders(table,page*roomCapacity);
   const findRow=re=>rr.find(row=>re.test(text(row)));
   const fillRow=(re,fn)=>{
    const row=findRow(re);
@@ -1372,7 +1384,7 @@ function fillTemplateTables(xml,f,r){
   const totalScore=rooms.reduce((n,x)=>n+Number(x.units||0)*((x.between===true?2:0)+(x.foot===true?2:0)+(x.bedSection===true?1:0)+(x.underbed===true?2:0)+(x.chairHeight===true?0.5:0)),0);
   if(cells(unitsRow).length)write(cells(unitsRow).at(-1),last?num(totalUnits):'');
   if(cells(scoreRow).length)write(cells(scoreRow).at(-1),last?num(totalScore):'');
-  const description=part.map((x,j)=>'Tipo '+String.fromCharCode(65+j)+': '+(x.description||'Sin descripción')).join('  |  ');
+  const description=part.map((x,j)=>'Tipo '+typeLetter(page*roomCapacity+j)+': '+(x.description||'Sin descripción')).join('  |  ');
   const templateRow=rr.find(row=>cells(row).length===1)||rr[0];
   const legend=templateRow.cloneNode(true);
   cells(legend).forEach(tc=>write(tc,''));
