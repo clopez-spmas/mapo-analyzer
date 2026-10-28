@@ -996,11 +996,20 @@ function fillTemplateTables(xml,f,r){
   const sample=rr.slice(0,idx).reverse().find(row=>/^Otros\s*:/i.test(text(cells(row)[0]||row)))||rr[idx-1];
   if(!sample||cells(sample).length<7)throw Error('No existe fila base de tareas en '+ti);
   const related=customs.filter(c=>keys.includes(c.category));
+  // Unificar una misma movilización registrada en distintos turnos,
+  // respetando las seis columnas y sin cambiar los totales originales.
+  const grouped=new Map();
   for(const c of related){
-   const entry=f.mobilizations?.entries?.[c.id]||{};
+   const label=String(c.name||'').trim();
+   const normalized=label.normalize('NFC').replace(/\s+/g,' ').toLocaleLowerCase('es');
+   if(!grouped.has(normalized))grouped.set(normalized,{name:label,values:Object.fromEntries(keys.map(k=>[k,[0,0,0]]))});
+   const item=grouped.get(normalized),entry=f.mobilizations?.entries?.[c.id]||{};
+   for(const kind of keys)for(let shift=0;shift<3;shift++)item.values[kind][shift]+=Number(entry[kind]?.[shift]||0);
+  }
+  for(const item of grouped.values()){
    const clone=sample.cloneNode(true);
-   write(cells(clone)[0],c.name);
-   keys.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],integer(entry[kind]?.[shift]??0))));
+   write(cells(clone)[0],item.name);
+   keys.forEach((kind,j)=>[0,1,2].forEach(shift=>write(cells(clone)[1+j*3+shift],integer(item.values[kind][shift]))));
    totalRow.parentNode.insertBefore(clone,totalRow);
   }
   // Sumar las mismas tareas que se muestran, sin incluir categorías no representadas.
