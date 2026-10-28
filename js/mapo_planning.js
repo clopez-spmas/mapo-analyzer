@@ -37,6 +37,7 @@ function draw(selectSimulation=false){
  host.querySelector('#planSaveJson').onclick=()=>{capture();const b=document.getElementById('saveStudy');if(b)b.click();};
 }
 function open(withSimulation=false){
+ window.MAPOSimulation?.capture?.();
  if(typeof formData==='undefined'||!formData)return;
  const host=screen();if(!host)return;
  ['accessScreen','studySelection','roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','mapoSimulation','reportTablesPanel','wordReportPanel','templateAdmin'].forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=true;});
