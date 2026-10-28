@@ -1356,7 +1356,19 @@ function fillTemplateTables(xml,f,r){
  ];
  for(let page=0;page<roomPages;page++){
   const table=page===0?roomOriginal:roomOriginal.cloneNode(true);
-  if(page>0)previousRoom.parentNode.insertBefore(table,previousRoom.nextSibling);
+  if(page>0){
+   // Word fusiona visualmente tablas consecutivas sin un párrafo separador.
+   // Mantener dos tablas independientes mediante un párrafo de separación.
+   const separator=d.createElementNS(ns,'w:p');
+   const props=d.createElementNS(ns,'w:pPr');
+   const spacing=d.createElementNS(ns,'w:spacing');
+   spacing.setAttributeNS(ns,'w:before','100');
+   spacing.setAttributeNS(ns,'w:after','100');
+   props.appendChild(spacing);
+   separator.appendChild(props);
+   previousRoom.parentNode.insertBefore(separator,previousRoom.nextSibling);
+   previousRoom.parentNode.insertBefore(table,separator.nextSibling);
+  }
   previousRoom=table;
   const rr=direct(table,'tr'),part=rooms.slice(page*roomCapacity,(page+1)*roomCapacity);
    renumberTypeHeaders(table,page*roomCapacity);
