@@ -89,7 +89,7 @@ document.querySelectorAll('#mapoSimulation [data-sim-mob][data-sim-mob-role="aid
   if(Math.abs(value-original)>0.001) simulationData.simulationMobilizationGroups[key]=value;
   else delete simulationData.simulationMobilizationGroups[key];
 });
-simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);
+if(Object.keys(simulationData.simulationMobilizationGroups).length){simulationData.simulationMobilizationRatios=buildTaskOverrides(simulationData);}else{delete simulationData.simulationMobilizationRatios;delete simulationData.simulationMobilizationGroups;}
 simulationChanged=JSON.stringify(baseData)!==JSON.stringify(simulationData);persist();}
 function flattenChanges(base,current,path='',out=[]){if(typeof base==='object'&&base!==null&&typeof current==='object'&&current!==null){if(Array.isArray(base)||Array.isArray(current)){const len=Math.max(base?.length||0,current?.length||0);for(let i=0;i<len;i++)flattenChanges(base?.[i],current?.[i],path?`${path}[${i}]`:`[${i}]`,out);}else{new Set([...Object.keys(base),...Object.keys(current)]).forEach(k=>{if(k!=='simulationMobilizationRatios'&&k!=='simulationMobilizationGroups')flattenChanges(base[k],current[k],path?`${path}.${k}`:k,out);});}return out;}if(String(base??'')!==String(current??''))out.push({path,from:base,to:current});return out;}
 function simulationChanges(base,current){
