@@ -266,6 +266,30 @@ function replaceUnitX(xml,unit){
  });
 }
 
+
+function placeUnitAfterColon(xml,unit){
+ const name=String(unit??'').trim();
+ if(!name)return xml;
+ const paragraphs=[...xml.matchAll(/<w:p\\b[^>]*>[\\s\\S]*?<\\/w:p>/g)];
+ const plain=p=>[...p.matchAll(/<w:t(?:\\s[^>]*)?>([\\s\\S]*?)<\\/w:t>/g)].map(m=>m[1]).join('').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+ const target=paragraphs.find(p=>/^Las salas o unidades evaluadas en el presente informe son las siguientes\\s*:/i.test(plain(p[0])));
+ if(!target)return xml;
+ // Únicamente el nombre de la unidad en esta frase, sin tocar otros títulos.
+ const text=plain(target[0]);if(text.slice(text.indexOf(':')+1).trim())return xml;
+ const run='<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> '+xesc(name)+'</w:t></w:r>';
+ const updated=target[0].replace(/<\\/w:p>$/,run+'</w:p>');
+ let result=xml.slice(0,target.index)+updated+xml.slice(target.index+target[0].length);
+ // La plantilla puede incluir el marcador de unidad en un párrafo
+ // independiente justo antes de esta frase. Evitamos duplicarlo.
+ const preceding=paragraphs.filter(p=>p.index<target.index).slice(-3);
+ const redundant=preceding.reverse().find(p=>plain(p[0])===name);
+ if(redundant){
+   const pos=result.lastIndexOf(redundant[0],target.index);
+   if(pos>=0)result=result.slice(0,pos)+result.slice(pos+redundant[0].length);
+ }
+ return result;
+}
+
 function positionDescriptionAfterHeading(xml,token,headingPattern){
  const paragraphs=[...xml.matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g)];
  const plain=p=>[...p.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)].map(x=>x[1]).join('').replace(/&nbsp;|&#160;/g,' ').trim();
@@ -1495,6 +1519,7 @@ async function generate(template,providedData){
  xml=insertPreventiveBullets(xml,f);
  xml=replacePlanningIntroduction(xml,f);
  xml=replacePlanningCompanyMentions(xml,f);
+ xml=placeUnitAfterColon(xml,f.unidad);
  xml=colorMapoResultCell(xml,r);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
