@@ -6,8 +6,8 @@
   /* Los accesos se obtienen de la definición vigente de pasos, sin índices antiguos. */
   const descriptions={
     'Identificación de la unidad':'Datos de empresa, centro, unidad y visita.',
-    'Descripción — Factores organizativos':'Texto descriptivo para el informe.',
-    'Descripción — Frecuencia':'Rutinas por turno para el informe.',
+    'Descripción — Factores organizativos':'Descripción de las condiciones de la unidad.',
+    'Descripción — Frecuencia':'Rutinas por turno.',
     'Descripción — Formación':'Información descriptiva de formación.',
     'Descripción — Equipos de ayuda disponibles':'Fotografías y datos de equipos de elevación.',
     'Descripción — Ayudas menores disponibles':'Registro de ayudas menores, presencia y unidades.',
