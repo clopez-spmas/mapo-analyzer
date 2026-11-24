@@ -1164,8 +1164,15 @@ function fillTemplateTables(xml,f,r){
  });
  const extras=[...(f.informeDescriptivo?.ayudasMenoresAdicionales||[])].filter(x=>x.descripcion?.trim());
  const legacy=help.otro;if(legacy?.descripcion?.trim())extras.push(legacy);
- if(extras.length>1)grow(10,7,1,extras.length);
- if(!extras.length)shrink(10,7,1,0);
+ // La plantilla puede terminar en la ultima ayuda predefinida, sin fila adicional.
+ const extraCapacity=rows(10).length>7?1:0;
+ if(extras.length>extraCapacity){
+  const model=rows(10)[extraCapacity?7:6];
+  if(!model||cells(model).length!==3)throw Error('La tabla de ayudas menores no contiene una fila modelo de tres celdas.');
+  const before=rows(10)[7+extraCapacity]||null;
+  for(let j=extraCapacity;j<extras.length;j++)tables[10].insertBefore(model.cloneNode(true),before);
+ }
+ if(!extras.length&&extraCapacity)shrink(10,7,1,0);
  extras.forEach((e,j)=>{set(10,7+j,0,e.descripcion);set(10,7+j,1,bool(e.presencia));set(10,7+j,2,e.numero??'');});
  // Equipos: datos registrados bajo el bloque descriptivo, sin cambiar sus preguntas.
 
