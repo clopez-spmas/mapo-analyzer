@@ -1,33 +1,12 @@
-/* Pantalla de acceso inicial de MAPO Analyzer. Las instrucciones por modalidad se enlazan desde la selección de estudio. */
+/* Acceso directo a la selección de estudio. */
 (function(){
-  function $(id){return document.getElementById(id);}
-
-  function showAccessScreen(){
-    const access=$('accessScreen');
-    const selection=$('studySelection');
-    const panel=$('studyPanel');
-    const result=$('result');
-    const admin=$('templateAdmin');
-    if(access)access.hidden=false;
-    if(selection)selection.hidden=true;
-    if(panel)panel.hidden=true;
-    if(result)result.hidden=true;
-    if(admin)admin.hidden=true;
+ function showAccessScreen(){
+  const selection=document.getElementById('studySelection');
+  if(selection)selection.hidden=false;
+  for(const id of ['roomSetup','moduleHub','studyPanel','result','globalResults','multiRoomResultsHub','planningPanel','wordReportPanel','mapoSimulation','templateAdmin']){
+   const el=document.getElementById(id);if(el)el.hidden=true;
   }
-
-  function enterProgram(){
-    const access=$('accessScreen');
-    if(access)access.hidden=true;
-    const selection=$('studySelection');
-    if(selection)selection.hidden=false;
-  }
-
-  function init(){
-    const enter=$('enterProgram');
-    if(enter)enter.addEventListener('click',enterProgram);
-    showAccessScreen();
-  }
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-  window.MAPOAccess={enterProgram,showAccessScreen};
+ }
+ window.MAPOAccess={enterProgram:showAccessScreen,showAccessScreen};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showAccessScreen);else showAccessScreen();
 })();
