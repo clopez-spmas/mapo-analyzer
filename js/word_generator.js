@@ -1553,6 +1553,25 @@ function fillTemplateTables(xml,f,r){
  }
  return new XMLSerializer().serializeToString(d);
 }
+function preserveWordWhitespace(xml){
+ const doc=new DOMParser().parseFromString(xml,'application/xml');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const node of Array.from(doc.getElementsByTagNameNS(ns,'t'))){
+  const value=node.textContent||'';
+  if(!/[\r\n\t]/.test(value))continue;
+  const run=node.parentNode;
+  if(run?.localName!=='r')continue;
+  const parts=value.replace(/\r\n?/g,'\n').split(/(\n|\t)/);
+  node.textContent=parts.shift();node.setAttribute('xml:space','preserve');
+  let after=node;
+  for(const part of parts){
+   const next=doc.createElementNS(ns,part==='\n'?'w:br':part==='\t'?'w:tab':'w:t');
+   if(next.localName==='t'){next.textContent=part;next.setAttribute('xml:space','preserve');}
+   run.insertBefore(next,after.nextSibling);after=next;
+  }
+ }
+ return new XMLSerializer().serializeToString(doc);
+}
 async function generate(template,providedData){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
@@ -1583,6 +1602,7 @@ async function generate(template,providedData){
  xml=replacePlanningCompanyMentions(xml,f);
  xml=placeUnitAfterColon(xml,f.unidad);
  xml=colorMapoResultCell(xml,r);
+ xml=preserveWordWhitespace(xml);
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
