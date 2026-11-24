@@ -1639,9 +1639,9 @@ async function generate(template,providedData){
 async function generateStudy(template){
  const mr=window.MAPOMultiRoom,rooms=mr?.state?.rooms||[];
  if(rooms.length<=1)return generate(template);
- const {merged,result}=mr.globalMAPO();
+ mr.syncCurrentRoom();
  const valid=rooms.map((room,i)=>{
-  const form=room.formData||{};
+  const form={...(room.formData||{}),unidad:room.name||room.formData?.unidad||'Unidad '+(i+1)};
   const previous=room.lastResult||{};
   const refreshed=window.MAPOStudyIO?.refreshCalculatedResult?.(form,previous)||previous;
   if(!Number.isFinite(Number(refreshed.mapo)))throw Error('Falta calcular el índice MAPO de la sala '+(room.name||i+1));
@@ -1655,7 +1655,7 @@ async function generateStudy(template){
  if(!bodyMatch)throw Error('No se puede identificar el cuerpo del informe Word.');
  const sectionMatch=/<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(bodyMatch[1]);
  const section=sectionMatch?.[0]||'';
- let combined=bodyMatch[1].replace(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g,'');
+ const fragments=[bodyMatch[1]];
  const relPath='word/_rels/document.xml.rels';
  let rels=await main.file(relPath).async('string'),types=await main.file('[Content_Types].xml').async('string');
  let relIndex=9000;
@@ -1666,7 +1666,7 @@ async function generateStudy(template){
   const src=docs[i],other=await src.file('word/document.xml').async('string');
   const body=/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/.exec(other);
   if(!body)throw Error('No se puede leer la sala '+(i+1));
-  let fragment=body[1].replace(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g,'');
+  let fragment=body[1];
   const srcRels=await src.file(relPath).async('string');
   for(const m of srcRels.matchAll(/<Relationship\b[^>]*\/>/g)){
    const tag=m[0],id=/\bId="([^"]+)"/.exec(tag)?.[1],target=/\bTarget="([^"]+)"/.exec(tag)?.[1];
@@ -1685,21 +1685,43 @@ async function generateStudy(template){
     types=types.replace('</Types>','<Default Extension="'+extension+'" ContentType="'+mime+'"/></Types>');
    }
   }
-  combined+=pageBreak+fragment;
+  fragments.push(fragment);
  }
- // El informe global contiene datos y cálculos agregados, no una media de índices.
- combined+=pageBreak+para('RESULTADOS GLOBALES DEL HOSPITAL',true);
- combined+=para('Evaluación conjunta de '+valid.length+' salas independientes.',false);
- combined+=para('Pacientes no colaboradores (NC): '+merged.nc);
- combined+=para('Pacientes parcialmente colaboradores (PC): '+merged.pc);
- combined+=para('Personal expuesto equivalente (OP): '+Number(merged.op).toLocaleString('es-ES'));
- const factorLabels=[['FS','fs'],['FA','fa'],['FC','fc'],['Famb','famb'],['FF','ff']];
- for(const [label,key] of factorLabels)combined+=para(label+': '+Number(result[key]).toLocaleString('es-ES'));
- combined+=para('Índice MAPO global: '+Number(result.mapo).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}),true);
- combined+=para('Nivel de exposición global: '+result.nivel,true);
- combined+=para('Comparativa por salas',true);
- for(const room of valid)combined+=para(room.name+': MAPO '+Number(room.result.mapo).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' — '+(room.result.nivel||''));
- xml=xml.replace(bodyMatch[0],'<w:body>'+combined+section+'</w:body>');
+ const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ const parser=new DOMParser(),serializer=new XMLSerializer();
+ const original=parser.parseFromString(xml,'application/xml');
+ const root=original.getElementsByTagNameNS(ns,'body')[0];
+ const plain=n=>Array.from(n.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent||'').join('').trim();
+ const heading=(label)=>{const p=original.createElementNS(ns,'w:p'),pr=original.createElementNS(ns,'w:pPr'),style=original.createElementNS(ns,'w:pStyle');style.setAttributeNS(ns,'w:val','Heading1');pr.appendChild(style);p.appendChild(pr);const run=original.createElementNS(ns,'w:r'),rp=original.createElementNS(ns,'w:rPr'),b=original.createElementNS(ns,'w:b');rp.appendChild(b);run.appendChild(rp);const t=original.createElementNS(ns,'w:t');t.textContent=label;run.appendChild(t);p.appendChild(run);return p;};
+ const append=nodes=>nodes.forEach(n=>root.appendChild(original.importNode(n,true)));
+ const split=fragment=>{
+  const doc=parser.parseFromString(xml.replace(bodyMatch[0],'<w:body>'+fragment+'</w:body>'),'application/xml');
+  const nodes=Array.from(doc.getElementsByTagNameNS(ns,'body')[0].children);
+  const find=(re,from=0)=>nodes.findIndex((n,i)=>i>=from&&n.localName==='p'&&re.test(plain(n)));
+  const intro=find(/^Introducci[oó]n\.?$/i),method=find(/^Metodolog[ií]a$/i,intro+1),evalStart=find(/^Descripci[oó]n de las unidades y evaluaci[oó]n\.?$/i,method+1);
+  const evalUnit=find(/^Descripci[oó]n de las unidades y evaluaci[oó]n\.\s*C[aá]lculo/i,evalStart+1);
+  const results=find(/^C[aá]lculo del [ií]ndice MAPO para la UNIDAD/i,evalUnit+1);
+  const conclusions=find(/^Resultados y conclusiones\.?$/i,results+1);
+  const plan=find(/^ANEXO\s*1\.?\s*PLANIFICACI[OÓ]N DE LA PREVENCI[OÓ]N/i,conclusions+1);
+  const planTable=nodes.findIndex((n,i)=>i>plan&&n.localName==='tbl'&&/RIESGO\/ASPECTO DEFICIENTE/i.test(plain(n)));
+  const planEnd=nodes.findIndex((n,i)=>i>planTable&&n.localName==='p'&&n.getElementsByTagNameNS(ns,'sectPr').length);
+  if([intro,method,evalStart,evalUnit,results,conclusions,plan,planTable,planEnd].some(i=>i<0))throw Error('La plantilla no contiene todos los apartados corporativos necesarios para el informe multiunidad.');
+  return {common:nodes.slice(0,evalStart),evaluation:nodes.slice(evalUnit+1,results),results:nodes.slice(results+1,conclusions),conclusions:nodes.slice(conclusions+1,plan),planIntro:nodes.slice(plan+1,planTable),plan:nodes.slice(planTable,planEnd+1),end:nodes.slice(planEnd+1)};
+ };
+ const parts=fragments.map(split);
+ while(root.firstChild)root.removeChild(root.firstChild);
+ append(parts[0].common);
+ root.appendChild(heading('3. Evaluación MAPO'));
+ parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name));append(p.evaluation);});
+ root.appendChild(heading('4. Resultados'));
+ parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name));append(p.results);});
+ root.appendChild(heading('5. Conclusiones'));
+ parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name));append(p.conclusions);});
+ root.appendChild(heading('6. Planificación preventiva'));
+ append(parts[0].planIntro);
+ parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name));append(p.plan);});
+ append(parts[0].end);
+ xml=serializer.serializeToString(original);
  main.file('word/document.xml',xml);
  main.file(relPath,rels);main.file('[Content_Types].xml',types);
  return main.generateAsync({type:'blob',compression:'DEFLATE'});
@@ -1726,7 +1748,7 @@ function createControls(){
  if(!host||document.getElementById('mapoGenerateWord'))return;
  const wrap=document.createElement('div');
  wrap.className='registry-card';wrap.id='mapoGenerateWord';
- wrap.innerHTML='<h3>Generar informe Word</h3><p id="mapoWordScope">En estudios multisala se generará un único documento con todas las salas y el resultado global.</p><label for="mapoWordFilename">Nombre del archivo Word</label><input id="mapoWordFilename" type="text" autocomplete="off" placeholder="MAPO_nombre_unidad.docx" aria-label="Nombre del informe Word"><p class="small">Se guardará como documento .docx. Si su navegador permite elegir carpeta, se abrirá el selector de archivos; en otros navegadores se descargará con el nombre indicado en la carpeta de descargas configurada.</p><div class="actions"><button type="button" id="mapoDownloadWord">Elegir ubicación y guardar Word</button></div><p id="mapoWordFeedback" role="status"></p>';
+ wrap.innerHTML='<h3>Generar informe Word</h3><p id="mapoWordScope">En estudios multisala se generará un único documento con todas las unidades, organizadas por apartados y sin resultado global.</p><label for="mapoWordFilename">Nombre del archivo Word</label><input id="mapoWordFilename" type="text" autocomplete="off" placeholder="MAPO_nombre_unidad.docx" aria-label="Nombre del informe Word"><p class="small">Se guardará como documento .docx. Si su navegador permite elegir carpeta, se abrirá el selector de archivos; en otros navegadores se descargará con el nombre indicado en la carpeta de descargas configurada.</p><div class="actions"><button type="button" id="mapoDownloadWord">Elegir ubicación y guardar Word</button></div><p id="mapoWordFeedback" role="status"></p>';
  host.appendChild(wrap);
  const input=wrap.querySelector('#mapoWordFilename');
  const defaultName=()=>{
