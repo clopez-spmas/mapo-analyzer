@@ -923,8 +923,8 @@ function fillTemplateTables(xml,f,r){
  const grow=(i,start,capacity,wanted)=>{
   if(wanted<=capacity)return;
   const template=rows(i)[start+capacity-1],before=rows(i)[start+capacity];
-  if(!template||!before)throw Error('No se puede ampliar la tabla original '+i);
-  for(let j=capacity;j<wanted;j++)tables[i].insertBefore(template.cloneNode(true),before);
+  if(!template)throw Error('No se puede ampliar la tabla original '+i);
+  for(let j=capacity;j<wanted;j++)tables[i].insertBefore(template.cloneNode(true),before||null);
  };
  const shrink=(i,start,capacity,wanted)=>{
   const rr=rows(i);for(let k=capacity-1;k>=wanted;k--){const row=rr[start+k];if(row)row.parentNode.removeChild(row);}
