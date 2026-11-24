@@ -1566,8 +1566,31 @@ function preserveWordWhitespace(xml){
   let after=node;
   for(const part of parts){
    const next=doc.createElementNS(ns,part==='\n'?'w:br':part==='\t'?'w:tab':'w:t');
+   if(next.localName==='br')next.setAttribute('mapoGenerated','1');
    if(next.localName==='t'){next.textContent=part;next.setAttribute('xml:space','preserve');}
    run.insertBefore(next,after.nextSibling);after=next;
+  }
+ }
+ // Convertir únicamente los saltos de texto manuales en párrafos reales.
+ for(const p of Array.from(doc.getElementsByTagNameNS(ns,'p'))){
+  let current=p;
+  for(const br of Array.from(p.getElementsByTagNameNS(ns,'br'))){
+   if(br.getAttribute('mapoGenerated')!=='1')continue;
+   br.removeAttribute('mapoGenerated');
+   const run=br.parentNode;
+   if(run?.parentNode!==current||run.localName!=='r')continue;
+   const nextP=current.cloneNode(false);
+   const props=Array.from(current.childNodes).find(n=>n.localName==='pPr');
+   if(props)nextP.appendChild(props.cloneNode(true));
+   const nextRun=run.cloneNode(false);
+   const rp=Array.from(run.childNodes).find(n=>n.localName==='rPr');
+   if(rp)nextRun.appendChild(rp.cloneNode(true));
+   while(br.nextSibling)nextRun.appendChild(br.nextSibling);
+   run.removeChild(br);
+   nextP.appendChild(nextRun);
+   while(run.nextSibling)nextP.appendChild(run.nextSibling);
+   current.parentNode.insertBefore(nextP,current.nextSibling);
+   current=nextP;
   }
  }
  return new XMLSerializer().serializeToString(doc);
