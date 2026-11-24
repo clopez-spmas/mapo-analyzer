@@ -25,7 +25,7 @@
   }
   function renderHygieneAids(){
     const d=hygieneAidsData(),extras=formData.ayudasHigieneAdicionales||[];
-    return '<section class="registry-card"><h3>Ayudas para la higiene del paciente</h3><p>Información complementaria para el informe Word. No modifica PMB ni Famb.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Ayuda</th><th>Presencia</th><th>Número</th></tr></thead><tbody>'+
+    return '<section class="registry-card"><h3>Ayudas para la higiene del paciente</h3><p>Información complementaria. No modifica PMB ni Famb.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Ayuda</th><th>Presencia</th><th>Número</th></tr></thead><tbody>'+
       hygieneAidKinds.map(([key,label])=>hygieneRow(key,label,d[key]||{},false)).join('')+
       extras.map((v,i)=>hygieneRow('extra_'+i,v.descripcion||'Ayuda adicional',v,true)).join('')+
       '</tbody></table></div><button type="button" class="secondary" id="addHygieneAid">+ Añadir otra ayuda</button></section>';
