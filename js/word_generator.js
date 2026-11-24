@@ -1438,7 +1438,11 @@ function fillTemplateTables(xml,f,r){
   write(destination,value);
  };
  const twoDecimals=v=>Number(v).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
- if(r.details?.pmsr!=null)fcWrite(/^PMSR\s*:/i,'PMSR = '+twoDecimals(r.details.pmsr));
+ if(r.details?.pmsr!=null){
+  const destinations=fcRows.flatMap(row=>cells(row)).filter(tc=>/^PMSR\s*=\s*(?:[\d.,]+)?\s*$/i.test(fcCellText(tc)));
+  if(!destinations.length)throw Error('No se encuentra la celda de resultado PMSR = en la plantilla.');
+  destinations.forEach(tc=>write(tc,'PMSR = '+twoDecimals(r.details.pmsr)));
+ }
  if(r.details?.tsr!=null)fcWrite(/^Total de sillas de ruedas en la sala/i,'TSR = '+Math.round(Number(r.details.tsr)));
  if(r.details?.fcSufficient!=null)fcWrite(/^¿TSR\s*[≥>=]+\s*50\s*%\s*NA/i,r.details.fcSufficient?'Sí':'No');
  // Las referencias técnicas y puntuaciones fijas del método se dejan intocadas.
