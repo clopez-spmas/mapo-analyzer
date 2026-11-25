@@ -53,10 +53,10 @@
 
   function taskTotalsFrom(data){
     const entries=taskEntries(data),raw=rawMobilizationTotals(data),overrides=data?.simulationMobilizationRatios||{};
-    if(!Object.keys(overrides).length)return{st:raw.st,lta:raw.lta,sp:raw.sp,lpa:raw.lpa,stp:raw.st+raw.sp,pLTA:raw.st?100*raw.lta/raw.st:0,pLPA:raw.sp?100*raw.lpa/raw.sp:0};
+    if(!Object.keys(overrides).length)return{st:raw.st,lta:raw.lta,sp:raw.sp,lpa:raw.lpa,stp:raw.st+raw.sp,pLTA:raw.st?100*raw.lta/raw.st:null,pLPA:raw.sp?100*raw.lpa/raw.sp:null};
     let st=0,lta=0,sp=0,lpa=0;
     Object.entries(entries).forEach(([id,e])=>{const totalT=num(e.manualTotal)+num(e.aidedTotal),totalP=num(e.manualPartial)+num(e.aidedPartial),ov=overrides[id]||{};st+=totalT;sp+=totalP;lta+=ov.total!==undefined&&totalT>0?totalT*Math.max(0,Math.min(100,num(ov.total)))/100:num(e.aidedTotal);lpa+=ov.partial!==undefined&&totalP>0?totalP*Math.max(0,Math.min(100,num(ov.partial)))/100:num(e.aidedPartial);});
-    return{st,lta,sp,lpa,stp:st+sp,pLTA:st?100*lta/st:0,pLPA:sp?100*lpa/sp:0};
+    return{st,lta,sp,lpa,stp:st+sp,pLTA:st?100*lta/st:null,pLPA:sp?100*lpa/sp:null};
   }
 
   function registryMean(items,fields){
@@ -91,10 +91,10 @@
   function calculateHospitalizacionFactors(data){
     const d=data||{},tt=taskTotalsFrom(d);
     const fsS=yn(d.fs_elevadores)||yn(d.fs_camillas)||yn(d.fs_camas3);
-    const fsA=tt.st>0&&tt.lta/tt.st>=.9-1e-9;
+    const fsA=tt.st>0?tt.lta/tt.st>=.9-1e-9:null;
     const fs=!fsS&&!fsA?4:fsS&&fsA?.5:2;
     const faS=(yn(d.fa_sabana)&&yn(d.fa_dos))||(yn(d.fa_sabana)&&yn(d.fa_camas3));
-    const faA=tt.sp>0&&tt.lpa/tt.sp>=.9-1e-9;
+    const faA=tt.sp>0?tt.lpa/tt.sp>=.9-1e-9:null;
     const fa=faS&&faA?.5:1;
 
     const wc=wheelchairData(d);
@@ -110,7 +110,7 @@
     const course=yn(d.ff_curso),cov=num(d.ff_cobertura),recent=yn(d.ff_antiguedad),eff=yn(d.ff_eficacia),info=yn(d.ff_informacion);
     const ff=(course&&cov>=75&&(recent||eff))?.75:(course&&cov>=50&&cov<75&&recent)||info?1:2;
 
-    return{fs,fa,fc,famb,ff,taskTotals:tt,details:{fsSufficient:fsS,fsAdequate:fsA,faSufficient:faS,faAdequate:faA,pmsr:wc.pmsr,tsr:wc.tsr,fcSufficient:fcS,pmamb,pmB:pmb,pmWC:pmwc,pmH:pmh,wheelchairPoints:wc.points}};
+    const warnings=[];if(!tt.st&&num(d.nc)>0)warnings.push('No hay levantamientos totales registrados, pero existen pacientes NC. Revise la situación antes de calcular MAPO.');if(!tt.sp&&num(d.pc)>0)warnings.push('No hay levantamientos parciales registrados, pero existen pacientes PC. Revise la situación antes de calcular MAPO.');return{fs,fa,fc,famb,ff,warnings,taskTotals:tt,details:{fsSufficient:fsS,fsAdequate:fsA,faSufficient:faS,faAdequate:faA,pmsr:wc.pmsr,tsr:wc.tsr,fcSufficient:fcS,pmamb,pmB:pmb,pmWC:pmwc,pmH:pmh,wheelchairPoints:wc.points}};
   }
   window.MAPOCalculationEngine={taskTotalsFrom,calculateHospitalizacionFactors,taskEntries,wheelchairData,registryMean};
   window.calculateHospitalizacionFactors=calculateHospitalizacionFactors;
