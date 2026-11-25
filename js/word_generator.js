@@ -41,7 +41,7 @@ function mobilizationSummary(f,r){
  const shift=kinds.map(k=>[0,1,2].map(i=>entries.reduce((total,e)=>total+Number(e?.[k]?.[i]||0),0)));
  const sum=x=>x.reduce((a,b)=>a+b,0);
  const [mt,mp,at,ap]=shift.map(sum);
- const pct=(num,den)=>den>0?(100*num/den).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' %':'No calculable';
+ const pct=(num,den)=>den>0?(100*num/den).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' %':'No procede';
  return {shift,mt,mp,at,ap,pctTotal:pct(at,mt+at),pctPartial:pct(ap,mp+ap)};
 }
 function rowsFor(key,f,r){
@@ -86,7 +86,7 @@ function rowsFor(key,f,r){
  }
  if(key==='tabla_banos_higiene'||key==='tabla_banos_wc'){const bath=key.endsWith('_higiene'),data=bath?f.bathTypes:f.wcTypes;const cols=bath?['¿Espacio insuficiente para el uso de ayudas?','¿Anchura de puerta inferior a 85 cm?','¿Presencia de obstáculos fijos?']:['¿Espacio insuficiente para utilizar silla de ruedas?','¿Altura del inodoro inadecuada (45–50 cm)?','¿Ausencia o inadecuación de barra de apoyo lateral?','¿Anchura de puerta inferior a 85 cm?','¿Espacio lateral insuficiente junto al inodoro?'];const fields=bath?['space','door','obstacles']:['space','height','bar','door','lateral'];return [[bath?'Tipo de baño para higiene':'Tipo de baño con inodoro','Número de unidades',...cols],...(data||[]).map(x=>[x.description||'',x.units??'',...fields.map(k=>yes(x[k]))])];}
  if(key==='tabla_habitaciones')return [['Tipo de habitación','Número de habitaciones','¿Espacio entre cama y pared inferior a 90 cm?','¿Espacio libre a los pies de la cama inferior a 120 cm?','¿Cama que requiere levantar manualmente una sección?','¿Espacio bajo la cama inferior a 15 cm?','¿Altura del asiento del sillón inadecuada?'],...(f.roomTypes||[]).map(x=>[x.description||'',x.units??'',...['between','foot','bedSection','underbed','chairHeight'].map(k=>yes(x[k]))])];
- const pct=v=>v==null||v===''?'':typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:2})+' %':String(v)+' %';
+ const pct=v=>v==null||v===''?'No procede':typeof v==='number'?v.toLocaleString('es-ES',{maximumFractionDigits:2})+' %':String(v)+' %';
  const result=(value)=>value==null?'':value;
  if(key==='tabla_fs_criterios')return [
  ['FS — NIVEL DE SUFICIENCIA NUMÉRICA','Comprobación'],
@@ -101,7 +101,7 @@ function rowsFor(key,f,r){
  ['La adecuación exige que el equipamiento responda a las necesidades de la unidad y que se utilice al menos en el 90 % de las movilizaciones totales de pacientes.',''],
  ['%LTA — Porcentaje de levantamientos totales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLTA)],
  ['¿El porcentaje de levantamientos totales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLTA==null?'No procede':yes(Number(r.taskTotals.pLTA)>=90)],
- ['Adecuación de los equipos de elevación',yes(r.details?.fsAdequate)]
+ ['Adecuación de los equipos de elevación',r.taskTotals?.st===0?'No procede':yes(r.details?.fsAdequate)]
  ];
  if(key==='tabla_fs_resultado')return [
  ['CARACTERÍSTICAS RELEVANTES PARA ASIGNAR FS','Valor de referencia'],
@@ -122,7 +122,7 @@ function rowsFor(key,f,r){
  ['Se consideran adecuadas las ayudas menores que satisfacen las exigencias de la unidad y se emplean al menos en el 90 % de las movilizaciones parciales.',''],
  ['%LPA — Porcentaje de levantamientos parciales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLPA)],
  ['¿El porcentaje de levantamientos parciales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLPA==null?'No procede':yes(Number(r.taskTotals.pLPA)>=90)],
- ['Adecuación de las ayudas menores',yes(r.details?.faAdequate)]
+ ['Adecuación de las ayudas menores',r.taskTotals?.sp===0?'No procede':yes(r.details?.faAdequate)]
  ];
  if(key==='tabla_fa_resultado')return [
  ['CARACTERÍSTICAS RELEVANTES PARA ASIGNAR FA','Valor de referencia'],
@@ -902,7 +902,7 @@ function fillTemplateTables(xml,f,r){
  const sum=(type,shift)=>entries.reduce((n,e)=>n+Number(e[type]?.[shift]||0),0);
  const totals=type=>[0,1,2].map(shift=>sum(type,shift));
  const types=['manualTotal','manualPartial','aidedTotal','aidedPartial'];
- const pct=(n,den)=>den?num(n/den*100)+' %':'';
+ const pct=(n,den)=>den?num(n/den*100)+' %':'No procede';
  const ttot=types.map(type=>totals(type).reduce((a,b)=>a+b,0));
  const descriptions={
   head_bed:'Desplazamiento hacia la cabecera de la cama',
