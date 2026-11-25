@@ -100,7 +100,7 @@ function rowsFor(key,f,r){
  ['FS — NIVEL DE ADECUACIÓN','Resultado'],
  ['La adecuación exige que el equipamiento responda a las necesidades de la unidad y que se utilice al menos en el 90 % de las movilizaciones totales de pacientes.',''],
  ['%LTA — Porcentaje de levantamientos totales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLTA)],
- ['¿El porcentaje de levantamientos totales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLTA==null?'':yes(Number(r.taskTotals.pLTA)>=90)],
+ ['¿El porcentaje de levantamientos totales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLTA==null?'No procede':yes(Number(r.taskTotals.pLTA)>=90)],
  ['Adecuación de los equipos de elevación',yes(r.details?.fsAdequate)]
  ];
  if(key==='tabla_fs_resultado')return [
@@ -121,7 +121,7 @@ function rowsFor(key,f,r){
  ['FA — NIVEL DE ADECUACIÓN','Resultado'],
  ['Se consideran adecuadas las ayudas menores que satisfacen las exigencias de la unidad y se emplean al menos en el 90 % de las movilizaciones parciales.',''],
  ['%LPA — Porcentaje de levantamientos parciales realizados con equipamiento de ayuda',pct(r.taskTotals?.pLPA)],
- ['¿El porcentaje de levantamientos parciales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLPA==null?'':yes(Number(r.taskTotals.pLPA)>=90)],
+ ['¿El porcentaje de levantamientos parciales con equipos de ayuda es igual o superior al 90 %?',r.taskTotals?.pLPA==null?'No procede':yes(Number(r.taskTotals.pLPA)>=90)],
  ['Adecuación de las ayudas menores',yes(r.details?.faAdequate)]
  ];
  if(key==='tabla_fa_resultado')return [
