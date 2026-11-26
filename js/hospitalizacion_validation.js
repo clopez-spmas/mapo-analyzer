@@ -8,6 +8,8 @@
       if(!window.getHospitalizacionPatientCounts)throw Error('No se ha cargado la clasificación de pacientes.');
       window.getHospitalizacionPatientCounts(formData);
       if(!(Number(formData.op)>0))throw Error('Complete primero Personas trabajadoras / turnos para obtener OP.');
+      for(const [id,x] of Object.entries(formData.wheelchairs?.entries||{})){if(Number(x.count)>0&&['brakes','arms','back','width'].some(k=>typeof x[k]!=='boolean'))throw Error('Complete los criterios de adecuación de todas las sillas de ruedas registradas.');}
+      for(const [key,label,fields] of [['bathTypes','baños para higiene',['space','door','obstacles']],['wcTypes','baños con WC',['space','height','bar','door','lateral']],['roomTypes','habitaciones',['between','foot','bedSection','underbed','chairHeight']]]){if((formData[key]||[]).some(x=>Number(x.units)>0&&fields.some(k=>typeof x[k]!=='boolean')))throw Error('Complete las preguntas de '+label+' antes de calcular MAPO.');}
       const f=window.calculateHospitalizacionFactors(formData);
       if(f.taskTotals.st===0&&Number(formData.nc)>0)throw Error('No hay levantamientos totales registrados, pero existen pacientes NC. Revise la situación.');
       if(f.taskTotals.sp===0&&Number(formData.pc)>0)throw Error('No hay levantamientos parciales registrados, pero existen pacientes PC. Revise la situación.');
