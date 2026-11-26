@@ -214,7 +214,7 @@ async function insertEquipmentPhotos(zip,xml,f){
  let rels=await relFile.async('string'),ct=await zip.file('[Content_Types].xml').async('string');
  let rid=1;while(rels.includes('Id="rId'+rid+'"'))rid++;
  let pid=1000;while(xml.includes('id="'+pid+'"'))pid++;
- const drawing=(rel,id)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2400000" cy="1750000"/><wp:docPr id="'+id+'" name="Foto equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rel+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2400000" cy="1750000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
+ const drawing=(rel,id,cx,cy)=>'<w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+id+'" name="Foto equipo '+id+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="Equipo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rel+'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
  const paragraph=content=>'<w:p><w:r>'+content+'</w:r></w:p>';
  const label=e=>[e.nombre,e.descripcion,e.marca,e.modelo].filter(Boolean).join(' · ');
  const cell=(content)=>'<w:tc><w:tcPr><w:tcW w:w="4400" w:type="dxa"/></w:tcPr>'+content+'</w:tc>';
@@ -227,10 +227,13 @@ async function insertEquipmentPhotos(zip,xml,f){
    const ext=m[1]==='jpg'?'jpeg':m[1];
    const mime=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
    if(!new RegExp('Extension="'+ext+'"','i').test(ct))ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+mime+'"/></Types>');
+   while(rels.includes('Id="rId'+rid+'"'))rid++;
    const file='mapo_equipo_'+i+'.'+ext,rel='rId'+rid++;
    zip.file('word/media/'+file,m[2].replace(/\s/g,''),{base64:true});
    rels=rels.replace('</Relationships>','<Relationship Id="'+rel+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+file+'"/></Relationships>');
-   picture=paragraph(drawing(rel,pid++));
+   const dimensions=await new Promise(resolve=>{const img=new Image();img.onload=()=>resolve([img.naturalWidth,img.naturalHeight]);img.onerror=()=>resolve([2400000,1750000]);img.src=e.imagen;});
+   const scale=Math.min(2400000/dimensions[0],1750000/dimensions[1]);
+   picture=paragraph(drawing(rel,pid++,Math.round(dimensions[0]*scale),Math.round(dimensions[1]*scale)));
   }
   rows+='<w:tr>'+cell(paragraph('<w:t xml:space="preserve">'+xesc(label(e)||'Equipo '+(i+1))+'</w:t>'))+cell(picture)+'</w:tr>';
  }
@@ -1676,6 +1679,7 @@ async function generateStudy(template){
    if(!raw)continue;
    const extension=target.split('.').pop(),filename='mapo_multi_'+i+'_'+relIndex+'.'+extension;
    main.file('word/media/'+filename,await raw.async('uint8array'));
+   while(rels.includes('Id="rId'+relIndex+'"'))relIndex++;
    const newid='rId'+relIndex++;
    fragment=fragment.replaceAll('r:embed="'+id+'"','r:embed="'+newid+'"');
    rels=rels.replace('</Relationships>','<Relationship Id="'+newid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+filename+'"/></Relationships>');
