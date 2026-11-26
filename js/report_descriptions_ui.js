@@ -92,10 +92,10 @@ function renderDescription(step){
 function renderEquipment(){
  const d=ensure();d.equipos=d.equipos||[];
  $('formContainer').innerHTML='<div class="step-title-row"><h3>Equipos de ayuda disponibles</h3>'+helpMarkup('equipos')+'</div>'+note+
- '<p>Registre cada equipo en la tabla de dos columnas. Incluya la imagen y la marca/modelo de cada equipo. No modifica los factores FS ni FA.</p>'+
+ '<p>Registre cada equipo en la tabla de dos columnas. Incluya la imagen y la marca/modelo de cada equipo. Puede seleccionar un archivo o arrastrar una fotografía al recuadro. No modifica los factores FS ni FA.</p>'+
  '<div style="overflow-x:auto"><table style="width:100%;table-layout:fixed;border-collapse:collapse"><thead><tr><th style="width:48%">Imagen</th><th>Marca / modelo</th></tr></thead><tbody>'+
- (!d.equipos.length?'<tr><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment style="width:100%;min-height:85px;border-style:dashed">+ Añadir imagen</button></td><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment style="width:100%;min-height:85px;border-style:dashed">+ Introducir marca / modelo</button></td></tr>':'')+d.equipos.map((eq,i)=>'<tr><td style="vertical-align:top;padding:8px;border:1px solid #ccc">'+(eq.imagen?'<img src="'+esc(eq.imagen)+'" alt="Equipo de ayuda" style="max-height:150px;max-width:100%;display:block;margin-bottom:8px">':'<span>Sin imagen</span>')+
- '<input type="file" accept="image/png,image/jpeg,image/webp" data-equipo-imagen="'+i+'" aria-label="Imagen del equipo '+(i+1)+'">'+
+ (!d.equipos.length?'<tr><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment data-image-drop="new" style="width:100%;min-height:85px;border-style:dashed">Seleccionar o arrastrar imagen</button></td><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment style="width:100%;min-height:85px;border-style:dashed">+ Introducir marca / modelo</button></td></tr>':'')+d.equipos.map((eq,i)=>'<tr><td style="vertical-align:top;padding:8px;border:1px solid #ccc">'+'<div data-image-drop="'+i+'" style="border:2px dashed #b7c9dc;border-radius:8px;padding:10px;margin-bottom:8px">'+(eq.imagen?'<img src="'+esc(eq.imagen)+'" alt="Equipo de ayuda" style="max-height:150px;max-width:100%;display:block;margin-bottom:8px">':'<span>Arrastre aquí una fotografía</span>')+
+ '<input type="file" accept="image/png,image/jpeg,image/webp" data-equipo-imagen="'+i+'" aria-label="Imagen del equipo '+(i+1)+'"></div>'+
  (eq.imagen?'<button type="button" class="secondary" data-quitar-imagen="'+i+'">Quitar imagen</button>':'')+
  '</td><td style="vertical-align:top;padding:8px;border:1px solid #ccc"><label>Marca / modelo<input type="text" style="width:100%" data-equipo-modelo="'+i+'" value="'+esc(eq.modelo||'')+'" placeholder="Marca y modelo"></label>'+
  '<button type="button" class="secondary" data-quitar-equipo="'+i+'">Eliminar fila</button></td></tr>').join('')+
@@ -105,12 +105,14 @@ function renderEquipment(){
  document.querySelectorAll('[data-equipo-modelo]').forEach(e=>e.addEventListener('input',read));
  document.querySelectorAll('[data-quitar-equipo]').forEach(b=>b.onclick=()=>{read();d.equipos.splice(Number(b.dataset.quitarEquipo),1);renderEquipment();});
  document.querySelectorAll('[data-quitar-imagen]').forEach(b=>b.onclick=()=>{read();d.equipos[Number(b.dataset.quitarImagen)].imagen='';renderEquipment();});
- document.querySelectorAll('[data-equipo-imagen]').forEach(input=>input.addEventListener('change',()=>{
-  const file=input.files?.[0],i=Number(input.dataset.equipoImagen),out=$('equipoImageMessage');
+ function loadImage(file,i,input){
+  const out=$('equipoImageMessage');
   if(!file)return;
-  if(!['image/png','image/jpeg','image/webp'].includes(file.type)){out.textContent='Formato no admitido. Use JPG, PNG o WebP.';input.value='';return;}
-  if(file.size>25*1024*1024){out.textContent='La imagen supera 25 MB. Seleccione una imagen menor.';input.value='';return;}
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)){out.textContent='Formato no admitido. Use JPG, PNG o WebP.';if(input)input.value='';return;}
+  if(file.size>25*1024*1024){out.textContent='La imagen supera 25 MB. Seleccione una imagen menor.';if(input)input.value='';return;}
   read();
+  if(i==='new'){d.equipos.push({modelo:'',imagen:''});i=d.equipos.length-1;}
+  const target=d.equipos[i];if(!target)return;
   const reader=new FileReader();
   reader.onload=()=>{
    const image=new Image();
@@ -125,9 +127,9 @@ function renderEquipment(){
      ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
      ctx.drawImage(image,0,0,canvas.width,canvas.height);
      const compressed=canvas.toDataURL('image/jpeg',0.82);
-     if(!d.equipos[i])return;
-     d.equipos[i].imagen=compressed;
-     renderEquipment();
+     if(!d.equipos.includes(target))return;
+     target.imagen=compressed;
+     if(formData.informeDescriptivo===d&&getStep()?.custom==='reportEquipment')renderEquipment();
     }catch(e){out.textContent='No se pudo preparar la imagen: '+e.message;}
    };
    image.onerror=()=>{out.textContent='No se pudo interpretar la fotografía.';};
@@ -135,7 +137,9 @@ function renderEquipment(){
   };
   reader.onerror=()=>{out.textContent='No se pudo leer la imagen.';};
   reader.readAsDataURL(file);
- }));
+ }
+ document.querySelectorAll('[data-equipo-imagen]').forEach(input=>input.addEventListener('change',()=>loadImage(input.files?.[0],Number(input.dataset.equipoImagen),input)));
+ document.querySelectorAll('[data-image-drop]').forEach(zone=>{zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.background='#eaf4ff';});zone.addEventListener('dragleave',()=>zone.style.background='');zone.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();zone.style.background='';const files=e.dataTransfer?.files;if(!files?.length)return;if(files.length!==1){$('equipoImageMessage').textContent='Arrastre una sola fotografía por equipo.';return;}loadImage(files[0],zone.dataset.imageDrop==='new'?'new':Number(zone.dataset.imageDrop));});});
 }
 function renderMinorAidsScreen(){
  const d=ensure();
