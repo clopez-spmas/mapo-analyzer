@@ -95,7 +95,7 @@ function renderEquipment(){
  '<p>Registre cada equipo en la tabla de dos columnas. Incluya la imagen y la marca/modelo de cada equipo. Puede seleccionar un archivo o arrastrar una fotografía al recuadro. No modifica los factores FS ni FA.</p>'+
  '<div style="overflow-x:auto"><table style="width:100%;table-layout:fixed;border-collapse:collapse"><thead><tr><th style="width:48%">Imagen</th><th>Marca / modelo</th></tr></thead><tbody>'+
  (!d.equipos.length?'<tr><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment data-image-drop="new" style="width:100%;min-height:85px;border-style:dashed">Seleccionar o arrastrar imagen</button></td><td style="padding:12px;border:1px solid #ccc"><button type="button" class="secondary" data-start-equipment style="width:100%;min-height:85px;border-style:dashed">+ Introducir marca / modelo</button></td></tr>':'')+d.equipos.map((eq,i)=>'<tr><td style="vertical-align:top;padding:8px;border:1px solid #ccc">'+'<div data-image-drop="'+i+'" style="border:2px dashed #b7c9dc;border-radius:8px;padding:10px;margin-bottom:8px">'+(eq.imagen?'<img src="'+esc(eq.imagen)+'" alt="Equipo de ayuda" style="max-height:150px;max-width:100%;display:block;margin-bottom:8px">':'<span>Arrastre aquí una fotografía</span>')+
- '<input type="file" accept="image/png,image/jpeg,image/webp" data-equipo-imagen="'+i+'" aria-label="Imagen del equipo '+(i+1)+'"></div>'+
+ '<input hidden type="file" accept="image/png,image/jpeg,image/webp" data-equipo-imagen="'+i+'" aria-label="Imagen del equipo '+(i+1)+'"><button type="button" class="secondary" data-select-image="'+i+'">'+(eq.imagen?'Cambiar imagen':'Seleccionar archivo')+'</button></div>'+
  (eq.imagen?'<button type="button" class="secondary" data-quitar-imagen="'+i+'">Quitar imagen</button>':'')+
  '</td><td style="vertical-align:top;padding:8px;border:1px solid #ccc"><label>Marca / modelo<input type="text" style="width:100%" data-equipo-modelo="'+i+'" value="'+esc(eq.modelo||'')+'" placeholder="Marca y modelo"></label>'+
  '<button type="button" class="secondary" data-quitar-equipo="'+i+'">Eliminar fila</button></td></tr>').join('')+
@@ -138,6 +138,7 @@ function renderEquipment(){
   reader.onerror=()=>{out.textContent='No se pudo leer la imagen.';};
   reader.readAsDataURL(file);
  }
+ document.querySelectorAll('[data-select-image]').forEach(b=>b.onclick=()=>document.querySelector('[data-equipo-imagen="'+b.dataset.selectImage+'"]').click());
  document.querySelectorAll('[data-equipo-imagen]').forEach(input=>input.addEventListener('change',()=>loadImage(input.files?.[0],Number(input.dataset.equipoImagen),input)));
  document.querySelectorAll('[data-image-drop]').forEach(zone=>{zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.background='#eaf4ff';});zone.addEventListener('dragleave',()=>zone.style.background='');zone.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();zone.style.background='';const files=e.dataTransfer?.files;if(!files?.length)return;if(files.length!==1){$('equipoImageMessage').textContent='Arrastre una sola fotografía por equipo.';return;}loadImage(files[0],zone.dataset.imageDrop==='new'?'new':Number(zone.dataset.imageDrop));});});
 }
