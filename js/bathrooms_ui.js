@@ -105,7 +105,7 @@
 
     document.querySelectorAll('[data-bath-sub]').forEach(btn=>btn.onclick=()=>{read(kind);bathSubStep=+btn.dataset.bathSub;renderBathScreen(bathSubStep===0?'bath':'wc');});
     document.querySelectorAll(`[data-brk="${kind}"]`).forEach(el=>el.addEventListener(el.type==='radio'?'change':'input',()=>read(kind)));
-    document.querySelectorAll('[data-remove-bath-type]').forEach(b=>b.onclick=()=>{if(!confirm('¿Eliminar este tipo y todos sus datos?'))return;read(kind);formData[keyFor(kind)].splice(Number(b.dataset.removeBathType),1);renderBathScreen(kind);});
+    document.querySelectorAll('[data-remove-bath-type]').forEach(b=>b.onclick=async()=>{if(!await window.MAPODialog.confirm('¿Eliminar este tipo y todos sus datos?'))return;read(kind);formData[keyFor(kind)].splice(Number(b.dataset.removeBathType),1);renderBathScreen(kind);});
     document.querySelector('[data-radd-local]')?.addEventListener('click',()=>{
       const key=keyFor(kind);formData[key]=formData[key]||[];if(formData[key].length>=50)return;
       read(kind);formData[key].push({});renderBathScreen(kind);
