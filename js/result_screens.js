@@ -41,7 +41,7 @@ function showGlobalMAPO(){
   const trs=rooms.map(room=>'<tr><td>'+escape(room.name)+'</td><td>'+fmt(room.result.mapo)+'</td><td>'+escape(room.result.nivel||'')+'</td></tr>').join('');
   panel.innerHTML='<div class="section-heading"><div><h2>Resultados globales del hospital</h2><p>Datos agregados de '+rooms.length+' salas independientes. Los factores se recalculan con el motor MAPO; no se promedian índices individuales.</p></div></div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Sala</th><th>MAPO</th><th>Exposición</th></tr></thead><tbody>'+trs+'<tr><th>HOSPITAL — GLOBAL</th><th>'+fmt(result.mapo)+'</th><th>'+escape(result.nivel)+'</th></tr></tbody></table><p><strong>Pacientes NC:</strong> '+fmt(merged.nc)+' · <strong>PC:</strong> '+fmt(merged.pc)+' · <strong>OP:</strong> '+fmt(merged.op)+'</p><p><strong>FS:</strong> '+fmt(result.fs)+' · <strong>FA:</strong> '+fmt(result.fa)+' · <strong>FC:</strong> '+fmt(result.fc)+' · <strong>Famb:</strong> '+fmt(result.famb)+' · <strong>FF:</strong> '+fmt(result.ff)+'</p>';
   openScreen('globalResults');addBackButton(panel);return true;
- }catch(e){window.alert('No se puede calcular el MAPO global: '+e.message);return false;}
+ }catch(e){window.MAPODialog.alert('No se puede calcular el MAPO global: '+e.message);return false;}
 }
 function selectRoom(i){const mr=window.MAPOMultiRoom,s=mr?.state;if(!s||!s.rooms?.[i])return false;s.active=i;mr.restoreCurrentRoom?.();return true;}
 function roomLabel(r,i){return r?.name?.trim()||('Sala '+(i+1));}
