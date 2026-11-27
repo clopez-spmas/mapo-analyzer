@@ -1610,7 +1610,7 @@ function preserveWordWhitespace(xml){
  }
  return new XMLSerializer().serializeToString(doc);
 }
-async function generate(template,providedData){
+async function generate(template,providedData,keepPlanning=false){
  if(typeof JSZip==='undefined')throw Error('No se ha cargado el componente ZIP necesario para generar DOCX.');
  const zip=await JSZip.loadAsync(template),doc=zip.file('word/document.xml');
  if(!doc)throw Error('El documento seleccionado no es una plantilla DOCX compatible.');
@@ -1649,6 +1649,15 @@ async function generate(template,providedData){
   if(/altura del WC|barra de apoyo|anchura de la puerta/i.test(plain))for(const t of ts)t.textContent=(t.textContent||'').replace(/\*+/g,'');
  }
  xml=new XMLSerializer().serializeToString(doc);}
+ if(!keepPlanning&&!(f.planificacionPreventiva?.medidas||[]).some(m=>String(m.medida||'').trim())){
+  const doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const body=doc.getElementsByTagNameNS(ns,'body')[0],nodes=Array.from(body.children);
+  const plain=n=>Array.from(n.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent||'').join('').trim();
+  const start=nodes.findIndex(n=>n.localName==='p'&&/^ANEXO\s*1\.?\s*PLANIFICACI[OÓ]N DE LA PREVENCI[OÓ]N/i.test(plain(n)));
+  const table=nodes.findIndex((n,i)=>i>start&&n.localName==='tbl'&&/RIESGO\/ASPECTO DEFICIENTE/i.test(plain(n)));
+  const end=nodes.findIndex((n,i)=>i>table&&n.localName==='p'&&n.getElementsByTagNameNS(ns,'sectPr').length);
+  if(start>=0&&table>start&&end>table){nodes.slice(start,end+1).forEach(n=>body.removeChild(n));xml=new XMLSerializer().serializeToString(doc);}
+ }
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
@@ -1667,7 +1676,7 @@ async function generateStudy(template){
   return {form,result:refreshed,name:room.name||'Sala '+(i+1)};
  });
  const docs=[];
- for(const room of valid)docs.push(await JSZip.loadAsync(await generate(template,room)));
+ for(const room of valid)docs.push(await JSZip.loadAsync(await generate(template,room,true)));
  const main=docs[0],mainDoc=main.file('word/document.xml');
  let xml=await mainDoc.async('string');
  const bodyMatch=/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/.exec(xml);
@@ -1745,9 +1754,12 @@ async function generateStudy(template){
  parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.results);});
  root.appendChild(heading('5. Conclusiones',0,true));
  parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.filter((n,j,arr)=>arr.findIndex(x=>plain(x)===plain(n))===j));});
- root.appendChild(heading('6. Planificación preventiva',0,true));
- append(parts[0].planIntro);
- parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.plan);});
+ const planned=parts.map((p,i)=>({p,i})).filter(({i})=>(valid[i].form.planificacionPreventiva?.medidas||[]).some(m=>String(m.medida||'').trim()));
+ if(planned.length){
+  root.appendChild(heading('6. Planificación preventiva',0,true));
+  append(planned[0].p.planIntro);
+  planned.forEach(({p,i},j)=>{root.appendChild(heading('6.'+(j+1)+'. '+valid[i].name,1,j>0));append(p.plan);});
+ }
  append(parts[0].end);
  // Evitar identificadores de dibujos duplicados al combinar documentos.
  let drawingId=1;
