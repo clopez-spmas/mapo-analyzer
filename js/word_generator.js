@@ -1715,16 +1715,30 @@ async function generateStudy(template){
  const parts=fragments.map(split);
  while(root.firstChild)root.removeChild(root.firstChild);
  append(parts[0].common);
+ for(const p of Array.from(root.getElementsByTagNameNS(ns,'p'))){
+  if(!/^Las salas o unidades evaluadas en el presente informe son las siguientes\s*:/i.test(plain(p)))continue;
+  const ts=Array.from(p.getElementsByTagNameNS(ns,'t'));
+  if(ts.length){ts[0].textContent=plain(p).split(':')[0]+': '+valid.map(v=>v.name).join('; ');ts.slice(1).forEach(t=>t.textContent='');}
+ }
+ const protection=/^El presente informe no tiene en cuenta que alguna persona trabajadora/i;
+ const commonConclusion=parts[parts.length-1].conclusions.filter(n=>protection.test(plain(n)));
+
  root.appendChild(heading('3. Evaluación MAPO'));
  parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name));append(p.evaluation);});
  root.appendChild(heading('4. Resultados'));
  parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name));append(p.results);});
  root.appendChild(heading('5. Conclusiones'));
- parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name));append(p.conclusions);});
+ parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
  root.appendChild(heading('6. Planificación preventiva'));
  append(parts[0].planIntro);
  parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name));append(p.plan);});
  append(parts[0].end);
+ // Evitar identificadores de dibujos duplicados al combinar documentos.
+ let drawingId=1;
+ for(const n of Array.from(root.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing','docPr')))n.setAttribute('id',String(drawingId++));
+ const settings=main.file('word/settings.xml');
+ if(settings){let st=await settings.async('string');st=st.replace(/<w:updateFields\b[^>]*\/>/g,'');st=st.replace('</w:settings>','<w:updateFields w:val="true"/></w:settings>');main.file('word/settings.xml',st);}
+
  xml=serializer.serializeToString(original);
  main.file('word/document.xml',xml);
  main.file(relPath,rels);main.file('[Content_Types].xml',types);
