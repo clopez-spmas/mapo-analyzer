@@ -1701,7 +1701,7 @@ async function generateStudy(template){
  const original=parser.parseFromString(xml,'application/xml');
  const root=original.getElementsByTagNameNS(ns,'body')[0];
  const plain=n=>Array.from(n.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent||'').join('').trim();
- const heading=(label,level=0)=>{const p=original.createElementNS(ns,'w:p'),pr=original.createElementNS(ns,'w:pPr'),style=original.createElementNS(ns,'w:pStyle');style.setAttributeNS(ns,'w:val',level===0?'Heading1':'Heading2');pr.appendChild(style);const outline=original.createElementNS(ns,'w:outlineLvl');outline.setAttributeNS(ns,'w:val',String(level));pr.appendChild(outline);p.appendChild(pr);const run=original.createElementNS(ns,'w:r'),rp=original.createElementNS(ns,'w:rPr'),b=original.createElementNS(ns,'w:b');rp.appendChild(b);run.appendChild(rp);const t=original.createElementNS(ns,'w:t');t.textContent=label;run.appendChild(t);p.appendChild(run);return p;};
+ const heading=(label,level=0,newPage=false)=>{const p=original.createElementNS(ns,'w:p'),pr=original.createElementNS(ns,'w:pPr'),style=original.createElementNS(ns,'w:pStyle');style.setAttributeNS(ns,'w:val',level===0?'Heading1':'Heading2');pr.appendChild(style);if(newPage){const pb=original.createElementNS(ns,'w:pageBreakBefore');pr.appendChild(pb);}const outline=original.createElementNS(ns,'w:outlineLvl');outline.setAttributeNS(ns,'w:val',String(level));pr.appendChild(outline);p.appendChild(pr);const run=original.createElementNS(ns,'w:r'),rp=original.createElementNS(ns,'w:rPr'),b=original.createElementNS(ns,'w:b');rp.appendChild(b);run.appendChild(rp);const t=original.createElementNS(ns,'w:t');t.textContent=label;run.appendChild(t);p.appendChild(run);return p;};
  const append=nodes=>nodes.forEach(n=>root.appendChild(original.importNode(n,true)));
  const split=fragment=>{
   const doc=parser.parseFromString(xml.replace(bodyMatch[0],'<w:body>'+fragment+'</w:body>'),'application/xml');
@@ -1728,15 +1728,15 @@ async function generateStudy(template){
  const protection=/^El presente informe no tiene en cuenta que alguna persona trabajadora/i;
  const commonConclusion=parts[parts.length-1].conclusions.filter(n=>protection.test(plain(n)));
 
- root.appendChild(heading('3. Evaluación MAPO'));
- parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name,1));append(p.evaluation);});
- root.appendChild(heading('4. Resultados'));
- parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name,1));append(p.results);});
- root.appendChild(heading('5. Conclusiones'));
- parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
- root.appendChild(heading('6. Planificación preventiva'));
+ root.appendChild(heading('3. Evaluación MAPO',0,true));
+ parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.evaluation);});
+ root.appendChild(heading('4. Resultados',0,true));
+ parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.results);});
+ root.appendChild(heading('5. Conclusiones',0,true));
+ parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
+ root.appendChild(heading('6. Planificación preventiva',0,true));
  append(parts[0].planIntro);
- parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name,1));append(p.plan);});
+ parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.plan);});
  append(parts[0].end);
  // Evitar identificadores de dibujos duplicados al combinar documentos.
  let drawingId=1;
