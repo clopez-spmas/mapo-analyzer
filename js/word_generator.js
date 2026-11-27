@@ -1257,10 +1257,11 @@ function fillTemplateTables(xml,f,r){
   [/Anchura de la puerta/i,'door'],
   [/Presencia de obstáculos/i,'obstacles']
  ];
+ const pristineBath=bathSource.cloneNode(true);
  let previousBath=bathSource;
  for(let page=0;page<bathPages;page++){
-  const table=page===0?bathSource:bathSource.cloneNode(true);
-  if(page>0)previousBath.parentNode.insertBefore(table,previousBath.nextSibling);
+  const table=page===0?bathSource:pristineBath.cloneNode(true);
+  if(page>0){const separator=d.createElementNS(ns,'w:p');const pr=d.createElementNS(ns,'w:pPr'),spacing=d.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:after','120');pr.appendChild(spacing);separator.appendChild(pr);previousBath.parentNode.insertBefore(separator,previousBath.nextSibling);previousBath.parentNode.insertBefore(table,separator.nextSibling);}
   previousBath=table;
   const part=baths.slice(page*bathCapacity,(page+1)*bathCapacity);
    renumberTypeHeaders(table,page*bathCapacity);
@@ -1315,10 +1316,11 @@ function fillTemplateTables(xml,f,r){
  // Tabla corporativa WC: localizar celdas reales por fila, incluidas combinaciones.
  const wcTypes=f.wcTypes||[],wcOriginal=tables[13],wcCapacity=6;
  const wcPages=Math.max(1,Math.ceil(wcTypes.length/wcCapacity));
+ const pristineWC=wcOriginal.cloneNode(true);
  let previousWC=wcOriginal;
  for(let page=0;page<wcPages;page++){
-  const table=page===0?wcOriginal:wcOriginal.cloneNode(true);
-  if(page>0)previousWC.parentNode.insertBefore(table,previousWC.nextSibling);
+  const table=page===0?wcOriginal:pristineWC.cloneNode(true);
+  if(page>0){const separator=d.createElementNS(ns,'w:p');const pr=d.createElementNS(ns,'w:pPr'),spacing=d.createElementNS(ns,'w:spacing');spacing.setAttributeNS(ns,'w:after','120');pr.appendChild(spacing);separator.appendChild(pr);previousWC.parentNode.insertBefore(separator,previousWC.nextSibling);previousWC.parentNode.insertBefore(table,separator.nextSibling);}
   previousWC=table;
   const part=wcTypes.slice(page*wcCapacity,(page+1)*wcCapacity);
    renumberTypeHeaders(table,page*wcCapacity);
@@ -1361,6 +1363,7 @@ function fillTemplateTables(xml,f,r){
  // Habitaciones: completar las celdas de cada fila mediante el rótulo del modelo.
  const rooms=f.roomTypes||[],roomOriginal=tables[14],roomCapacity=6;
  const roomPages=Math.max(1,Math.ceil(rooms.length/roomCapacity));
+ const pristineRoom=roomOriginal.cloneNode(true);
  let previousRoom=roomOriginal;
  const roomCriteria=[
   [/Espacio entre cama/i,'between',2],
@@ -1370,7 +1373,7 @@ function fillTemplateTables(xml,f,r){
   [/Altura del asiento/i,'chairHeight',0.5]
  ];
  for(let page=0;page<roomPages;page++){
-  const table=page===0?roomOriginal:roomOriginal.cloneNode(true);
+  const table=page===0?roomOriginal:pristineRoom.cloneNode(true);
   if(page>0){
    // Word fusiona visualmente tablas consecutivas sin un párrafo separador.
    // Mantener dos tablas independientes mediante un párrafo de separación.
