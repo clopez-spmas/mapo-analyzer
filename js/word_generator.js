@@ -1638,6 +1638,14 @@ async function generate(template,providedData){
  xml=placeUnitAfterColon(xml,f.unidad);
  xml=colorMapoResultCell(xml,r);
  xml=preserveWordWhitespace(xml);
+ // Eliminar llamadas de nota con asteriscos del texto de las tablas WC.
+ {const doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+ for(const tc of Array.from(doc.getElementsByTagNameNS(ns,'tc'))){
+  const ts=Array.from(tc.getElementsByTagNameNS(ns,'t'));
+  const plain=ts.map(t=>t.textContent||'').join('');
+  if(/altura del WC|barra de apoyo|anchura de la puerta/i.test(plain))for(const t of ts)t.textContent=(t.textContent||'').replace(/\*+/g,'');
+ }
+ xml=new XMLSerializer().serializeToString(doc);}
  const leftovers=[...new Set([...xml.matchAll(/\{([a-z_]+)\}/g)].map(x=>x[1]))];
  if(leftovers.length)throw Error('Quedan marcadores sin completar: '+leftovers.join(', '));
  zip.file('word/document.xml',xml);
