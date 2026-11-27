@@ -870,7 +870,12 @@ function fillTemplateTables(xml,f,r){
  const unique=row=>cells(row).filter((c,i,a)=>a.indexOf(c)===i);
  const cell=(i,row,col)=>cells(rows(i)[row]||{})[col];
  const write=(tc,val)=>{
-  if(!tc||val===undefined||val===null)return;
+  if(!tc)return;
+  // Los campos de evaluación sin dato se representan con guiones.
+  // La planificación conserva sus campos pendientes de cumplimentar.
+  const owner=tc.parentNode?.parentNode;
+  const isPlanning=owner&&/FECHA PREVISTA\s*(?:DE\s*)?APLICACI[OÓ]N/i.test(Array.from(owner.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent||'').join(''));
+  if(val==null||String(val).trim()===''){if(isPlanning)return;val='---';}
   let ts=all(tc,'t');
   if(!ts.length){
    let p=direct(tc,'p')[0];if(!p){p=d.createElementNS(ns,'w:p');tc.appendChild(p);}
