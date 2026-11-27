@@ -1736,7 +1736,7 @@ async function generateStudy(template){
   const ts=Array.from(p.getElementsByTagNameNS(ns,'t'));
   if(ts.length){ts[0].textContent=plain(p).split(':')[0]+': '+valid.map(v=>v.name).join('; ');ts.slice(1).forEach(t=>t.textContent='');}
  }
- const protection=/^El presente informe no tiene en cuenta que alguna persona trabajadora/i;
+ const protection=/^(?:El presente informe no tiene en cuenta que alguna persona trabajadora|Se recuerda a la empresa el deber de dar informaci[oó]n|Por [úu]ltimo,\s*MAS\s*Prevenci[oó]n)/i;
  const commonConclusion=parts[parts.length-1].conclusions.filter(n=>protection.test(plain(n)));
 
  root.appendChild(heading('3. Evaluación MAPO',0,true));
@@ -1744,7 +1744,7 @@ async function generateStudy(template){
  root.appendChild(heading('4. Resultados',0,true));
  parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.results);});
  root.appendChild(heading('5. Conclusiones',0,true));
- parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
+ parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.filter((n,j,arr)=>arr.findIndex(x=>plain(x)===plain(n))===j));});
  root.appendChild(heading('6. Planificación preventiva',0,true));
  append(parts[0].planIntro);
  parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name,1,i>0));append(p.plan);});
