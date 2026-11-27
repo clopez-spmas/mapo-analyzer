@@ -1696,7 +1696,7 @@ async function generateStudy(template){
  const original=parser.parseFromString(xml,'application/xml');
  const root=original.getElementsByTagNameNS(ns,'body')[0];
  const plain=n=>Array.from(n.getElementsByTagNameNS(ns,'t')).map(t=>t.textContent||'').join('').trim();
- const heading=(label)=>{const p=original.createElementNS(ns,'w:p'),pr=original.createElementNS(ns,'w:pPr'),style=original.createElementNS(ns,'w:pStyle');style.setAttributeNS(ns,'w:val','Heading1');pr.appendChild(style);p.appendChild(pr);const run=original.createElementNS(ns,'w:r'),rp=original.createElementNS(ns,'w:rPr'),b=original.createElementNS(ns,'w:b');rp.appendChild(b);run.appendChild(rp);const t=original.createElementNS(ns,'w:t');t.textContent=label;run.appendChild(t);p.appendChild(run);return p;};
+ const heading=(label,level=0)=>{const p=original.createElementNS(ns,'w:p'),pr=original.createElementNS(ns,'w:pPr'),style=original.createElementNS(ns,'w:pStyle');style.setAttributeNS(ns,'w:val',level===0?'Heading1':'Heading2');pr.appendChild(style);const outline=original.createElementNS(ns,'w:outlineLvl');outline.setAttributeNS(ns,'w:val',String(level));pr.appendChild(outline);p.appendChild(pr);const run=original.createElementNS(ns,'w:r'),rp=original.createElementNS(ns,'w:rPr'),b=original.createElementNS(ns,'w:b');rp.appendChild(b);run.appendChild(rp);const t=original.createElementNS(ns,'w:t');t.textContent=label;run.appendChild(t);p.appendChild(run);return p;};
  const append=nodes=>nodes.forEach(n=>root.appendChild(original.importNode(n,true)));
  const split=fragment=>{
   const doc=parser.parseFromString(xml.replace(bodyMatch[0],'<w:body>'+fragment+'</w:body>'),'application/xml');
@@ -1724,14 +1724,14 @@ async function generateStudy(template){
  const commonConclusion=parts[parts.length-1].conclusions.filter(n=>protection.test(plain(n)));
 
  root.appendChild(heading('3. Evaluación MAPO'));
- parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name));append(p.evaluation);});
+ parts.forEach((p,i)=>{root.appendChild(heading('3.'+(i+1)+'. '+valid[i].name,1));append(p.evaluation);});
  root.appendChild(heading('4. Resultados'));
- parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name));append(p.results);});
+ parts.forEach((p,i)=>{root.appendChild(heading('4.'+(i+1)+'. '+valid[i].name,1));append(p.results);});
  root.appendChild(heading('5. Conclusiones'));
- parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
+ parts.forEach((p,i)=>{root.appendChild(heading('5.'+(i+1)+'. '+valid[i].name,1));append(p.conclusions.filter(n=>!protection.test(plain(n))));if(i===parts.length-1)append(commonConclusion.slice(0,1));});
  root.appendChild(heading('6. Planificación preventiva'));
  append(parts[0].planIntro);
- parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name));append(p.plan);});
+ parts.forEach((p,i)=>{root.appendChild(heading('6.'+(i+1)+'. '+valid[i].name,1));append(p.plan);});
  append(parts[0].end);
  // Evitar identificadores de dibujos duplicados al combinar documentos.
  let drawingId=1;
@@ -1739,6 +1739,23 @@ async function generateStudy(template){
  const settings=main.file('word/settings.xml');
  if(settings){let st=await settings.async('string');st=st.replace(/<w:updateFields\b[^>]*\/>/g,'');st=st.replace('</w:settings>','<w:updateFields w:val="true"/></w:settings>');main.file('word/settings.xml',st);}
 
+ // Marcar el campo TOC existente como pendiente de actualización, incluyendo campos complejos.
+ for(const p of Array.from(root.getElementsByTagNameNS(ns,'p'))){
+  if(!/^(?:\d+\.?\s*)?(Introducci[oó]n|Metodolog[ií]a)\.?$/i.test(plain(p)))continue;
+  let pr=Array.from(p.children).find(n=>n.localName==='pPr');
+  if(!pr){pr=original.createElementNS(ns,'w:pPr');p.insertBefore(pr,p.firstChild);}
+  let outline=Array.from(pr.children).find(n=>n.localName==='outlineLvl');
+  if(!outline){outline=original.createElementNS(ns,'w:outlineLvl');pr.appendChild(outline);}
+  outline.setAttributeNS(ns,'w:val','0');
+ }
+ for(const n of Array.from(root.getElementsByTagNameNS(ns,'fldChar'))){
+  if(n.getAttributeNS(ns,'fldCharType')==='begin'){n.setAttributeNS(ns,'w:dirty','true');n.removeAttributeNS(ns,'fldLock');}
+ }
+ for(const n of Array.from(root.getElementsByTagNameNS(ns,'fldSimple'))){
+  if(/^\s*TOC\b/i.test(n.getAttributeNS(ns,'instr')||'')){n.setAttributeNS(ns,'w:dirty','true');n.removeAttributeNS(ns,'fldLock');}
+ }
+ const instructions=Array.from(root.getElementsByTagNameNS(ns,'instrText'));
+ for(const n of instructions){if(/^\s*TOC\b/i.test(n.textContent||'')){n.textContent=' TOC \\o "1-2" \\h \\z \\u ';}}
  xml=serializer.serializeToString(original);
  main.file('word/document.xml',xml);
  main.file(relPath,rels);main.file('[Content_Types].xml',types);
