@@ -745,12 +745,12 @@ function replaceAcknowledgement(xml,f){
 
 function insertPreventiveBullets(xml,f){
  const measures=(f.planificacionPreventiva?.medidas||[]).map(m=>String(m.medida||'').trim()).filter(Boolean);
- if(!measures.length)return xml;
  const doc=new DOMParser().parseFromString(xml,'application/xml');
  const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  const paragraphs=Array.from(doc.getElementsByTagNameNS(ns,'p'));
  const text=p=>Array.from(p.getElementsByTagNameNS(ns,'t')).map(n=>n.textContent||'').join('');
  const anchor=paragraphs.find(p=>/se insta a la empresa adoptar las siguientes medidas preventivas\s*:/i.test(text(p)));
+ if(!measures.length){if(anchor)anchor.parentNode.removeChild(anchor);return new XMLSerializer().serializeToString(doc);}
  if(!anchor)throw Error('No aparece el párrafo introductorio de medidas preventivas en la plantilla.');
  let cursor=anchor;
  for(const measure of measures){
